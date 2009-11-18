@@ -1,0 +1,50 @@
+/** @mainpage C++ binding for SAM/BAM files
+
+The Sequence Alignment/Map (SAM) file format and its binary companion BAM
+are formats for storing nucleotide sequence alignments.  They are designed
+for the large volumes of short- to middling-length reads produced by
+next-generation sequencing technologies, and are described at
+http://samtools.sourceforge.net/ and elsewhere.
+
+@b Cansam is a C++ library providing classes representing the records found in
+these files, facilities for reading and writing SAM and BAM files, and several
+algorithms for manipulating these files, including sorting and merging.
+
+The main things to know about are sam::alignment and sam::header.
+
+@section utilities Utilities
+
+Several basic command-line utilities are provided along with the library.
+They are intended to be of use in their own right, as well as providing
+non-trivial examples of programming with the library.
+
+  - @ref samcat  for converting between SAM and BAM formats
+  - @ref samsort for sorting and merging files
+
+@section colophon Colophon
+
+This documentation was generated from comments in the source code using
+<a href="http://doxygen.org/">doxygen</a>.
+*/
+
+
+/// @namespace sam
+/// @brief All of Cansam is encapsulated within this namespace.
+namespace sam {
+} // end of namespace sam
+
+// Example programs
+// ================
+
+/** @example simplecat.cpp
+Simplecat demonstrates reading and writing SAM files from/to ordinary streams.
+
+It copies alignment records from the files specified to standard output.
+Headers from the first file are also copied, but those from subsequent files
+are thrown away; simply copying them would not result in a valid SAM file,
+as they would appear after previously-emitted alignment records.
+
+(Real programs ought to handle such situations more carefully.)
+*/
+
+// vim:set filetype=doxygen:

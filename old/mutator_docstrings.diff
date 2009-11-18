@@ -1,0 +1,35 @@
+--- alignment.h	2009-11-05 15:00:26.000000000 +0000
++++ alignment.h.old	2009-11-05 15:00:01.000000000 +0000
+@@ -166,19 +166,19 @@
+ 
+   /** @name Field modifiers  */
+   //@{
+-  void set_qname(const std::string& qname);
+-  void set_flags(int flags);
+-  void set_rindex(int rindex);
+-  void set_rname(const std::string& rname);
+-  void set_pos(coord_t pos);
+-  void set_zpos(coord_t zpos);
+-  void set_mapq(int mapq);
+-  void set_cigar(const std::string& cigar);
+-  void set_mate_rindex(int mate_rindex);
+-  void set_mate_rname(const std::string& mate_rname);
+-  void set_mate_pos(coord_t pos);
+-  void set_mate_zpos(coord_t zpos);
+-  void set_isize(scoord_t isize);
++  void set_qname(const std::string& qname);  ///< Query name
++  void set_flags(int flags);   ///< Flags
++  void set_rindex(int rindex); ///< Reference identifier
++  void set_rname(const std::string& rname);  ///< Reference name
++  void set_pos(coord_t pos);   ///< Leftmost position (1-based)
++  void set_zpos(coord_t zpos); ///< Leftmost position (0-based)
++  void set_mapq(int mapq);     ///< Mapping quality
++  void set_cigar(const std::string& cigar);  ///< Cigar string
++  void set_mate_rindex(int mate_rindex);     ///< Mate's reference identifier
++  void set_mate_rname(const std::string& mate_rname); ///< Mate's reference name
++  void set_mate_pos(coord_t pos);    ///< Mate's leftmost position (1-based)
++  void set_mate_zpos(coord_t zpos);  ///< Mate's leftmost position (0-based)
++  void set_isize(scoord_t isize);    ///< Insert size
+ 
+   // FIXME put length first?
+   void set_seq(const std::string& seq);

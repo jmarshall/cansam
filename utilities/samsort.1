@@ -1,0 +1,22 @@
+.TH samsort 1 "" "Cancer Genome Project" "Wellcome Trust Sanger Institute"
+.SH NAME
+samsort \- sort SAM and/or BAM files, merging headers where necessary
+.SH SYNOPSIS
+.BR samsort " [" -bcm "] [" -f
+.IR CMP "]"
+.RB "[" -o
+.IR FILE "]"
+.RB "[" -S
+.IR SIZE "]"
+.RB "[" -T
+.IR DIR "]"
+.RB "[" -z
+.IR NUM "] [" FILE "]..."
+.SH DESCRIPTION
+It sorts them.
+.SS Merging headers
+If more than one input file is given,
+.B samsort
+needs to do something about merging headers.
+.SH SEE ALSO
+The SAM file format specification http://samtools.sourceforge.net/

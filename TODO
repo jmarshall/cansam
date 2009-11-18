@@ -1,0 +1,28 @@
+* Utilities for alignment records:
+  - bam_cigar2qlen
+  - bam_reg2bin
+  - bam_tpos2qpos (given pos on the reference, figure out which base in
+    the read corresponds to it by parsing the cigar; just became private
+    to bam_maqcns.c)
+  - done, actually:
+      - bam_calend (is right_pos()/right_zpos())
+
+* Fix EOF in lib/istream.cpp and lib/rawfilebuf.cpp: either #include <cstdio>
+  or instead use std::char_traits<char>::eof() or so
+
+* Move any information in REFCOUNT and UNCOUNTED into lib/alignment.cpp
+
+* Maybe refcount the alignments so that assignment is cheap too, and you
+  don't need to obfuscate with swap() -- EXCEPT it wreaks havoc with threading
+
+* Indexing
+  - Constructing and loading indices
+  - Utility function for (sensible!) parsing of "chr2:100,000-200,000"
+  - Some form of iterator equivalent to bam_fetch()
+
+* Documentation
+  - Doxygen HTML filename overachieving: build the filename myself by hacking
+    on util.cpp's convertNameToFile()
+
+* Things that samtools does that we don't:
+  - Pileups

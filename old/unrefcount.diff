@@ -1,0 +1,52 @@
+--- sam/alignment.h.orig	2009-10-29 10:15:09.000000000 +0000
++++ sam/alignment.h	2009-10-29 10:16:07.000000000 +0000
+@@ -44,17 +44,17 @@
+ class alignment {
+ public:
+   /// Construct an empty %alignment.
+-  alignment() : p(&empty_block) { p->refcount++; }
++  alignment() : p(&empty_block) { }
+ 
+   /// Construct an %alignment by splitting up a tab-separated text string.
+   // FIXME what reference_thingie does this use?
+   explicit alignment(const std::string& line) { assign(line); }
+ 
+   /// Construct a copy of an %alignment.
+-  alignment(const alignment& aln) : p(aln.p) { p->refcount++; }
++  alignment(const alignment& aln);
+ 
+   /// Destroy this %alignment object.
+-  ~alignment() { if (--p->refcount <= 0) destroy(); }
++  ~alignment();
+ 
+   /// Copy an %alignment.
+   alignment& operator= (const alignment& aln);
+@@ -251,7 +251,6 @@
+   public:
+     typedef int size_type;
+ 
+-    int refcount;
+     void* reference_thingie;  // FIXME
+     size_type capacity;
+     size_type cached_auxen_offset;
+--- lib/alignment.cpp.orig	2009-10-29 10:15:14.000000000 +0000
++++ lib/alignment.cpp	2009-10-29 10:16:24.000000000 +0000
+@@ -128,7 +128,6 @@
+   block* p = reinterpret_cast<block*>(cp);
+ 
+   // FIXME also init reference_thingie and cached_auxen_offset?
+-  p->refcount = 1;
+   p->capacity = excess;
+   return p;
+ }
+--- lib/bam.cpp.orig	2009-10-29 10:15:23.000000000 +0000
++++ lib/bam.cpp	2009-10-29 10:16:42.000000000 +0000
+@@ -14,7 +14,7 @@
+ mostly in the same way as it is represented in an (uncompressed) BAM file.
+ 
+   +---------------+---------+--...--+-...-+-...--+--...--+------...------+
+-  | refcount, etc | bamcore | cigar | seq | qual | rname | aux fields... |
++  | capacity, etc | bamcore | cigar | seq | qual | rname | aux fields... |
+   +---------------+---------+--...--+-...-+-...--+--...--+------...------+
+ 
+ The memory block is allocated as a suitably-aligned appropriately-sized char

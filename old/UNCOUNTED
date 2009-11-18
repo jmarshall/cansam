@@ -1,0 +1,54 @@
+* Infrastructure for sam::alignment class:
+
+empty lies about its capacity; empty->capacity() is always 0.  (It tells the truth about size())  (It tells the truth about size())
+
+
+Function                        Non-counted
+                                ===========
+
+construct empty                 p(empty)
+
+copy construct                  p(create(other.size)), memcpy(p, other.p)
+
+destruct                        if (p != empty) destroy(p)
+
+assign from another aln         make_new_unshared(other.size), memcpy
+                                [NO! Buggy, needs to handle self-assignment]
+
+swap                            tmp = p, p = other.p, other.p = tmp
+
+assign from elsewhere           make_new_unshared(elsewhere_size), copy from elsewhere
+
+various mutators                make_unshared_copy(mutated_required_size), make changes
+
+* make_unshared_copy(size)      if (p == empty)
+                                    p = create(size), memcpy(p, empty)
+                                else if (p.capacity < size)
+                                    newp = create(size), oldp = p, memcpy(newp, oldp), p = newp,
+                                    destroy(oldp)
+
+* make_new_unshared(size)       if (p == empty)
+                                    p = create(size)
+                                else if (p.capacity < size)
+                                    newp = create(size), oldp = p, p = newp, destroy(oldp)
+
+(Or if empty lies and has empty.capacity == 0)
+
+* make_unshared_copy(size)      if (p.capacity < size)
+                                    newp = create(size), oldp = p, memcpy(newp, oldp), p = newp,
+                                    if (oldp != empty) destroy(oldp)
+
+* make_new_unshared(size)       if (p.capacity < size)
+                                    newp = create(size), oldp = p, p = newp,
+				    if (oldp != empty) destroy(oldp)
+
+
+
+Non-counted assignment
+======================
+
+
+        aln:
+this:   EMPTY        OWNED
+EMPTY   stet         alloc/copy
+OWNED   resize/copy  if_not_this, resize/copy
