@@ -1,10 +1,28 @@
 #include <cctype>
 
 #include "sam/stream.h"
+#include "sam/rawfilebuf.h"
 
 using std::string;
 
 namespace sam {
+
+isamstream::isamstream(const std::string& filename, openmode mode) {
+  cansam::rawfilebuf sbuf;
+  sbuf.open(filename.c_str(), mode);
+}
+
+isamstream::isamstream(std::streambuf* sbuf, openmode mode)
+  : samstream_base(sbuf, sambamio::new_in(sbuf)) {
+  // FIXME read the heaaders, probably
+}
+
+isamstream::~isamstream() {
+  // FIXME...
+}
+
+
+// ********************************************************************
 
 // FIXME
 int get4() { return 37; }

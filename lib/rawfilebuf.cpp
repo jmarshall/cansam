@@ -1,11 +1,88 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 
-#include "sam/iobuffer.h"
+#include "sam/rawfilebuf.h"
+#include "sam/exception.h"
 
-namespace sam {
+namespace cansam {
+
+rawfilebuf*
+rawfilebuf::open(const char* fname, std::ios_base::openmode mode, int perm) {
+  using std::ios;
+
+  // FIXME Either nuke or prettify table
+  //
+  //    out		w	O_WRONLY|O_CREAT|O_TRUNC
+  //    out trunc	w	O_WRONLY|O_CREAT|O_TRUNC
+  //    out       app	a	O_WRONLY|O_CREAT        |O_APPEND
+  // in			r	O_RDONLY
+  // in out		r+	O_RDWR
+  // in out trunc	w+	O_RDWR  |O_CREAT|O_TRUNC
+  // in out       app	a+	O_RDWR  |O_CREAT|       |O_APPEND    (not std)
+
+  int flags = 0;
+  if (mode & ios::in) {
+    flags = (mode & ios::out)? O_RDWR : O_RDONLY;
+  }
+  else if (mode & ios::out)  {
+    flags = O_WRONLY | O_CREAT;
+    if (! (mode & ios::app))  flags |= O_TRUNC;
+  }
+
+  if (mode & ios::trunc)   flags |= O_CREAT | O_TRUNC;
+  if (mode & ios::app)     flags |= O_CREAT | O_APPEND;
+#ifdef O_BINARY
+  if (mode & ios::binary)  flags |= O_BINARY;
+#endif
+#ifdef O_TEXT
+  if (! (mode & ios::binary))  flags |= O_TEXT;
+#endif
+
+  if (! open(fname, flags, perm))
+    return NULL;
+
+  if (mode & ios::ate) {
+    if (::lseek(fd_, 0, SEEK_END) <= 0) {
+      int saved_errno = errno;
+      close_nothrow();
+      errno = saved_errno;
+      return NULL;
+    }
+  }
+
+  return this;
+}
+
+rawfilebuf* rawfilebuf::open(const char* fname, int flags, int perm) {
+  if (is_open())  return NULL;
+
+  do fd_ = ::open(fname, flags, perm); while (fd_ < 0 && errno == EINTR);
+  if (fd_ < 0)
+    return NULL;
+
+  owned_ = true;
+  return this;
+}
+
+// Close the underlying file descriptor, failing (i.e., returning negative)
+// on hard errors rather than throwing an exception.
+int rawfilebuf::close_nothrow() {
+  if (! is_open())  return 0;
+
+  int ret;
+  do ret = ::close(fd_); while (ret < 0 && errno == EINTR);
+
+  fd_ = -1;
+  return ret;
+}
+
+void rawfilebuf::close() {
+  if (close_nothrow() < 0)
+    throw std::ios::failure("rawfilebuf::close(): error closing the file");
+}
 
 // FIXME This paranoia is hopefully unwarranted, and we can just use
 // the EOF-returning defaults supplied by std::streambuf.
@@ -14,7 +91,7 @@ std::streambuf::int_type rawfilebuf::uflow() {
   throw std::ios::failure("rawfilebuf::uflow() invoked");
 #else
   char c;
-  std::streamsize nread = xsgetn(&c, 1); 
+  std::streamsize nread = xsgetn(&c, 1);
   return (nread == 1)? int_type(c) : EOF;
 #endif
 }
@@ -25,9 +102,9 @@ std::streambuf::int_type rawfilebuf::underflow() {
 
 std::streamsize rawfilebuf::xsgetn(char* s, std::streamsize n) {
   ssize_t nread;
-  while ((nread = ::read(fd_, s, n)) < 0)
-    if (errno != EINTR)
-      throw std::ios::failure("rawfilebuf::xsgetn(): error reading the file");
+  do nread = ::read(fd_, s, n); while (nread < 0 && errno == EINTR);
+  if (nread < 0)
+    throw std::ios::failure("rawfilebuf::xsgetn(): error reading the file");
 
   return nread;
 }
@@ -36,13 +113,10 @@ std::streamsize rawfilebuf::xsputn(const char* s, std::streamsize n) {
   std::streamsize total = 0;
 
   while (n > 0) {
-    ssize_t nwritten = ::write(fd_, s, n);
-    if (nwritten < 0) {
-      if (errno == EINTR)
-	nwritten = 0;
-      else
-	throw std::ios::failure("rawfilebuf::xsputn(): error writing the file");
-    }
+    ssize_t nwritten;
+    do nwritten = ::write(fd_, s, n); while (nwritten < 0 && errno == EINTR);
+    if (nwritten < 0)
+      throw std::ios::failure("rawfilebuf::xsputn(): error writing the file");
 
     total += nwritten;
     s += nwritten;

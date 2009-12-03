@@ -36,14 +36,22 @@ void test_harness::check(size_t a, size_t b, const string& title) {
 
 extern void test_alignments(test_harness&);
 extern void test_headers(test_harness&);
+extern void test_sam_io(test_harness&);
 extern void test_wire(test_harness&);
 
 int main() {
   test_harness t;
 
-  test_headers(t);
-  test_alignments(t);
-  test_wire(t);
+  try {
+    test_headers(t);
+    test_alignments(t);
+    test_sam_io(t);
+    test_wire(t);
+  }
+  catch (const char* what) {
+    std::cerr << "Excess exception: " << what << '\n';
+    t.nfail++;
+  }
 
   if (t.nfail > 0) {
     std::cerr << "\nTotal failures: " << t.nfail << '\n';

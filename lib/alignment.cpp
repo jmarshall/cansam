@@ -359,7 +359,11 @@ int aux_length(char type, const char* value, int value_length) {
 int lookup_in_refthingie(const char*) { return -1; }
 int itoa(const char*) { return 0; }
 
-void alignment::assign(const std::vector<char*>& fields /*, refthingie*/) {
+void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthingie*/) {
+  // An alignment in SAM format is a tab-separated line containing fields
+  // ordered as:
+  // qname flag rname pos mapq cigar mrname mpos isize seq qual aux...
+  // 0     1    2     3   4    5     6      7    8     9   10   11...
   enum { qname, flag, rname, pos, mapq, cigar, mrname, mpos, isize, seq, qual,
 	 firstaux };
 

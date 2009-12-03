@@ -6,7 +6,7 @@ all: $(OUTPUTS)
 
 lib: libcansam.a
 
-LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/bam.o lib/sam.o \
+LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
 	  lib/samstream.o lib/istream.o lib/ostream.o lib/rawfilebuf.o \
 	  lib/utilities.o lib/zio.o
 
@@ -15,13 +15,12 @@ libcansam.a: $(LIBOBJS)
 	ranlib $@
 
 lib/alignment.o: lib/alignment.cpp sam/alignment.h
-lib/bam.o: lib/bam.cpp sam/stream.h lib/wire.h
 lib/collection.o: lib/collection.cpp sam/collection.h
 lib/header.o: lib/header.cpp sam/header.h
 lib/istream.o: lib/istream.cpp sam/header.h sam/alignment.h
 lib/ostream.o: lib/ostream.cpp sam/header.h sam/alignment.h
-lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/iobuffer.h
-lib/sam.o: lib/sam.cpp
+lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/rawfilebuf.h
+lib/sambamio.o: lib/sambamio.cpp sam/stream.h lib/wire.h
 lib/samstream.o: lib/samstream.cpp sam/stream.h
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
 lib/zio.o: lib/zio.cpp lib/zio.h
@@ -46,7 +45,8 @@ examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
 test: test/runtests
 	test/runtests
 
-TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/wire.o
+TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
+	    test/wire.o
 
 test/runtests: $(TEST_OBJS) libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) -lcansam
@@ -54,6 +54,7 @@ test/runtests: $(TEST_OBJS) libcansam.a
 test/runtests.o: test/runtests.cpp test/test.h
 test/alignment.o: test/alignment.cpp test/test.h sam/alignment.h
 test/header.o: test/header.cpp test/test.h sam/header.h
+test/sam.o: test/sam.cpp test/test.h sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 
 .PHONY: all clean doc docclean lib tags test

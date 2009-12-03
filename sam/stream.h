@@ -8,6 +8,7 @@ a different name.
 #ifndef CANSAM_STREAM_H
 #define CANSAM_STREAM_H
 
+#include <ios>
 #include <string>
 #include <vector>
 
@@ -28,8 +29,15 @@ enum openmode {
 
 };
 
-class samstream_base {
+class samstream_base : public std::ios {
 protected:
+  class sambamio;
+  samstream_base(std::streambuf* sbuf, samstream_base::sambamio* io0)
+    : std::ios(sbuf), io(io0) { }
+
+  samstream_base() { }
+#if 1
+  // FIXME All this moves over to sam::collection
   // @cond private
   struct reference {
     std::string name;
@@ -39,6 +47,7 @@ protected:
   std::vector<header> headers;
 
   void read_reftable();
+#endif
 
   class sambamio {
   public:
@@ -53,7 +62,6 @@ protected:
 
   class bamio;
   class samio;
-  class gzsamio;
 
   sambamio* io;
   // @endcond
@@ -63,7 +71,7 @@ protected:
     @brief SAM/BAM input stream
 
 FIXME This isn't a stream in the sense that you can stream @e anything from it;
-you only get to read %sam %alignment records.  Maybe we can come up with a
+you only get to read sam alignment records.  Maybe we can come up with a
 better name than (by parallel with ifstream, istringstream) a "stream backed
 by a sam".  */
 class isamstream : public samstream_base {
@@ -72,15 +80,15 @@ public:
   isamstream(std::streambuf* sbuf, openmode mode = in);
   ~isamstream();
 
-  /// Seek back to the first %alignment record in the stream.
+  /// Seek back to the first alignment record in the stream
   isamstream& rewind();
 
-  /// Read an %alignment.
+  /// Read an alignment
   isamstream& get(alignment& aln) { io->get(*this, aln); return *this; }
 };
 
-/// Read an %alignment from a SAM/BAM stream
-isamstream& operator>> (isamstream& stream, alignment& aln)
+/// Read an alignment from a SAM/BAM stream
+inline isamstream& operator>> (isamstream& stream, alignment& aln)
   { return stream.get(aln); }
 
 /** @class sam::osamstream sam/stream.h
@@ -92,13 +100,13 @@ public:
   ~osamstream();
 };
 
-/// Write the %alignment to a SAM/BAM stream
+/// Write the alignment to a SAM/BAM stream
 osamstream& operator<< (osamstream& stream, const alignment& aln);
 
 /** @brief Returns the mode flags indicated by the filename extension.
-@details Returns an appropriate openmode for .bam, .%sam, and .sam.gz.
+@details Returns an appropriate openmode for .bam, .sam, and .sam.gz.
 Filenames are matched case-insensitively, and unrecognised extensions are
-equivalent to .%sam.  */
+equivalent to .sam.  */
 openmode extension(const std::string& filename);
 
 } // namespace sam

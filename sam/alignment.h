@@ -14,6 +14,9 @@
 
 namespace sam {
 
+//class samstream_base;
+//class samstream_base::samio;
+
 // FIXME do something about namespaces so you don't have to say sam::PAIRED etc
 
 /** The @e flags field of an alignment contains a number of flag bits pertaining
@@ -297,7 +300,10 @@ private:
 
   block* p;
 
-  void assign(const std::vector<char*>& fields /*, refthingie*/);
+public: // FIXME figure out how to get samio access to this
+  void assign(int nfields, const std::vector<char*>& fields /*, refthingie*/);
+  friend class samio;
+private:
 
   void sync() const;
   //FIXME NUKEME void destroy();  // FIXME prob should be const (!)

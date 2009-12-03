@@ -5,16 +5,16 @@
 #ifndef CANSAM_EXCEPTION_H
 #define CANSAM_EXCEPTION_H
 
-#include <exception>
+#include <stdexcept>
 #include <string>
 
 namespace sam {
 
 /** @brief Exceptions thrown by Cansam functions.  */
-class failure : public std::exception {
+class failure : public std::runtime_error {
 public:
-  explicit failure(const std::string& message) : what_(message) { }
-  virtual ~failure() { }
+  explicit failure(const std::string& message) : runtime_error(message), what_(message) { }
+  virtual ~failure() throw() { }
   virtual const char* what() const throw() { return what_.c_str(); }
 
 private:

@@ -33,6 +33,11 @@ This documentation was generated from comments in the source code using
 namespace sam {
 } // end of namespace sam
 
+/// @namespace cansam
+/// @brief General utilities that are not specific to SAM processing
+namespace cansam {
+} // end of namespace cansam
+
 // Example programs
 // ================
 
