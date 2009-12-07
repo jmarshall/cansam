@@ -1,11 +1,22 @@
+#include "sam/stream.h"
+
 #include <cctype>
 
-#include "sam/stream.h"
+#include "sam/exception.h"
 #include "sam/rawfilebuf.h"
 
 using std::string;
 
 namespace sam {
+
+// As setstate(), but returns whether setstate() would have thrown an exception.
+bool samstream_base::setstate_wouldthrow(iostate state) {
+  try { setstate(state); }
+  catch (...) { return true; }
+
+  return false;
+}
+
 
 isamstream::isamstream(const std::string& filename, openmode mode) {
   cansam::rawfilebuf sbuf;
@@ -19,6 +30,32 @@ isamstream::isamstream(std::streambuf* sbuf, openmode mode)
 
 isamstream::~isamstream() {
   // FIXME...
+}
+
+isamstream& isamstream::operator>> (alignment& aln) {
+  try {
+    if (! io->get(*this, aln))
+      if (setstate_wouldthrow(eofbit | failbit) && (exceptions() & eofbit))
+	throw sam::failure("eof");
+  }
+  catch (sam::failure& e) {
+    if (setstate_wouldthrow(failbit)) {
+      e.set_filename("thefilename"); // FIXME
+      throw;
+    }
+  }
+  catch (sam::exception& e) {
+    if (setstate_wouldthrow(badbit)) {
+      e.set_filename("thefilename"); // FIXME
+      throw;
+    }
+  }
+  catch (...) {
+    if (setstate_wouldthrow(badbit))
+      throw;
+  }
+
+  return *this;
 }
 
 
@@ -42,7 +79,9 @@ void samstream_base::read_reftable() {
   }
 }
 
-openmode extension(const string& filename) {
+std::ios_base::openmode extension(const string& filename) {
+  using std::ios;
+
   string::size_type dotpos = filename.rfind('.');
   if (dotpos != string::npos) {
     // If the extension has fewer than 4 characters (i.e., is shorter
@@ -53,16 +92,20 @@ openmode extension(const string& filename) {
   }
 
   if (dotpos == string::npos)
-    return openmode(0);
+    return ios::in; // FIXME openmode(0);
 
   string ext(filename, dotpos);
   for (string::size_type i = 0; i < ext.length(); i++)
     ext[i] = ::tolower(ext[i]);
 
-  if (ext == ".bam")  return binary; // FIXME binary|compressed
+  // FIXME
+#if 0
+  if (ext == ".bam")  return ios::binary; // FIXME binary|compressed
   else if (ext == ".sam")  return openmode(2);  // FIXME fix us too
   else if (ext == ".sam.gz")  return compressed;
   else  return openmode(0);
+#endif
+  return ios::in;
 }
 
 } // namespace sam

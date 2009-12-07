@@ -7,12 +7,14 @@
 #include "sam/alignment.h"
 
 #include <string>
+#include <sstream>
 #include <cstring>
 //#include <cstdlib>
 #include <climits>
 #include <cctype>
 
 #include "sam/collection.h"
+#include "sam/exception.h"
 
 using std::string;
 
@@ -38,6 +40,14 @@ scoord_t alignment::cigar_span() const {
 
 string alignment::mate_rname() const {
   return "FIXME"; // FIXME
+}
+
+static std::string printify(unsigned char c) {
+  std::ostringstream str;
+  if (isgraph(c))  str << '\'' << c << '\'';
+  else  str << std::hex << std::showbase << unsigned(c);
+
+  return str.str();
 }
 
 void alignment::pack_seq(char* dest, const char* seq, int seq_length) {
@@ -71,13 +81,17 @@ void alignment::pack_seq(char* dest, const char* seq, int seq_length) {
   for (int i = 0; i < even_length; i += 2) {
     char hi = encode[*unpacked++];
     char lo = encode[*unpacked++];
-    if ((hi | lo) & 16)  throw "invalid character in sequence string";
+    if ((hi | lo) & 16)
+      throw sam::failure("Invalid character (" +
+	      printify(unpacked[(hi & 16)? -2 : -1]) + ") in sequence string");
     *dest++ = (hi << 4) | lo;
   }
 
   if (even_length < seq_length) {
     char hi = encode[*unpacked];
-    if (hi & 16)  throw "invalid character in sequence string";
+    if (hi & 16)
+      throw sam::failure("Invalid character (" +
+	      printify(*unpacked) + ") in sequence string");
     *dest = (hi << 4);
   }
 }
@@ -123,7 +137,9 @@ void alignment::unpack_seq(string::iterator dest,
 void alignment::pack_qual(char* dest, const char* qual, int seq_length) {
   for (int i = 0; i < seq_length; i++) {
     char q = *qual++;
-    if (q < 33 || q > 126)  throw "invalid character in quality string";
+    if (q < 33 || q > 126)
+      throw sam::failure("Invalid character (" + printify(q) +
+			 ") in quality string");
     *dest++ = q - 33;
   }
 }
@@ -315,7 +331,7 @@ int to_flags(const char* s) {
     char* slim;
     val = strtol(s, &slim, 0);
     if (*slim != '\0')
-      throw "Trailing gunge in flags field";
+      throw sam::failure("Trailing gunge in flags field");
   }
   else {
     // FIXME One day there'll be a defined text representation
@@ -344,7 +360,8 @@ int calc_cigar_length(const char* s) {
 int aux_length(char type, const char* value, int value_length) {
   switch (type) {
   case 'A':
-    if (value_length != 1)  throw "Type A aux field has length other than 1";
+    if (value_length != 1)
+      throw sam::failure("Type A aux field has length other than 1");
     return 1;
 
   case 'i':
@@ -367,6 +384,9 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
   enum { qname, flag, rname, pos, mapq, cigar, mrname, mpos, isize, seq, qual,
 	 firstaux };
 
+  if (nfields < 11)
+    throw sam::failure("Too few fields in SAM record");
+
   int name_length = fields[qname+1] - fields[qname]; // including terminator
   int cigar_length = calc_cigar_length(fields[cigar]);
   int seq_length = fields[seq+1] - fields[seq] - 1;
@@ -378,19 +398,21 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
   if (qual_length == 1 && fields[qual][0] == '*')
     qual_length = 0;
   else if (qual_length != seq_length) {
-    if (seq_length == 0)  throw "QUAL specified when SEQ is absent";
-    else  throw "SEQ and QUAL differ in length";
+    if (seq_length == 0)
+      throw sam::failure("QUAL specified when SEQ is absent");
+    else
+      throw sam::failure("SEQ and QUAL differ in length");
   }
 
   int size = sizeof(block_header) + sizeof(bamcore)
 	     + name_length + (cigar_length * sizeof(uint32_t))
 	     + (seq_length+1)/2 + seq_length;
 
-  for (size_t i = firstaux; i < fields.size(); i++) {
+  for (int i = firstaux; i < nfields; i++) {
     int length = fields[i+1] - fields[i] - 1;
     char* aux = fields[i];
     if (length < 5 || aux[2] != ':' || aux[4] != ':')
-      throw "Malformatted aux field";
+      throw sam::failure("Malformatted aux field");
     size += 3 + aux_length(aux[3], &aux[5], length - 5);
   }
 
@@ -428,7 +450,7 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
 
   memcpy(p->data() + p->name_offset(), fields[qname], name_length);
 
-  for (size_t i = firstaux; i < fields.size(); i++)
+  for (int i = firstaux; i < nfields; i++)
     ;
 }
 

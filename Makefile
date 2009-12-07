@@ -14,14 +14,14 @@ libcansam.a: $(LIBOBJS)
 	$(AR) cr $@ $(LIBOBJS)
 	ranlib $@
 
-lib/alignment.o: lib/alignment.cpp sam/alignment.h
+lib/alignment.o: lib/alignment.cpp sam/alignment.h sam/exception.h
 lib/collection.o: lib/collection.cpp sam/collection.h
 lib/header.o: lib/header.cpp sam/header.h
 lib/istream.o: lib/istream.cpp sam/header.h sam/alignment.h
 lib/ostream.o: lib/ostream.cpp sam/header.h sam/alignment.h
 lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/rawfilebuf.h
 lib/sambamio.o: lib/sambamio.cpp sam/stream.h lib/wire.h
-lib/samstream.o: lib/samstream.cpp sam/stream.h
+lib/samstream.o: lib/samstream.cpp sam/stream.h sam/exception.h
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
 lib/zio.o: lib/zio.cpp lib/zio.h
 

@@ -38,6 +38,19 @@ namespace sam {
 namespace cansam {
 } // end of namespace cansam
 
+/* Not sure if this is a good idea... */
+namespace std {
+/** @class std::ios <ios>
+    @brief the relevant parts of std::ios
+
+blah */
+class ios {
+int state_flags;
+int exceptions();
+};
+}
+
+
 // Example programs
 // ================
 

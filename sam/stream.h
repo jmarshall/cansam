@@ -18,6 +18,7 @@ a different name.
 
 namespace sam {
 
+#if 0
 /** Flags used when opening a stream.  */
 enum openmode {
   in,
@@ -28,6 +29,7 @@ enum openmode {
   uncompressed 	///< No compression
 
 };
+#endif
 
 class samstream_base : public std::ios {
 protected:
@@ -36,6 +38,9 @@ protected:
     : std::ios(sbuf), io(io0) { }
 
   samstream_base() { }
+
+  bool setstate_wouldthrow(iostate state);
+
 #if 1
   // FIXME All this moves over to sam::collection
   // @cond private
@@ -56,7 +61,11 @@ protected:
 
     virtual ~sambamio() { }
 
+    // FIXME maybe these should be taking the collection in fact
     virtual bool get_headers(samstream_base&) = 0;
+
+    // Returns true when an alignment has been successfully read,
+    // false at EOF, or throws an exception on formatting or I/O errors.
     virtual bool get(samstream_base&, alignment&) = 0;
   };
 
@@ -83,13 +92,13 @@ public:
   /// Seek back to the first alignment record in the stream
   isamstream& rewind();
 
-  /// Read an alignment
-  isamstream& get(alignment& aln) { io->get(*this, aln); return *this; }
+  /// Read an alignment record
+  /** Similarly to @a std::istream's extraction operators, this reads one
+  alignment record into @a aln and returns the stream.  The @a iostate flags
+  will be set at EOF or upon errors, and exceptions will be thrown accordingly
+  as selected via @a ios::exception().  */
+  isamstream& operator>> (alignment& aln);
 };
-
-/// Read an alignment from a SAM/BAM stream
-inline isamstream& operator>> (isamstream& stream, alignment& aln)
-  { return stream.get(aln); }
 
 /** @class sam::osamstream sam/stream.h
     @brief SAM/BAM output stream */
@@ -107,7 +116,7 @@ osamstream& operator<< (osamstream& stream, const alignment& aln);
 @details Returns an appropriate openmode for .bam, .sam, and .sam.gz.
 Filenames are matched case-insensitively, and unrecognised extensions are
 equivalent to .sam.  */
-openmode extension(const std::string& filename);
+std::ios_base::openmode extension(const std::string& filename);
 
 } // namespace sam
 

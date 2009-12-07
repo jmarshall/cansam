@@ -5,7 +5,6 @@
 #include <errno.h>
 
 #include "sam/rawfilebuf.h"
-#include "sam/exception.h"
 
 namespace cansam {
 

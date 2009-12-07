@@ -6,7 +6,7 @@
 
 static void test_reader(test_harness& t) {
   std::istringstream sam1(
-"foo\t37\t*\t0\t*\t*\t*\t0\t0\tATGC\t????\tNM:i:4\n");
+"foo\t37\t*\t0\t*\t*\t*\t0\t0\tATGC\t????\tNM:i:4\nbar\n");
 
   sam::isamstream str(sam1.rdbuf());
   sam::alignment aln;

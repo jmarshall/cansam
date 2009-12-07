@@ -1,6 +1,8 @@
 #include <streambuf>
 #include <vector>
 
+#include <iostream>  // FIXME NUKEME
+
 #include <cstring>
 
 #include "sam/stream.h"
@@ -188,6 +190,12 @@ int samstream_base::samio::getline() {
 
 bool samstream_base::samio::get(samstream_base& stream, alignment& aln) {
   int nfields = getline();
+#if 0
+std::clog << "getline returned " << nfields << ":";
+for (int i = 0; i < nfields; i++)
+  std::clog << " {" << fields[i] << "}";
+std::clog << "\n";
+#endif
   if (nfields <= 0)
     return false;
 
