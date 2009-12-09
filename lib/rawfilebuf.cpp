@@ -1,10 +1,12 @@
+#include "sam/rawfilebuf.h"
+
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 
-#include "sam/rawfilebuf.h"
+#include "sam/exception.h"
 
 namespace cansam {
 
@@ -80,7 +82,7 @@ int rawfilebuf::close_nothrow() {
 
 void rawfilebuf::close() {
   if (close_nothrow() < 0)
-    throw std::ios::failure("rawfilebuf::close(): error closing the file");
+    throw sam::sysbork("close() failed", errno);
 }
 
 // FIXME This paranoia is hopefully unwarranted, and we can just use
@@ -103,7 +105,7 @@ std::streamsize rawfilebuf::xsgetn(char* s, std::streamsize n) {
   ssize_t nread;
   do nread = ::read(fd_, s, n); while (nread < 0 && errno == EINTR);
   if (nread < 0)
-    throw std::ios::failure("rawfilebuf::xsgetn(): error reading the file");
+    throw sam::sysbork("read() failed", errno);
 
   return nread;
 }
@@ -115,7 +117,7 @@ std::streamsize rawfilebuf::xsputn(const char* s, std::streamsize n) {
     ssize_t nwritten;
     do nwritten = ::write(fd_, s, n); while (nwritten < 0 && errno == EINTR);
     if (nwritten < 0)
-      throw std::ios::failure("rawfilebuf::xsputn(): error writing the file");
+      throw sam::sysbork("write() failed", errno);
 
     total += nwritten;
     s += nwritten;

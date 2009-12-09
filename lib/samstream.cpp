@@ -9,7 +9,8 @@ using std::string;
 
 namespace sam {
 
-// As setstate(), but returns whether setstate() would have thrown an exception.
+// As per setstate(), but returns whether setstate() would have thrown an
+// exception, i.e., whether a state listed in exceptions() has been set.
 bool samstream_base::setstate_wouldthrow(iostate state) {
   try { setstate(state); }
   catch (...) { return true; }
@@ -33,24 +34,41 @@ isamstream::~isamstream() {
 }
 
 isamstream& isamstream::operator>> (alignment& aln) {
+  /* Set iostate bits in response to exceptions from io->get() and from
+  the underlying streambuf, and propagate the exceptions if so instructed
+  by exceptions().
+
+  The formatting layers throw sam::failure, so these set cause failbit to
+  be set; Cansam's streambufs specifically throw sam::* exceptions other
+  than sam::failure, and other streambufs might throw anything at all but
+  surely not sam::failure, so other exceptions set badbit, corresponding to
+  serious streambuf problems such as I/O errors.  */
+
   try {
-    if (! io->get(*this, aln))
+    if (! io->get(*this, aln)) {
+      // We're at EOF, so set eofbit and failbit; but (and this differs from
+      // standard streams) throw only if exceptions are requested for eofbit.
       if (setstate_wouldthrow(eofbit | failbit) && (exceptions() & eofbit))
 	throw sam::failure("eof");
+    }
   }
   catch (sam::failure& e) {
     if (setstate_wouldthrow(failbit)) {
-      e.set_filename("thefilename"); // FIXME
+      // If an exception is to be thrown, annotate and rethrow the original
+      // exception (rather than the generic one thrown by plain setstate()).
+      e.set_filename(filename());
       throw;
     }
   }
   catch (sam::exception& e) {
     if (setstate_wouldthrow(badbit)) {
-      e.set_filename("thefilename"); // FIXME
+      e.set_filename(filename());
       throw;
     }
   }
   catch (...) {
+    // FIXME  Possibly worth propagating this as a sam::exception or so,
+    // so that our callers need expect only sam::* exceptions.
     if (setstate_wouldthrow(badbit))
       throw;
   }
@@ -59,8 +77,13 @@ isamstream& isamstream::operator>> (alignment& aln) {
 }
 
 
+osamstream& osamstream::operator<< (const alignment& aln) {
+  io->put(*this, aln);
+}
+
 // ********************************************************************
 
+#if 0
 // FIXME
 int get4() { return 37; }
 
@@ -78,6 +101,7 @@ void samstream_base::read_reftable() {
     reftable[i].length = get4();
   }
 }
+#endif
 
 std::ios_base::openmode extension(const string& filename) {
   using std::ios;

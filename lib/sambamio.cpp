@@ -29,14 +29,15 @@ packed cigar and seq fields are first and thus naturally aligned.  */
 
 class samstream_base::bamio : public samstream_base::sambamio {
 public:
-  bamio(std::streambuf* sbuf, const char* text, std::streamsize textsize);
+  bamio(const char* text, std::streamsize textsize);
   virtual ~bamio() { }
 
   virtual bool get_headers(samstream_base&);
   virtual bool get(samstream_base& strm, alignment& aln);
+  virtual void put(samstream_base& strm, const alignment& aln);
 };
 
-samstream_base::bamio::bamio(std::streambuf* sbuf, const char* text, std::streamsize textsize) {
+samstream_base::bamio::bamio(const char* text, std::streamsize textsize) {
 }
 
 bool samstream_base::bamio::get_headers(samstream_base& strm) {
@@ -45,20 +46,22 @@ bool samstream_base::bamio::get_headers(samstream_base& strm) {
 bool samstream_base::bamio::get(samstream_base& strm, alignment& aln) {
 }
 
+void samstream_base::bamio::put(samstream_base& strm, const alignment& aln) {
+}
+
 
 // *** samio
 
 class samstream_base::samio : public samstream_base::sambamio {
 public:
-  samio(std::streambuf* sbuf, const char* text, std::streamsize textsize);
+  samio(const char* text, std::streamsize textsize);
   virtual ~samio();
 
   virtual bool get_headers(samstream_base&);
-  virtual bool get(samstream_base& strm, alignment& aln);
+  virtual bool get(samstream_base&, alignment&);
+  virtual void put(samstream_base&, const alignment&);
 
 private:
-  std::streambuf* sbuf;
-
   char* buffer;
   char* begin;
   char* end;
@@ -66,15 +69,11 @@ private:
   bool eof_sighted;
 
   std::vector<char*> fields;
-  int getline();
+  int getline(std::streambuf*);
   char* flush_buffer(char*);
 };
 
-samstream_base::samio::samio(std::streambuf* sbuf0,
-			     const char* text, std::streamsize textsize) {
-  sbuf = sbuf0;
-  eof_sighted = false;
-
+samstream_base::samio::samio(const char* text, std::streamsize textsize) {
   bufsize = 32768;
   buffer = new char[bufsize];
 
@@ -82,6 +81,8 @@ samstream_base::samio::samio(std::streambuf* sbuf0,
   begin = end - textsize;
   memcpy(begin, text, textsize);
   *end = '\n';
+
+  eof_sighted = false;
 }
 
 samstream_base::samio::~samio() {
@@ -134,7 +135,7 @@ char* samstream_base::samio::flush_buffer(char* ptr) {
 and returns the number of fields present (or 0 at EOF). 
 
 */
-int samstream_base::samio::getline() {
+int samstream_base::samio::getline(std::streambuf* sbuf) {
   fields.clear();
   fields.push_back(begin);
 
@@ -189,7 +190,7 @@ int samstream_base::samio::getline() {
 }
 
 bool samstream_base::samio::get(samstream_base& stream, alignment& aln) {
-  int nfields = getline();
+  int nfields = getline(stream.rdbuf());
 #if 0
 std::clog << "getline returned " << nfields << ":";
 for (int i = 0; i < nfields; i++)
@@ -201,6 +202,9 @@ std::clog << "\n";
 
   aln.assign(nfields, fields /*, stream.refthingie*/);
   return true;
+}
+
+void samstream_base::samio::put(samstream_base& strm, const alignment& aln) {
 }
 
 
@@ -226,29 +230,29 @@ samstream_base::sambamio::new_in(std::streambuf* sbuf) {
     // FIXME Allow for other extra subfields in addition to the "BC" one.
     // FIXME Theoretically should allow for other extra subfields.
     if (n >= 16 && (buf[3] & 4) && memcmp(&buf[10], "\6\0\x42\x43\2\0", 6) == 0)
-      return new bamio(sbuf, buf, n);
+      return new bamio(buf, n);
     else
 #if 0
-      return new gzsamio(sbuf, buf, n);
+      return new gzsamio(buf, n);
 #else
       throw ".sam.gz not yet implemented";
 #endif
   }
   else
-    return new samio(sbuf, buf, n);
+    return new samio(buf, n);
 }
 
 // Construct a new concrete sambamio according to MODE.
 samstream_base::sambamio*
 samstream_base::sambamio::new_out(std::streambuf* sbuf, openmode mode) {
   if (mode & binary)
-    return new bamio(sbuf, NULL, 0 /*, mode & compressed*/);
+    return new bamio(NULL, 0 /*, mode & compressed*/);
 #if 0
   else if (mode & compressed)
-    return new gzsamio(sbuf, NULL, 0);
+    return new gzsamio(NULL, 0);
 #endif
   else
-    return new samio(sbuf, NULL, 0);
+    return new samio(NULL, 0);
 }
 
 } // namespace sam

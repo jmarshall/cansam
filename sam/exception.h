@@ -19,7 +19,10 @@ public:
   virtual ~exception() throw() { }
   //using failure::what;
 
+  /// The filename associated with this problem, or empty if none or unknown
   std::string filename() const { return filename_; }
+
+  /// Set an associated filename
   void set_filename(const std::string& filename) { filename_ = filename; }
 
 private:
@@ -36,13 +39,16 @@ public:
 };
 
 /** @class sam::sysbork sam/exception.h
-    @brief Exceptions representing I/O errors, etc */
+    @brief Exceptions raised from system call failures */
 class sysbork : public exception {
 public:
   explicit sysbork(const std::string& message, int errnum)
     : exception(message), errnum_(errnum) { }
   virtual ~sysbork() throw() { }
   virtual const char* what() const throw();
+
+  /// The @c errno error code underlying this exception
+  int errnum() const { return errnum_; }
 
 private:
   int errnum_;

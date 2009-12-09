@@ -21,6 +21,18 @@ public:
   // FIXME or call it rindex or so?
   int findseq(const std::string& rname) const;
 
+#if 0
+  // @cond private
+  struct reference {
+    std::string name;
+    coord_t length;
+  };
+  std::vector<reference> reftable;
+  std::vector<header> headers;
+
+  void read_reftable();
+#endif
+
 private:
   //std::vector<something> refseqs;
   std::map<std::string, int> refmap;

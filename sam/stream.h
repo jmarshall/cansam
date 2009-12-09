@@ -32,6 +32,16 @@ enum openmode {
 #endif
 
 class samstream_base : public std::ios {
+public:
+  // FIXME But wait!  Who's responsible for the io?
+  virtual ~samstream_base() { }
+
+  /// The filename associated with this stream, or empty if none or unknown
+  std::string filename() const { return filename_; }
+
+  /// Set an associated filename
+  void set_filename(const std::string& filename) { filename_ = filename; }
+
 protected:
   class sambamio;
   samstream_base(std::streambuf* sbuf, samstream_base::sambamio* io0)
@@ -39,20 +49,8 @@ protected:
 
   samstream_base() { }
 
-  bool setstate_wouldthrow(iostate state);
-
-#if 1
-  // FIXME All this moves over to sam::collection
   // @cond private
-  struct reference {
-    std::string name;
-    coord_t length;
-  };
-  std::vector<reference> reftable;
-  std::vector<header> headers;
-
-  void read_reftable();
-#endif
+  bool setstate_wouldthrow(iostate state);
 
   class sambamio {
   public:
@@ -67,6 +65,8 @@ protected:
     // Returns true when an alignment has been successfully read,
     // false at EOF, or throws an exception on formatting or I/O errors.
     virtual bool get(samstream_base&, alignment&) = 0;
+
+    virtual void put(samstream_base&, const alignment&) = 0;
   };
 
   class bamio;
@@ -74,6 +74,9 @@ protected:
 
   sambamio* io;
   // @endcond
+
+private:
+  std::string filename_;
 };
 
 /** @class sam::isamstream sam/stream.h
@@ -89,15 +92,17 @@ public:
   isamstream(std::streambuf* sbuf, openmode mode = in);
   ~isamstream();
 
-  /// Seek back to the first alignment record in the stream
-  isamstream& rewind();
-
   /// Read an alignment record
   /** Similarly to @a std::istream's extraction operators, this reads one
   alignment record into @a aln and returns the stream.  The @a iostate flags
   will be set at EOF or upon errors, and exceptions will be thrown accordingly
   as selected via @a ios::exception().  */
   isamstream& operator>> (alignment& aln);
+
+  /// Seek back to the first alignment record in the stream
+  isamstream& rewind();
+
+  // FIXME  Some form of seek/tell -- or maybe that's in samstream_base
 };
 
 /** @class sam::osamstream sam/stream.h
@@ -107,10 +112,11 @@ public:
   osamstream(const std::string& filename, openmode mode = out);
   osamstream(std::streambuf* sbuf, openmode mode = out);
   ~osamstream();
+
+  /// Write the alignment
+  osamstream& operator<< (const alignment& aln);
 };
 
-/// Write the alignment to a SAM/BAM stream
-osamstream& operator<< (osamstream& stream, const alignment& aln);
 
 /** @brief Returns the mode flags indicated by the filename extension.
 @details Returns an appropriate openmode for .bam, .sam, and .sam.gz.
