@@ -7,9 +7,6 @@
   - done, actually:
       - bam_calend (is right_pos()/right_zpos())
 
-* Fix EOF in lib/istream.cpp and lib/rawfilebuf.cpp: either #include <cstdio>
-  or instead use std::char_traits<char>::eof() or so
-
 * Move any information in REFCOUNT and UNCOUNTED into lib/alignment.cpp
 
 * Maybe refcount the alignments so that assignment is cheap too, and you

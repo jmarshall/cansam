@@ -40,7 +40,7 @@ namespace cansam {
 
 /* Not sure if this is a good idea... */
 namespace std {
-/** @class std::ios <ios>
+/** @class std::ios
     @brief the relevant parts of std::ios
 
 blah */

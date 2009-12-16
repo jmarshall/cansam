@@ -1,13 +1,42 @@
 #include "sam/stream.h"
 
+#include <fstream>
 #include <cctype>
 
 #include "sam/exception.h"
-#include "sam/rawfilebuf.h"
+#include "sam/streambuf.h"
+#include "lib/sambamio.h"
 
 using std::string;
 
 namespace sam {
+
+bool samstream_base::is_open() const {
+  if (sam::streambuf* sbuf = dynamic_cast<sam::streambuf*>(rdbuf()))
+    return sbuf->is_open();
+  else if (std::filebuf* fbuf = dynamic_cast<std::filebuf*>(rdbuf()))
+    return fbuf->is_open();
+  else
+    return rdbuf()? true : false;
+}
+
+void samstream_base::close() {
+  if (sam::streambuf* sbuf = dynamic_cast<sam::streambuf*>(rdbuf()))
+    sbuf->close();
+  else if (std::filebuf* fbuf = dynamic_cast<std::filebuf*>(rdbuf()))
+    fbuf->close();
+
+  // FIXME maybe this should delete rdbuf() (if delete_rdbuf) and/or io
+}
+
+samstream_base::~samstream_base() {
+  delete io;
+
+  if (delete_rdbuf) {
+    std::streambuf* sbuf = rdbuf(NULL);
+    delete sbuf;
+  }
+}
 
 // As per setstate(), but returns whether setstate() would have thrown an
 // exception, i.e., whether a state listed in exceptions() has been set.
@@ -19,9 +48,21 @@ bool samstream_base::setstate_wouldthrow(iostate state) {
 }
 
 
-isamstream::isamstream(const std::string& filename, openmode mode) {
-  cansam::rawfilebuf sbuf;
-  sbuf.open(filename.c_str(), mode);
+/* This constructor wants to:
+    init ios(NULL)
+    io = NULL
+    delete_rdbuf = true
+    filename_ = filename
+    create an appropriate sam::streambuf   [can throw]
+    rdbuf(sbuf);
+    open sbuf as appropriate   [can possibly throw]
+    if (is_open)
+      io = new_in(...)   [can throw]
+*/
+
+isamstream::isamstream(const std::string& filename, openmode mode)
+  : samstream_base(new rawfilebuf, NULL) {
+  //sbuf.open(filename.c_str(), mode);
 }
 
 isamstream::isamstream(std::streambuf* sbuf, openmode mode)
@@ -33,17 +74,43 @@ isamstream::~isamstream() {
   // FIXME...
 }
 
+#if 0
+isamstream& isamstream::rewind() {
+  // FIXME
+  return *this;
+}
+#endif
+
+
+#if 0
+std::streamsize isamstream::rdbuf_sgetn(char* buffer, std::streamsize size) {
+  std::stream n;
+  try {
+    n = rdbuf()->sgetn(buffer, size);
+  }
+  catch (sam::exception& e) {
+    e.set_filename(filename());
+    if (setstate_wouldthrow(badbit))  throw;
+    else  throw nonpropagated();
+  }
+  catch (...) {
+    if (setstate_wouldthrow(badbit))  throw;
+    else  throw nonpropagated();
+  }
+}
+#endif
+
+/* These operators set iostate bits in response to exceptions from io->get()
+and from the underlying streambuf, and propagate the exceptions if instructed
+to do so by exceptions().
+
+The formatting layers throw sam::failure exceptions, so these cause failbit
+to be set; Cansam's streambufs specifically throw sam::* exceptions other than
+sam::failure, and other streambufs might throw anything at all but presumably
+not sam::failure, so other exceptions set badbit, corresponding to serious
+streambuf problems such as I/O errors.  */
+
 isamstream& isamstream::operator>> (alignment& aln) {
-  /* Set iostate bits in response to exceptions from io->get() and from
-  the underlying streambuf, and propagate the exceptions if so instructed
-  by exceptions().
-
-  The formatting layers throw sam::failure, so these set cause failbit to
-  be set; Cansam's streambufs specifically throw sam::* exceptions other
-  than sam::failure, and other streambufs might throw anything at all but
-  surely not sam::failure, so other exceptions set badbit, corresponding to
-  serious streambuf problems such as I/O errors.  */
-
   try {
     if (! io->get(*this, aln)) {
       // We're at EOF, so set eofbit and failbit; but (and this differs from
@@ -53,9 +120,9 @@ isamstream& isamstream::operator>> (alignment& aln) {
     }
   }
   catch (sam::failure& e) {
+    // If an exception is to be thrown, annotate and rethrow the original
+    // exception (rather than the generic one thrown by plain setstate()).
     if (setstate_wouldthrow(failbit)) {
-      // If an exception is to be thrown, annotate and rethrow the original
-      // exception (rather than the generic one thrown by plain setstate()).
       e.set_filename(filename());
       throw;
     }
@@ -76,9 +143,23 @@ isamstream& isamstream::operator>> (alignment& aln) {
   return *this;
 }
 
-
 osamstream& osamstream::operator<< (const alignment& aln) {
-  io->put(*this, aln);
+  try {
+    io->put(*this, aln);
+  }
+  // FIXME hmmm...
+  catch (sam::exception& e) {
+    if (setstate_wouldthrow(badbit)) {
+      e.set_filename(filename());
+      throw;
+    }
+  }
+  catch (...) {
+    if (setstate_wouldthrow(badbit))
+      throw;
+  }
+
+  return *this;
 }
 
 // ********************************************************************

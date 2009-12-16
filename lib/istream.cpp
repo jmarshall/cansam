@@ -6,6 +6,12 @@
 
 #include "lib/utilities.h"
 
+#ifndef EOF
+#define EOF  (std::char_traits<char>::eof())
+// FIXME or maybe inline int eof() { return std::char_traits<char>::eof(); }
+// in lib/utilities.h or maybe just break down and #include <cstdio>
+#endif
+
 using std::string;
 
 namespace sam {

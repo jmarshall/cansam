@@ -15,8 +15,10 @@ namespace sam {
     @brief Base class for Cansam exceptions */
 class exception : public std::ios_base::failure {
 public:
+  /// Construct an exception with the given @a message
   explicit exception(const std::string& message) : failure(message) { }
   virtual ~exception() throw() { }
+
   //using failure::what;
 
   /// The filename associated with this problem, or empty if none or unknown
@@ -33,6 +35,7 @@ private:
     @brief Exceptions representing formatting errors, etc */
 class failure : public exception {
 public:
+  /// Construct a failure exception with the given @a message
   explicit failure(const std::string& message) : exception(message) { }
   virtual ~failure() throw() { }
   //using exception::what;
@@ -42,6 +45,7 @@ public:
     @brief Exceptions raised from system call failures */
 class sysbork : public exception {
 public:
+  /// Construct an exception with the given @a message and @a errno value
   explicit sysbork(const std::string& message, int errnum)
     : exception(message), errnum_(errnum) { }
   virtual ~sysbork() throw() { }

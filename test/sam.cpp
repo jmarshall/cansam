@@ -12,6 +12,11 @@ static void test_reader(test_harness& t) {
   sam::alignment aln;
   while (str >> aln)
     std::cout << aln << '\n';
+
+  std::cout << "* from /dev/null:\n";
+  sam::isamstream str2("/dev/null");
+  while (str2 >> aln)
+    std::cout << aln << '\n';
 }
 
 void test_sam_io(test_harness& t) {

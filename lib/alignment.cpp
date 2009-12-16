@@ -318,10 +318,12 @@ alignment::alignment(const alignment& aln)
   block::copy(p, aln.p);
 }
 
+#if 1
 alignment& alignment::assign(const string& /*line*/) {
   // FIXME
   //return *this;
 }
+#endif
 
 // FIXME Where do these functions go?
 int to_flags(const char* s) {
@@ -375,6 +377,97 @@ int aux_length(char type, const char* value, int value_length) {
 
 int lookup_in_refthingie(const char*) { return -1; }
 int itoa(const char*) { return 0; }
+
+int alignment::approx_sam_record_length() const {
+  int len = 0;
+  len += p->c.name_length;  // This includes the \0, so accounts for the tab
+  len += 4 + 1;
+  len += 5; // FIXME refname
+  len += 10 + 1;
+  len += 3 + 1;
+  len += 5; // FIXME cigar
+
+  return len;
+}
+
+template<typename int_type>
+char* format_hex(char* dest, int_type val) {
+  *dest++ = '0';
+  *dest++ = 'x';
+
+  int_type n = val;
+  do { dest++; n >>= 4; } while (n != 0);
+
+  char* destlim = dest;
+  do { *--dest = "0123456789ABCDEF"[val & 0xf]; val >>= 4; } while (val != 0);
+
+  return destlim;
+}
+
+template<typename int_type>
+char* format(char* dest, int_type val) {
+  int_type n = val;
+  do { dest++; n /= 10; } while (n != 0);
+
+  char* destlim = dest;
+  do { *--dest = (val % 10) + '0'; val /= 10; } while (val != 0);
+
+  return destlim;
+}
+
+char* format_signed(char* dest, int_fast32_t val) {
+  uint_fast32_t uval = val;
+  if (val < 0)
+    *dest++ = '-', uval = -uval;
+  return format(dest, uval);
+}
+
+void alignment::sam_record(char* dest, int dest_length) const {
+#if 0
+  if (! length_is_okay)
+    return excess_needed;
+#endif
+
+  strcpy(dest, qname_c_str()), dest += p->c.name_length - 1;
+
+  *dest++ = '\t';
+  if (0 /*fmtflags & boolalpha*/)
+    strcpy(dest, "FIXME"), dest += 5; // FIXME
+  else if (0 /*fmtflags & hex*/)
+    dest = format_hex(dest, flags());
+  else
+    dest = format(dest, flags());
+
+  *dest++ = '\t';
+  if (rindex() < 0)  *dest++ = '*';
+  else  strcpy(dest, "REFNAME"), dest += 7; // FIXME
+
+  *dest++ = '\t';
+  dest = format(dest, pos());
+
+  *dest++ = '\t';
+  dest = format(dest, mapq());
+
+  *dest++ = '\t';
+  strcpy(dest, "CIGAR"), dest += 5; // FIXME
+
+  *dest++ = '\t';
+  if (mate_rindex() < 0)  *dest++ = '*';
+  else if (mate_rindex() == rindex())  *dest++ = '=';
+  else  strcpy(dest, "MATEREFNAME"), dest += 11; // FIXME
+
+  *dest++ = '\t';
+  // FIXME Do we need to do anything special for 0 or -1 i.e. unmapped?
+  dest = format(dest, mate_pos());
+
+  *dest++ = '\t';
+  dest = format_signed(dest, isize());
+
+  for (int i = 0; i < 0; i++) {
+    *dest++ = '\t';
+    // FIXME iterate over the auxen loop
+  }
+}
 
 void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthingie*/) {
   // An alignment in SAM format is a tab-separated line containing fields

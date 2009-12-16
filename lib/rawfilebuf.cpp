@@ -1,4 +1,6 @@
-#include "sam/rawfilebuf.h"
+#include "sam/streambuf.h"
+
+#include <stdexcept>
 
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -8,7 +10,7 @@
 
 #include "sam/exception.h"
 
-namespace cansam {
+namespace sam {
 
 rawfilebuf*
 rawfilebuf::open(const char* fname, std::ios_base::openmode mode, int perm) {
@@ -23,6 +25,8 @@ rawfilebuf::open(const char* fname, std::ios_base::openmode mode, int perm) {
   // in out		r+	O_RDWR
   // in out trunc	w+	O_RDWR  |O_CREAT|O_TRUNC
   // in out       app	a+	O_RDWR  |O_CREAT|       |O_APPEND    (not std)
+  //
+  // (Actually will be std, as will in|app, app, as per DR 596.)
 
   int flags = 0;
   if (mode & ios::in) {
@@ -85,22 +89,6 @@ void rawfilebuf::close() {
     throw sam::sysbork("close() failed", errno);
 }
 
-// FIXME This paranoia is hopefully unwarranted, and we can just use
-// the EOF-returning defaults supplied by std::streambuf.
-std::streambuf::int_type rawfilebuf::uflow() {
-#ifdef BE_NICE_AND_EFFICIENT
-  throw std::ios::failure("rawfilebuf::uflow() invoked");
-#else
-  char c;
-  std::streamsize nread = xsgetn(&c, 1);
-  return (nread == 1)? int_type(c) : EOF;
-#endif
-}
-
-std::streambuf::int_type rawfilebuf::underflow() {
-  throw std::ios::failure("rawfilebuf::underflow() invoked");
-}
-
 std::streamsize rawfilebuf::xsgetn(char* s, std::streamsize n) {
   ssize_t nread;
   do nread = ::read(fd_, s, n); while (nread < 0 && errno == EINTR);
@@ -159,6 +147,18 @@ rawfilebuf::seekoff(std::streamoff off, std::ios_base::seekdir way,
 std::streampos
 rawfilebuf::seekpos(std::streampos pos, std::ios_base::openmode) {
   return ::lseek(fd_, pos, SEEK_SET);
+}
+
+std::streambuf::int_type rawfilebuf::uflow() {
+  throw std::logic_error("rawfilebuf::uflow() invoked");
+}
+
+std::streambuf::int_type rawfilebuf::underflow() {
+  throw std::logic_error("rawfilebuf::underflow() invoked");
+}
+
+std::streambuf::int_type rawfilebuf::overflow(int_type) {
+  throw std::logic_error("rawfilebuf::overflow() invoked");
 }
 
 } // namespace sam

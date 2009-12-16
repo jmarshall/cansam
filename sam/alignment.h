@@ -120,6 +120,7 @@ public:
   const char* raw_seq() const { return p->data() + p->seq_offset(); }
 
   /// Quality string
+  // FIXME uh, no, needs offsetted
   std::string qual() const
     { return std::string(p->data() + p->qual_offset(), p->c.read_length); }
 
@@ -222,6 +223,10 @@ public:
   coord_t right_pos() const  { return pos() + cigar_span() - 1; }
   /// Rightmost position (0-based)
   coord_t right_zpos() const { return zpos() + cigar_span() - 1; }
+
+  // FIXME maybe should be private/friend?
+  int approx_sam_record_length() const;
+  void sam_record(char*, int) const;
   //@}
 
   /// Pack sequence string into two-base-per-byte encoding
