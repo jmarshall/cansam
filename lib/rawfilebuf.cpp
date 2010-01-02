@@ -86,14 +86,14 @@ int rawfilebuf::close_nothrow() {
 
 void rawfilebuf::close() {
   if (close_nothrow() < 0)
-    throw sam::sysbork("close() failed", errno);
+    throw sam::system_error("close() failed", errno);
 }
 
 std::streamsize rawfilebuf::xsgetn(char* s, std::streamsize n) {
   ssize_t nread;
   do nread = ::read(fd_, s, n); while (nread < 0 && errno == EINTR);
   if (nread < 0)
-    throw sam::sysbork("read() failed", errno);
+    throw sam::system_error("read() failed", errno);
 
   return nread;
 }
@@ -105,7 +105,7 @@ std::streamsize rawfilebuf::xsputn(const char* s, std::streamsize n) {
     ssize_t nwritten;
     do nwritten = ::write(fd_, s, n); while (nwritten < 0 && errno == EINTR);
     if (nwritten < 0)
-      throw sam::sysbork("write() failed", errno);
+      throw sam::system_error("write() failed", errno);
 
     total += nwritten;
     s += nwritten;

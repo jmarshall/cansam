@@ -26,13 +26,13 @@ void samstream_base::close() {
   else if (std::filebuf* fbuf = dynamic_cast<std::filebuf*>(rdbuf()))
     fbuf->close();
 
-  // FIXME maybe this should delete rdbuf() (if delete_rdbuf) and/or io
+  // FIXME maybe this should delete rdbuf() (if owned_rdbuf_) and/or io
 }
 
 samstream_base::~samstream_base() {
   delete io;
 
-  if (delete_rdbuf) {
+  if (owned_rdbuf_) {
     std::streambuf* sbuf = rdbuf(NULL);
     delete sbuf;
   }
@@ -48,25 +48,22 @@ bool samstream_base::setstate_wouldthrow(iostate state) {
 }
 
 
-/* This constructor wants to:
-    init ios(NULL)
-    io = NULL
-    delete_rdbuf = true
-    filename_ = filename
-    create an appropriate sam::streambuf   [can throw]
-    rdbuf(sbuf);
-    open sbuf as appropriate   [can possibly throw]
-    if (is_open)
-      io = new_in(...)   [can throw]
-*/
+std::streambuf*
+new_and_open(const std::string& filename, std::ios_base::openmode mode) {
+  // TODO Eventually might look for URL schemes and make a different streambuf
 
-isamstream::isamstream(const std::string& filename, openmode mode)
-  : samstream_base(new rawfilebuf, NULL) {
-  //sbuf.open(filename.c_str(), mode);
+  return new rawfilebuf(filename.c_str(), mode);
 }
 
-isamstream::isamstream(std::streambuf* sbuf, openmode mode)
-  : samstream_base(sbuf, sambamio::new_in(sbuf)) {
+isamstream::isamstream(const std::string& filename, openmode mode)
+  : samstream_base(new_and_open(filename, mode), true, NULL) {
+  set_filename(filename);
+  if (is_open())
+    io = sambamio::new_in(rdbuf());
+}
+
+isamstream::isamstream(std::streambuf* sbuf)
+  : samstream_base(sbuf, false, sambamio::new_in(sbuf)) {
   // FIXME read the heaaders, probably
 }
 
@@ -82,42 +79,30 @@ isamstream& isamstream::rewind() {
 #endif
 
 
-#if 0
-std::streamsize isamstream::rdbuf_sgetn(char* buffer, std::streamsize size) {
-  std::stream n;
-  try {
-    n = rdbuf()->sgetn(buffer, size);
-  }
-  catch (sam::exception& e) {
-    e.set_filename(filename());
-    if (setstate_wouldthrow(badbit))  throw;
-    else  throw nonpropagated();
-  }
-  catch (...) {
-    if (setstate_wouldthrow(badbit))  throw;
-    else  throw nonpropagated();
-  }
-}
-#endif
-
 /* These operators set iostate bits in response to exceptions from io->get()
 and from the underlying streambuf, and propagate the exceptions if instructed
 to do so by exceptions().
 
-The formatting layers throw sam::failure exceptions, so these cause failbit
+The formatting layers throw sam::bad_format exceptions, so these cause failbit
 to be set; Cansam's streambufs specifically throw sam::* exceptions other than
-sam::failure, and other streambufs might throw anything at all but presumably
-not sam::failure, so other exceptions set badbit, corresponding to serious
+sam::bad_format, and other streambufs might throw anything at all but surely
+not sam::bad_format, so other exceptions set badbit, corresponding to serious
 streambuf problems such as I/O errors.  */
 
 isamstream& isamstream::operator>> (alignment& aln) {
   try {
     if (! io->get(*this, aln)) {
-      // We're at EOF, so set eofbit and failbit; but (and this differs from
-      // standard streams) throw only if exceptions are requested for eofbit.
-      if (setstate_wouldthrow(eofbit | failbit) && (exceptions() & eofbit))
-	throw sam::failure("eof");
+      // There are no more records, so set failbit but don't throw (thus
+      // differing from standard streams) as this is not a failure as such.
+      // Leave eofbit as is, as it means EOF-seen-on-streambuf rather than
+      // no-more-records, and it is almost certainly already set anyway.
+      (void) setstate_wouldthrow(failbit);
     }
+  }
+  catch (const sambamio::eof_exception&) {
+    // An exception was thrown while setting eofbit within io->get().
+    // Propagate it as an externally-known exception type.
+    throw std::ios::failure("eof");
   }
   catch (sam::failure& e) {
     // If an exception is to be thrown, annotate and rethrow the original
@@ -197,20 +182,16 @@ std::ios_base::openmode extension(const string& filename) {
   }
 
   if (dotpos == string::npos)
-    return ios::in; // FIXME openmode(0);
+    return sam_format;
 
   string ext(filename, dotpos);
   for (string::size_type i = 0; i < ext.length(); i++)
     ext[i] = ::tolower(ext[i]);
 
-  // FIXME
-#if 0
-  if (ext == ".bam")  return ios::binary; // FIXME binary|compressed
-  else if (ext == ".sam")  return openmode(2);  // FIXME fix us too
-  else if (ext == ".sam.gz")  return compressed;
-  else  return openmode(0);
-#endif
-  return ios::in;
+  if (ext == ".bam")  return bam_format;
+  else if (ext == ".sam")  return sam_format;
+  else if (ext == ".sam.gz")  return sam_format | compressed;
+  else  return sam_format;
 }
 
 } // namespace sam

@@ -9,7 +9,34 @@
 #include <vector>
 #include <map>
 
+#include "sam/types.h"
+
 namespace sam {
+
+#if 0
+/*. @class sam::reference sam/collection.h
+    @brief Reference sequence record, corresponding to an @@SQ header */
+class reference {
+public:
+  reference(const std::string& name, coord_t length)
+    : name_(name), length_(length) { }
+
+  ~reference() { }
+
+  /// Name of the sequence
+  std::string name() const { return name_; }
+
+  /// Sequence length
+  coord_t length() const { return length_; }
+
+  void set_name(const std::string& name) { name_ = name; }
+  void set_length(coord_t length) { length_ = length; }
+
+private:
+  std::string name_;
+  coord_t length_;
+};
+#endif
 
 /** @class sam::collection sam/collection.h
     @brief Header information for a collection of SAM/BAM records */
@@ -20,6 +47,9 @@ public:
 
   // FIXME or call it rindex or so?
   int findseq(const std::string& rname) const;
+
+  /// 
+  std::string rname(int rindex) const;
 
 #if 0
   // @cond private
@@ -32,6 +62,9 @@ public:
 
   void read_reftable();
 #endif
+
+  // FIXME prob not public
+  static collection& find(unsigned cindex) { return *collections[cindex]; }
 
 private:
   //std::vector<something> refseqs;

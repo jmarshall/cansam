@@ -27,12 +27,16 @@ public:
   /// Set an associated filename
   void set_filename(const std::string& filename) { filename_ = filename; }
 
+protected:
+  /// A buffer for use by what()
+  std::string message;
+
 private:
   std::string filename_;
 };
 
 /** @class sam::failure sam/exception.h
-    @brief Exceptions representing formatting errors, etc */
+    @brief Exception representing formatting errors, etc */
 class failure : public exception {
 public:
   /// Construct a failure exception with the given @a message
@@ -41,14 +45,17 @@ public:
   //using exception::what;
 };
 
-/** @class sam::sysbork sam/exception.h
-    @brief Exceptions raised from system call failures */
-class sysbork : public exception {
+/** @class sam::system_error sam/exception.h
+    @brief Exception raised from system call failures */
+class system_error : public exception {
 public:
   /// Construct an exception with the given @a message and @a errno value
-  explicit sysbork(const std::string& message, int errnum)
+  explicit system_error(const std::string& message, int errnum)
     : exception(message), errnum_(errnum) { }
-  virtual ~sysbork() throw() { }
+
+  virtual ~system_error() throw() { }
+
+  /// Returns a message, including filename and @a errno, if available
   virtual const char* what() const throw();
 
   /// The @c errno error code underlying this exception
@@ -56,6 +63,33 @@ public:
 
 private:
   int errnum_;
+};
+
+/** @class sam::bad_format sam/exception.h
+    @brief Exception representing a SAM or BAM parsing error
+
+Invalid records encountered while reading SAM or BAM streams cause the
+stream's @c failbit state flag to be set and, if @c failbit is listed in its
+@c exceptions(), a sam::bad_format exception will be thrown accordingly.  */
+class bad_format : public exception {
+public:
+  /// Construct an exception with the given particulars
+  explicit bad_format(const std::string& message, int recnum = 0)
+    : exception(message), recnum_(recnum) { }
+
+  virtual ~bad_format() throw() { }
+
+  /// The full message associated with this problem
+  virtual const char* what() const throw();
+
+  /// The record number associated with this problem, or 0 if none or unknown
+  int recnum() const { return recnum_; }
+
+  /// Set an associated record number
+  void set_recnum(int recnum) { recnum_ = recnum; }
+
+private:
+  int recnum_;
 };
 
 } // namespace sam

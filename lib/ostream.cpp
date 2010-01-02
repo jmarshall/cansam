@@ -5,17 +5,19 @@
 
 namespace sam {
 
+#if 1
 std::ostream& operator<< (std::ostream& out, const header& hdr) {
   out << '@' << hdr.type();
   for (header::const_iterator it = hdr.begin(); it != hdr.end(); ++it) {
     out << '\t';
-    if (! it->tag.empty())
-      out << it->tag << ':';
-    out << it->value;
+    if (it->tag()[0])
+      out << it->tag() << ':';
+    out << it->field();
   }
 
   return out;
 }
+#endif
 
 std::ostream& operator<< (std::ostream& out, const alignment& aln) {
   std::ios_base::fmtflags flags = out.flags();

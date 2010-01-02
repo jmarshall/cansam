@@ -1,6 +1,7 @@
 #include "lib/utilities.h"
 
 #include <string>
+#include <iomanip>
 
 using std::string;
 
@@ -29,6 +30,14 @@ coord_t to_int(const string& str,
   while (s < lim)
     val = 10 * val + *s++ - '0';
   return val;
+}
+
+make_string& make_string::operator<< (unsigned char c) {
+  if (isgraph(c))  buffer << c;
+  else if (c == '\0')  buffer << "\\0";
+  else  buffer << "\\x" << std::hex << std::setw(2) << unsigned(c);
+
+  return *this;
 }
 
 } // namespace sam

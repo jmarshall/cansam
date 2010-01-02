@@ -45,6 +45,21 @@ void test_unpack_seq(test_harness& t) {
   t.check(threw, "pack_seq.invalid_char");
 }
 
+void test_iterators(test_harness& t, const sam::alignment& aln) {
+  sam::alignment::const_iterator it;
+  sam::alignment::const_iterator it1 = it;
+  sam::alignment::const_iterator it2(it);
+
+  t.check(it1 == it2, "const_iterator.==");
+  t.check(!(it1 != it2), "const_iterator.!=");
+
+  for (it = aln.begin(); it != aln.end(); ++it) {
+    // dereference it...
+  }
+
+  it = aln.begin();
+  it++;
+}
 
 void test_alignments(test_harness& t) {
   sam::alignment aln;
@@ -57,4 +72,5 @@ void test_alignments(test_harness& t) {
   a2 = a1;
 
   test_unpack_seq(t);
+  test_iterators(t, a1);
 }

@@ -16,6 +16,8 @@
 #include "sam/collection.h"
 #include "sam/exception.h"
 
+#include "lib/utilities.h"
+
 using std::string;
 
 namespace sam {
@@ -26,9 +28,11 @@ namespace sam {
 // For order(); 0, FIRST_IN_PAIR, SECOND_IN_PAIR, FIRST_IN_PAIR|SECOND_IN_PAIR.
 const int alignment::order_value[4] = { 0, -1, +1, 0 };
 
+#if 1
 string alignment::rname() const {
   return "FIXME"; // FIXME
 }
+#endif
 
 string alignment::cigar() const {
   return "FIXME"; // FIXME
@@ -40,14 +44,6 @@ scoord_t alignment::cigar_span() const {
 
 string alignment::mate_rname() const {
   return "FIXME"; // FIXME
-}
-
-static std::string printify(unsigned char c) {
-  std::ostringstream str;
-  if (isgraph(c))  str << '\'' << c << '\'';
-  else  str << std::hex << std::showbase << unsigned(c);
-
-  return str.str();
 }
 
 void alignment::pack_seq(char* dest, const char* seq, int seq_length) {
@@ -82,16 +78,17 @@ void alignment::pack_seq(char* dest, const char* seq, int seq_length) {
     char hi = encode[*unpacked++];
     char lo = encode[*unpacked++];
     if ((hi | lo) & 16)
-      throw sam::failure("Invalid character (" +
-	      printify(unpacked[(hi & 16)? -2 : -1]) + ") in sequence string");
+      throw bad_format(make_string()
+	  << "Invalid character ('" << unpacked[(hi & 16)? -2 : -1]
+	  << "') in sequence string");
     *dest++ = (hi << 4) | lo;
   }
 
   if (even_length < seq_length) {
     char hi = encode[*unpacked];
     if (hi & 16)
-      throw sam::failure("Invalid character (" +
-	      printify(*unpacked) + ") in sequence string");
+      throw bad_format(make_string()
+	  << "Invalid character ('" << *unpacked << "') in sequence string");
     *dest = (hi << 4);
   }
 }
@@ -138,8 +135,8 @@ void alignment::pack_qual(char* dest, const char* qual, int seq_length) {
   for (int i = 0; i < seq_length; i++) {
     char q = *qual++;
     if (q < 33 || q > 126)
-      throw sam::failure("Invalid character (" + printify(q) +
-			 ") in quality string");
+      throw bad_format(make_string()
+	  << "Invalid character ('" << q << "') in quality string");
     *dest++ = q - 33;
   }
 }
@@ -333,7 +330,7 @@ int to_flags(const char* s) {
     char* slim;
     val = strtol(s, &slim, 0);
     if (*slim != '\0')
-      throw sam::failure("Trailing gunge in flags field");
+      throw bad_format("Trailing gunge in flags field");
   }
   else {
     // FIXME One day there'll be a defined text representation
@@ -359,11 +356,48 @@ int calc_cigar_length(const char* s) {
   return n;
 }
 
-int aux_length(char type, const char* value, int value_length) {
+int alignment::aux_length(const char* aux) {
+  switch (aux[2]) {
+  case 'A':
+    return 2 + 1 + 1;
+
+  case 'c':
+  case 'C':
+    return 2 + 1 + sizeof(int8_t);
+
+  case 's':
+  case 'S':
+    return 2 + 1 + sizeof(int16_t);
+
+  case 'i':
+  case 'I':
+    return 2 + 1 + sizeof(int32_t);
+
+  case 'f':
+    return 2 + 1 + 4;
+
+  case 'd':
+    return 2 + 1 + 8;
+
+  case 'Z':
+  case 'H':
+    // The alignment::block adds a sentinel, so this "string" is NUL-terminated
+    // even if the record is malformatted.
+    // FIXME Is this right for H?
+    return 2 + 1 + strlen(&aux[3]);
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << aux[0] << aux[1] << "' has invalid type ('"
+	<< aux[2] << "')");
+  }
+}
+
+int sam_aux_length(char type, const char* value, int value_length) {
   switch (type) {
   case 'A':
     if (value_length != 1)
-      throw sam::failure("Type A aux field has length other than 1");
+      throw bad_format("Type 'A' aux field has length other than 1");
     return 1;
 
   case 'i':
@@ -478,7 +512,7 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
 	 firstaux };
 
   if (nfields < 11)
-    throw sam::failure("Too few fields in SAM record");
+    throw bad_format("Too few fields in SAM record");
 
   int name_length = fields[qname+1] - fields[qname]; // including terminator
   int cigar_length = calc_cigar_length(fields[cigar]);
@@ -492,9 +526,9 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
     qual_length = 0;
   else if (qual_length != seq_length) {
     if (seq_length == 0)
-      throw sam::failure("QUAL specified when SEQ is absent");
+      throw bad_format("QUAL specified when SEQ is absent");
     else
-      throw sam::failure("SEQ and QUAL differ in length");
+      throw bad_format("SEQ and QUAL differ in length");
   }
 
   int size = sizeof(block_header) + sizeof(bamcore)
@@ -505,8 +539,8 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
     int length = fields[i+1] - fields[i] - 1;
     char* aux = fields[i];
     if (length < 5 || aux[2] != ':' || aux[4] != ':')
-      throw sam::failure("Malformatted aux field");
-    size += 3 + aux_length(aux[3], &aux[5], length - 5);
+      throw bad_format("Malformatted aux field");
+    size += 3 + sam_aux_length(aux[3], &aux[5], length - 5);
   }
 
   if (p->capacity() < size)

@@ -15,4 +15,8 @@ typedef long scoord_t;
 
 } // namespace sam
 
+// @cond private
+#define no_throw() throw()
+// @endcond
+
 #endif

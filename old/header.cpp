@@ -6,7 +6,6 @@ using std::string;
 
 namespace sam {
 
-#if 1
 header& header::assign(const string& line) {
   // FIXME hmmm?
   // Accept a missing '@' to avoid inventing an error to be handled.
@@ -21,32 +20,7 @@ header& header::assign(const string& line) {
     tabpos = line.find('\t', pos);
 
     if (tabpos - pos >= 3 && line[pos + 2] == ':')
-      push_back(line.substr(pos, 2).c_str(),
-		line.substr(pos + 3, tabpos - (pos + 3)));
-    else {
-      // The field has no tag; sadly this can happen, e.g., in @CO comments.
-      push_back("", line.substr(pos, tabpos - pos));
-    }
-  }
-
-  return *this;
-}
-#else
-header& header::assign(const string& line) {
-  // FIXME hmmm?
-  // Accept a missing '@' to avoid inventing an error to be handled.
-  string::size_type pos = (line.length() >= 1 && line[0] == '@')? 1 : 0;
-
-  string::size_type tabpos = line.find('\t', pos);
-  type_.assign(line, pos, tabpos - pos);
-
-  clear();
-  while (tabpos != string::npos) {
-    pos = tabpos + 1;
-    tabpos = line.find('\t', pos);
-
-    if (tabpos - pos >= 3 && line[pos + 2] == ':')
-      push_back(header_field(line.substr(pos, 2).c_str(),
+      push_back(header_field(line.substr(pos, 2),
 			     line.substr(pos + 3, tabpos - (pos + 3))));
     else {
       // The field has no tag; sadly this can happen, e.g., in @CO comments.
@@ -56,7 +30,6 @@ header& header::assign(const string& line) {
 
   return *this;
 }
-#endif
 
 string header::str() const {
   string s = "@";
@@ -64,11 +37,11 @@ string header::str() const {
 
   for (const_iterator it = begin(); it != end(); ++it) {
     s += '\t';
-    if (! it->tag().empty()) {
-      s += it->tag();
+    if (! it->tag.empty()) {
+      s += it->tag;
       s += ':';
       }
-    s += it->field();
+    s += it->value;
   }
 
   return s;
@@ -76,14 +49,14 @@ string header::str() const {
 
 header::const_iterator header::find(const char* tag) const {
   for (const_iterator it = begin(); it != end(); ++it)
-    if (it->tag() == tag)  return it;
+    if (it->tag == tag)  return it;
 
   return end();
 }
 
 header::iterator header::find(const char* tag) {
   for (iterator it = begin(); it != end(); ++it)
-    if (it->tag() == tag)  return it;
+    if (it->tag == tag)  return it;
 
   return end();
 }
@@ -91,20 +64,9 @@ header::iterator header::find(const char* tag) {
 std::string header::field(const char* tag,
 			  const std::string& default_value) const {
   for (const_iterator it = begin(); it != end(); ++it)
-    if (it->tag() == tag)  return it->field();
+    if (it->tag == tag)  return it->value;
 
   return default_value;
 }
-
-#if 0
-extern void bar(const std::string&);
-void foo(header::iterator it) {
-  bar(it->tag());
-  bar(it->field());
-  int a = it->field_int();
-  //it->set_field("banana");
-  //it->set_field(a+5);
-}
-#endif
 
 } // namespace sam

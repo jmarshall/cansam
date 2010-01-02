@@ -9,6 +9,8 @@ class alignment;
 
 class samstream_base::sambamio {
 public:
+  class eof_exception { };
+
   static sambamio* new_in(std::streambuf* sbuf);
   static sambamio* new_out(std::streambuf* sbuf, openmode);
 

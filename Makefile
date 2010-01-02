@@ -14,7 +14,8 @@ libcansam.a: $(LIBOBJS)
 	$(AR) cr $@ $(LIBOBJS)
 	ranlib $@
 
-lib/alignment.o: lib/alignment.cpp sam/alignment.h sam/exception.h
+lib/alignment.o: lib/alignment.cpp sam/alignment.h sam/exception.h \
+		 lib/utilities.h
 lib/collection.o: lib/collection.cpp sam/collection.h
 lib/exception.o: lib/exception.cpp sam/exception.h
 lib/header.o: lib/header.cpp sam/header.h

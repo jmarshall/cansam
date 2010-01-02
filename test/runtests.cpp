@@ -1,6 +1,8 @@
 #include <iostream>
 #include <cstdlib>
 
+#include "sam/exception.h"
+
 #include "test/test.h"
 
 void test_harness::check(bool expr, const string& title) {
@@ -47,6 +49,18 @@ int main() {
     test_alignments(t);
     test_sam_io(t);
     test_wire(t);
+  }
+  catch (const sam::exception& e) {
+    if (e.filename().empty())
+      std::cerr << "Excess sam::exception: " << e.what() << '\n';
+    else
+      std::cerr << "Excess sam::exception from " << e.filename() << ": "
+		<< e.what() << '\n';
+    t.nfail++;
+  }
+  catch (const std::exception& e) {
+    std::cerr << "Excess std::exception: " << e.what() << '\n';
+    t.nfail++;
   }
   catch (const char* what) {
     std::cerr << "Excess exception: " << what << '\n';

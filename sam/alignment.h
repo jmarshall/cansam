@@ -13,6 +13,7 @@
 #include <stdint.h>
 
 #include "sam/types.h"
+#include "sam/collection.h"
 
 namespace sam {
 
@@ -52,9 +53,11 @@ public:
   /// Construct an empty alignment.
   alignment() : p(&empty) { }
 
+#if 0
   /// Construct an alignment by splitting up a tab-separated text string.
   // FIXME what reference_thingie does this use?
   explicit alignment(const std::string& line) { assign(line); }
+#endif
 
   /// Construct a copy of an alignment.
   alignment(const alignment& aln);
@@ -84,7 +87,10 @@ public:
   int flags() const { return p->c.flags; }
 
   int rindex() const { return p->c.rindex; } ///< Reference identifier (or -1)
-  std::string rname() const; ///< Reference name (or '*' @c *)
+
+  /// Reference name (or '*' @c *)
+  std::string rname() const
+    ;// FIXME { return collection::find(p->h.cindex).rname(p->c.rindex); }
 
   coord_t pos() const  { return p->c.zpos+1; } ///< Leftmost position (1-based)
   coord_t zpos() const { return p->c.zpos; }   ///< Leftmost position (0-based)
@@ -138,6 +144,49 @@ public:
 
   double aux_double(const char* tag) const;
   double aux_double(const char* tag, double default_value) const;
+  //@}
+
+  /** @name Auxiliary fields as a collection
+  Alignment records provide limited collection-style access to their
+  auxiliary fields.  */
+  //@{
+  struct iterator {
+    char* aux;
+    // ...etc...
+  };
+
+  class const_iterator {
+  public:
+    const_iterator() { }
+    const_iterator(const const_iterator& it) : aux(it.aux) { }
+    ~const_iterator() { }
+    const_iterator& operator= (const_iterator it)
+      { aux = it.aux; return *this; }
+
+    bool operator== (const_iterator rhs) const { return aux == rhs.aux; }
+    bool operator!= (const_iterator rhs) const { return aux != rhs.aux; }
+
+    // operator*
+    // operator->
+
+    const_iterator& operator++ () { aux += aux_length(aux); return *this; }
+    const_iterator operator++ (int)
+      { const char* orig_aux = aux;
+	aux += aux_length(aux); return const_iterator(orig_aux); }
+
+  private:
+    friend class alignment;
+    explicit const_iterator(const char* p) : aux(p) { }
+
+    const char* aux;
+  };
+
+  const_iterator begin() const
+    { return const_iterator(p->data() + p->auxen_offset()); }
+
+  const_iterator end() const { return const_iterator(NULL); /*FIXME*/ }
+
+  const_iterator find(const char* tag) const;
   //@}
 
   /** @name Additional field accessors
@@ -317,6 +366,8 @@ private:
 
   void resize_unshare_copy(int size);
   void resize_unshare_discard(int size);
+
+  static int aux_length(const char* aux);
 
   static void unpack_seq(std::string::iterator dest,
 			 const char* raw_seq, int seq_length);

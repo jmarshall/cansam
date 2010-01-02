@@ -3,8 +3,6 @@
 #include <streambuf>
 #include <vector>
 
-#include <iostream> // FIXME NUKEME
-
 #include <cstring>
 
 #include "sam/stream.h"
@@ -29,7 +27,7 @@ packed cigar and seq fields are first and thus naturally aligned.  */
 
 // *** bamio
 
-class bamio : public samstream_base::sambamio {
+class samstream_base::bamio : public samstream_base::sambamio {
 public:
   bamio(const char* text, std::streamsize textsize);
   virtual ~bamio() { }
@@ -39,22 +37,22 @@ public:
   virtual void put(osamstream& strm, const alignment& aln);
 };
 
-bamio::bamio(const char* text, std::streamsize textsize) {
+samstream_base::bamio::bamio(const char* text, std::streamsize textsize) {
 }
 
-bool bamio::get_headers(isamstream& strm) {
+bool samstream_base::bamio::get_headers(isamstream& strm) {
 }
 
-bool bamio::get(isamstream& strm, alignment& aln) {
+bool samstream_base::bamio::get(isamstream& strm, alignment& aln) {
 }
 
-void bamio::put(osamstream& strm, const alignment& aln) {
+void samstream_base::bamio::put(osamstream& strm, const alignment& aln) {
 }
 
 
 // *** samio
 
-class samio : public samstream_base::sambamio {
+class samstream_base::samio : public samstream_base::sambamio {
 public:
   samio(const char* text, std::streamsize textsize);
   virtual ~samio();
@@ -74,7 +72,7 @@ private:
   char* flush_buffer(char*);
 };
 
-samio::samio(const char* text, std::streamsize textsize) {
+samstream_base::samio::samio(const char* text, std::streamsize textsize) {
   bufsize = 32768;
   buffer = new char[bufsize];
 
@@ -84,7 +82,7 @@ samio::samio(const char* text, std::streamsize textsize) {
   *end = '\n';
 }
 
-samio::~samio() {
+samstream_base::samio::~samio() {
   delete [] buffer;
 }
 
@@ -99,7 +97,7 @@ samio::~samio() {
 // start of the buffer, or, if  begin  is already at the start of the buffer,
 // by enlarging it; rewires pointers, including  ptr  and those in  fields,
 // to point to the same places in the new location.
-char* samio::flush_buffer(char* ptr) {
+char* samstream_base::samio::flush_buffer(char* ptr) {
   char* oldbuffer = NULL;
   char* oldbegin = begin;
 
@@ -108,7 +106,6 @@ char* samio::flush_buffer(char* ptr) {
   }
   else {
     bufsize *= 2;
-std::clog << "samio::flush_buffer realloc " << bufsize << " bytes\n";
     char* newbuffer = new char[bufsize];
     oldbuffer = buffer;
     memcpy(newbuffer, begin, end - begin);
@@ -132,7 +129,7 @@ std::clog << "samio::flush_buffer realloc " << bufsize << " bytes\n";
 and returns the number of fields present (or 0 at EOF). 
 
 */
-int samio::getline(isamstream& stream) {
+int samstream_base::samio::getline(isamstream& stream) {
   fields.clear();
   fields.push_back(begin);
 
@@ -170,11 +167,14 @@ int samio::getline(isamstream& stream) {
 	// This is the sentinel, and there are more characters to be read.
 	s = flush_buffer(s);
 
-	// Buffer space available to be filled is [end,bufsize-1),
-	// leaving one character to spare for the sentinel.
-	std::streamsize n = 5;//FIXME stream.rdbuf_sgetn(end, &buffer[bufsize-1] - end);
+	// Buffer space available to be filled is [end,bufsize-1), leaving
+	// one character to spare for the sentinel.
+	std::streamsize n = stream.rdbuf()->sgetn(end, &buffer[bufsize-1]-end);
+	if (n == 0) {
+	  if (stream.setstate_wouldthrow(eofbit))
+	    throw eof_exception();
+	}
 
-	if (n == 0)  stream.setstate(std::ios_base::eofbit);
 	end += n;
 	*end = '\n';
       }
@@ -186,10 +186,10 @@ int samio::getline(isamstream& stream) {
   return fields.size() - 1;
 }
 
-bool samio::get_headers(isamstream& strm) {
+bool samstream_base::samio::get_headers(isamstream& strm) {
 }
 
-bool samio::get(isamstream& stream, alignment& aln) {
+bool samstream_base::samio::get(isamstream& stream, alignment& aln) {
   int nfields = getline(stream);
 #if 0
 std::clog << "getline returned " << nfields << ":";
@@ -204,7 +204,7 @@ std::clog << "\n";
   return true;
 }
 
-void samio::put(osamstream& strm, const alignment& aln) {
+void samstream_base::samio::put(osamstream& strm, const alignment& aln) {
 }
 
 

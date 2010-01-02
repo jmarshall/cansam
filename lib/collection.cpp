@@ -10,4 +10,6 @@ collection::collection() {
 collection::~collection() {
 }
 
+std::vector<collection*> collection::collections;
+
 } // namespace sam

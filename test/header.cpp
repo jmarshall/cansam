@@ -12,6 +12,7 @@ void test_headers(test_harness& t) {
 
   h.assign(pg);
   t.check(h.str(), pg, "pg: assign/str");
+#if 0
 
   h.assign("@NL");
   t.check(h.type(), "NL", "empty.type");
@@ -40,4 +41,5 @@ void test_headers(test_harness& t) {
   t.check(h.field("XX", "missing"), "missing", "field.notfound");
 
   t.check(h.find("XX") == h.end(), "find.notfound");
+#endif
 }
