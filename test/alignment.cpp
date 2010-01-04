@@ -1,3 +1,5 @@
+#include <iostream> // FIXME NUKE-ME
+
 #include "test/test.h"
 #include "sam/alignment.h"
 
@@ -53,11 +55,14 @@ void test_iterators(test_harness& t, const sam::alignment& aln) {
   t.check(it1 == it2, "const_iterator.==");
   t.check(!(it1 != it2), "const_iterator.!=");
 
+std::clog << "begin: " << aln.begin() << ", end: " << aln.end() << "\n";
+
   for (it = aln.begin(); it != aln.end(); ++it) {
     // dereference it...
   }
 
   it = aln.begin();
+std::clog << "And finally...\n";
   it++;
 }
 

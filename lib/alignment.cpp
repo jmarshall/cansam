@@ -17,6 +17,7 @@
 #include "sam/exception.h"
 
 #include "lib/utilities.h"
+#include "lib/wire.h"
 
 using std::string;
 
@@ -318,7 +319,7 @@ alignment::alignment(const alignment& aln)
 #if 1
 alignment& alignment::assign(const string& /*line*/) {
   // FIXME
-  //return *this;
+  return *this;
 }
 #endif
 
@@ -356,43 +357,7 @@ int calc_cigar_length(const char* s) {
   return n;
 }
 
-int alignment::aux_length(const char* aux) {
-  switch (aux[2]) {
-  case 'A':
-    return 2 + 1 + 1;
-
-  case 'c':
-  case 'C':
-    return 2 + 1 + sizeof(int8_t);
-
-  case 's':
-  case 'S':
-    return 2 + 1 + sizeof(int16_t);
-
-  case 'i':
-  case 'I':
-    return 2 + 1 + sizeof(int32_t);
-
-  case 'f':
-    return 2 + 1 + 4;
-
-  case 'd':
-    return 2 + 1 + 8;
-
-  case 'Z':
-  case 'H':
-    // The alignment::block adds a sentinel, so this "string" is NUL-terminated
-    // even if the record is malformatted.
-    // FIXME Is this right for H?
-    return 2 + 1 + strlen(&aux[3]);
-
-  default:
-    throw bad_format(make_string()
-	<< "Aux field '" << aux[0] << aux[1] << "' has invalid type ('"
-	<< aux[2] << "')");
-  }
-}
-
+#if 0
 int sam_aux_length(char type, const char* value, int value_length) {
   switch (type) {
   case 'A':
@@ -408,6 +373,12 @@ int sam_aux_length(char type, const char* value, int value_length) {
     break;
   }
 }
+#else
+// FIXME
+int sam_aux_length(char, const char*, int) {
+  return 20;
+}
+#endif
 
 int lookup_in_refthingie(const char*) { return -1; }
 int itoa(const char*) { return 0; }
@@ -456,7 +427,7 @@ char* format_signed(char* dest, int_fast32_t val) {
   return format(dest, uval);
 }
 
-void alignment::sam_record(char* dest, int dest_length) const {
+void alignment::sam_record(char* dest, int /*dest_length*/) const {
 #if 0
   if (! length_is_okay)
     return excess_needed;
@@ -593,5 +564,108 @@ inline bool tag_eq(const char* s1, const char* s2) {
 }
 
 #endif
+
+// 4. Iterators
+//=============
+
+int alignment::aux_field::size() const {
+  switch (type_) {
+  case 'A':
+    return 2 + 1 + 1;
+
+  case 'c':
+  case 'C':
+    return 2 + 1 + sizeof(int8_t);
+
+  case 's':
+  case 'S':
+    return 2 + 1 + sizeof(int16_t);
+
+  case 'i':
+  case 'I':
+    return 2 + 1 + sizeof(int32_t);
+
+  case 'f':
+    return 2 + 1 + 4;
+
+  case 'd':
+    return 2 + 1 + 8;
+
+  case 'Z':
+  case 'H':
+    // The alignment::block adds a sentinel, so this "string" is NUL-terminated
+    // even if the alignment record is malformatted.
+    // FIXME Is this right for H?
+    return 2 + 1 + strlen(data);
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+}
+
+static string stringize(int) {
+  return "FIXME"; // FIXME
+}
+
+string alignment::aux_field::value() const {
+  switch (type_) {
+  case 'A':
+    return string(1, data[0]);
+
+  case 'c':
+  case 'C':
+  case 's':
+  case 'S':
+  case 'i':
+  case 'I':
+    return stringize(value_int());
+
+  case 'f':
+  case 'd':
+    throw exception("Implement aux_field::value(f/d)"); // FIXME
+
+  case 'Z':
+  case 'H':
+    // FIXME Is this right for H?
+    return string(data);
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+}
+
+static inline signed char    to_int8(char c) { return c; }
+static inline unsigned char to_uint8(char c) { return c; }
+
+int alignment::aux_field::value_int() const {
+  switch (type_) {
+  case 'c':  return to_int8(*data);
+  case 'C':  return to_uint8(*data);
+  case 's':  return convert::bamtoint16(data);
+  case 'S':  return convert::bamtouint16(data);
+  case 'i':  return convert::bamtoint32(data);
+  // FIXME do something about the big ones...
+  case 'I':  return convert::bamtouint32(data);
+
+  case 'f':
+  case 'd':
+  case 'A':
+  case 'Z':
+  case 'H':
+    // FIXME What exception should we be throwing?
+    throw exception(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1]
+	<< "' is of non-integral type ('" << type_ << "')");
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+}
 
 } // namespace sam

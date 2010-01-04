@@ -1,4 +1,4 @@
-# Doxyfile 1.6.1
+# Doxyfile 1.6.2
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project
@@ -99,6 +99,7 @@ ALWAYS_DETAILED_SEC    = NO
 # members were ordinary class members. Constructors, destructors and assignment
 # operators of the base classes will not be shown.
 
+###
 INLINE_INHERITED_MEMB  = YES
 
 # If the FULL_PATH_NAMES tag is set to YES then Doxygen will prepend the full
@@ -153,7 +154,8 @@ QT_AUTOBRIEF           = NO
 # The new default is to treat a multi-line C++ comment block as a detailed
 # description. Set this tag to YES if you prefer the old behaviour instead.
 
-MULTILINE_CPP_IS_BRIEF = NO
+###
+MULTILINE_CPP_IS_BRIEF = YES
 
 # If the INHERIT_DOCS tag is set to YES (the default) then an undocumented
 # member inherits the documentation from any documented member that it
@@ -225,6 +227,7 @@ EXTENSION_MAPPING      =
 # func(std::string) {}). This also make the inheritance and collaboration
 # diagrams that involve STL classes more complete and accurate.
 
+###
 BUILTIN_STL_SUPPORT    = YES
 
 # If you use Microsoft's C++/CLI language, you should set this option to YES to
@@ -350,6 +353,7 @@ HIDE_UNDOC_CLASSES     = NO
 # If set to NO (the default) these declarations will be included in the
 # documentation.
 
+###
 HIDE_FRIEND_COMPOUNDS  = YES
 
 # If the HIDE_IN_BODY_DOCS tag is set to YES, Doxygen will hide any
@@ -384,7 +388,14 @@ HIDE_SCOPE_NAMES       = NO
 # will put a list of the files that are included by a file in the documentation
 # of that file.
 
+###
 SHOW_INCLUDE_FILES     = NO
+
+# If the FORCE_LOCAL_INCLUDES tag is set to YES then Doxygen
+# will list include files with double quotes in the documentation
+# rather than with sharp brackets.
+
+FORCE_LOCAL_INCLUDES   = NO
 
 # If the INLINE_INFO tag is set to YES (the default) then a tag [inline]
 # is inserted in the documentation for inline members.
@@ -423,6 +434,7 @@ SORT_GROUP_NAMES       = NO
 # Note: This option applies only to the class list, not to the
 # alphabetical list.
 
+###
 SORT_BY_SCOPE_NAME     = YES
 
 # The GENERATE_TODOLIST tag can be used to enable (YES) or
@@ -462,6 +474,7 @@ ENABLED_SECTIONS       =
 # documentation can be controlled using \showinitializer or \hideinitializer
 # command in the documentation regardless of this setting.
 
+###
 MAX_INITIALIZER_LINES  = 0
 
 # Set the SHOW_USED_FILES tag to NO to disable the list of files generated
@@ -506,6 +519,7 @@ FILE_VERSION_FILTER    =
 # file name after the option, if omitted DoxygenLayout.xml will be used as the name
 # of the layout file.
 
+###
 LAYOUT_FILE            = doc/layout.xml
 
 #---------------------------------------------------------------------------
@@ -585,7 +599,7 @@ INPUT_ENCODING         = UTF-8
 # *.c *.cc *.cxx *.cpp *.c++ *.java *.ii *.ixx *.ipp *.i++ *.inl *.h *.hh *.hxx
 # *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.py *.f90
 
-FILE_PATTERNS          = *.h *.[1-9]
+FILE_PATTERNS          = *.cpp *.h *.[1-9]
 
 # The RECURSIVE tag can be used to turn specify whether or not subdirectories
 # should be searched for input files as well. Possible values are YES and NO.
@@ -729,6 +743,7 @@ USE_HTAGS              = NO
 # will generate a verbatim copy of the header file for each class for
 # which an include is specified. Set to NO to disable this.
 
+###
 VERBATIM_HEADERS       = NO
 
 #---------------------------------------------------------------------------
@@ -795,6 +810,12 @@ HTML_FOOTER            = doc/footer.html
 # stylesheet in the HTML output directory as well, or it will be erased!
 
 HTML_STYLESHEET        = doc/cansam.css
+
+# If the HTML_TIMESTAMP tag is set to YES then the footer of each generated HTML
+# page will contain the date and time when the page was generated. Setting
+# this to NO can help when comparing the output of multiple runs.
+
+HTML_TIMESTAMP         = NO
 
 # If the HTML_ALIGN_MEMBERS tag is set to YES, the members of classes,
 # files or namespaces will be aligned in HTML using tables. If set to
@@ -897,7 +918,7 @@ QCH_FILE               =
 # Qt Help Project output. For more information please see
 # http://doc.trolltech.com/qthelpproject.html#namespace
 
-QHP_NAMESPACE          =
+QHP_NAMESPACE          = org.doxygen.Project
 
 # The QHP_VIRTUAL_FOLDER tag specifies the namespace to use when generating
 # Qt Help Project output. For more information please see
@@ -928,6 +949,22 @@ QHP_SECT_FILTER_ATTRS  =
 # .qhp file.
 
 QHG_LOCATION           =
+
+# If the GENERATE_ECLIPSEHELP tag is set to YES, additional index files
+#  will be generated, which together with the HTML files, form an Eclipse help
+#  plugin. To install this plugin and make it available under the help contents
+# menu in Eclipse, the contents of the directory containing the HTML and XML
+# files needs to be copied into the plugins directory of eclipse. The name of
+# the directory within the plugins directory should be the same as
+# the ECLIPSE_DOC_ID value. After copying Eclipse needs to be restarted before the help appears.
+
+GENERATE_ECLIPSEHELP   = NO
+
+# A unique identifier for the eclipse help plugin. When installing the plugin
+# the directory name containing the HTML and XML files should also have
+# this name.
+
+ECLIPSE_DOC_ID         = org.doxygen.Project
 
 # The DISABLE_INDEX tag can be used to turn on/off the condensed index at
 # top of each HTML page. The value NO (the default) enables the index and
@@ -969,12 +1006,18 @@ TREEVIEW_WIDTH         = 250
 
 FORMULA_FONTSIZE       = 10
 
-# When the SEARCHENGINE tag is enable doxygen will generate a search box for the HTML output. The underlying search engine uses javascript
-# and DHTML and should work on any modern browser. Note that when using HTML help (GENERATE_HTMLHELP) or Qt help (GENERATE_QHP)
-# there is already a search function so this one should typically
-# be disabled.
+# When the SEARCHENGINE tag is enabled doxygen will generate a search box for the HTML output. The underlying search engine uses javascript
+# and DHTML and should work on any modern browser. Note that when using HTML help (GENERATE_HTMLHELP), Qt help (GENERATE_QHP), or docsets (GENERATE_DOCSET) there is already a search function so this one should
+# typically be disabled. For large projects the javascript based search engine
+# can be slow, then enabling SERVER_BASED_SEARCH may provide a better solution.
 
 SEARCHENGINE           = YES
+
+# When the SERVER_BASED_SEARCH tag is enabled the search engine will be implemented using a PHP enabled web server instead of at the web client using Javascript. Doxygen will generate the search PHP script and index
+# file to put on the web server. The advantage of the server based approach is that it scales better to large projects and allows full text search. The disadvances is that it is more difficult to setup
+# and does not have live searching capabilities.
+
+SERVER_BASED_SEARCH    = NO
 
 #---------------------------------------------------------------------------
 # configuration options related to the LaTeX output
@@ -983,6 +1026,7 @@ SEARCHENGINE           = YES
 # If the GENERATE_LATEX tag is set to YES (the default) Doxygen will
 # generate Latex output.
 
+###
 GENERATE_LATEX         = NO
 
 # The LATEX_OUTPUT tag is used to specify where the LaTeX docs will be put.
@@ -993,6 +1037,9 @@ LATEX_OUTPUT           = latex
 
 # The LATEX_CMD_NAME tag can be used to specify the LaTeX command name to be
 # invoked. If left blank `latex' will be used as the default command name.
+# Note that when enabling USE_PDFLATEX this option is only used for
+# generating bitmaps for formulas in the HTML output, but not in the
+# Makefile that is written to the output directory.
 
 LATEX_CMD_NAME         = latex
 
@@ -1389,6 +1436,7 @@ CLASS_GRAPH            = YES
 # indirect implementation dependencies (inheritance, containment, and
 # class references variables) of the class with other documented classes.
 
+###
 COLLABORATION_GRAPH    = NO
 
 # If the GROUP_GRAPHS and HAVE_DOT tags are set to YES then doxygen
@@ -1412,6 +1460,7 @@ TEMPLATE_RELATIONS     = NO
 # file showing the direct and indirect include dependencies of the file with
 # other documented files.
 
+###
 INCLUDE_GRAPH          = NO
 
 # If the ENABLE_PREPROCESSING, SEARCH_INCLUDES, INCLUDED_BY_GRAPH, and
@@ -1419,6 +1468,7 @@ INCLUDE_GRAPH          = NO
 # documented header file showing the documented files that directly or
 # indirectly include this file.
 
+###
 INCLUDED_BY_GRAPH      = NO
 
 # If the CALL_GRAPH and HAVE_DOT options are set to YES then
@@ -1447,6 +1497,7 @@ GRAPHICAL_HIERARCHY    = YES
 # in a graphical way. The dependency relations are determined by the #include
 # relations between the files in the directories.
 
+###
 DIRECTORY_GRAPH        = NO
 
 # The DOT_IMAGE_FORMAT tag can be used to set the image format of the images
@@ -1505,6 +1556,7 @@ DOT_MULTI_TARGETS      = NO
 # generate a legend page explaining the meaning of the various boxes and
 # arrows in the dot generated graphs.
 
+###
 GENERATE_LEGEND        = NO
 
 # If the DOT_CLEANUP tag is set to YES (the default) Doxygen will

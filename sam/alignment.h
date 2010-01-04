@@ -7,7 +7,10 @@
 
 #include <string>
 #include <vector>
-#include <algorithm>
+//#include <algorithm>  // FIXME NUKE-ME, but for specialising std::swap IIRC
+#include <iterator>
+
+#include <ostream> // FIXME NUKE-ME, but figure out who's getting us <iosfwd>
 
 //#include <cstddef>
 #include <stdint.h>
@@ -150,12 +153,75 @@ public:
   Alignment records provide limited collection-style access to their
   auxiliary fields.  */
   //@{
-  struct iterator {
-    char* aux;
-    // ...etc...
+  class aux_field {
+  public:
+    std::string tag() const { return std::string(tag_, sizeof tag_); }
+    char type() const { return type_; }
+
+    /// Field value, as it would appear in a SAM file
+    std::string value() const;
+
+    /// Field value as an integer
+    /// (or throws if this field's type is non-integral)
+    int value_int() const;
+
+    /// Field value as a coordinate
+    /// (or throws if this field's type is non-integral)
+    coord_t value_coord() const;
+
+    // TODO  Implement value_float(), value_double()
+
+    /// Number of bytes in the BAM representation of this field
+    int size() const;
+
+  private:
+    char tag_[2];
+    char type_;
+    char data[1];
   };
 
-  class const_iterator {
+  class iterator :
+    public std::iterator<std::forward_iterator_tag, std::pair<alignment*, char*> > {
+  public:
+    //typedef std::pair<alignment*, char*> value_type;
+
+    iterator() { }
+    iterator(const iterator& it) : aln(it.aln), aux(it.aux) { }
+    ~iterator() { }
+    iterator& operator= (iterator it)
+      { aln = it.aln; aux = it.aux; return *this; }
+
+    bool operator== (iterator rhs) const { return aux == rhs.aux; }
+    bool operator!= (iterator rhs) const { return aux != rhs.aux; }
+
+    value_type& operator* () const
+      { return std::pair<alignment*,char*>(aln,aux); }
+
+    //...? how??!!
+    aux_field* operator-> () const
+      { return reinterpret_cast<const aux_field*>(aux); }
+
+    iterator& operator++ () { aux += (*this)->size(); return *this; }
+    iterator operator++ (int)
+      { const char* orig_aux = aux;
+	aux += (*this)->size(); return iterator(orig_aux); }
+
+    // FIXME NUKE-ME probably
+    /// Print an iterator address to the stream (presumably for debugging)
+    friend std::ostream& operator<< (std::ostream& stream, iterator it)
+      { return stream << reinterpret_cast<const void*>(it.aux); }
+
+  private:
+    friend class alignment;
+    explicit iterator(char* p) : aux(p) { }
+
+    alignment* aln;
+    char* aux;
+  };
+
+  class const_iterator :
+    public std::iterator<std::forward_iterator_tag, aux_field, ptrdiff_t,
+			 const aux_field*, const aux_field&> {
   public:
     const_iterator() { }
     const_iterator(const const_iterator& it) : aux(it.aux) { }
@@ -166,13 +232,21 @@ public:
     bool operator== (const_iterator rhs) const { return aux == rhs.aux; }
     bool operator!= (const_iterator rhs) const { return aux != rhs.aux; }
 
-    // operator*
-    // operator->
+    const aux_field& operator* () const
+      { return *reinterpret_cast<const aux_field*>(aux); }
 
-    const_iterator& operator++ () { aux += aux_length(aux); return *this; }
+    const aux_field* operator-> () const
+      { return reinterpret_cast<const aux_field*>(aux); }
+
+    const_iterator& operator++ () { aux += (*this)->size(); return *this; }
     const_iterator operator++ (int)
       { const char* orig_aux = aux;
-	aux += aux_length(aux); return const_iterator(orig_aux); }
+	aux += (*this)->size(); return const_iterator(orig_aux); }
+
+    // FIXME NUKE-ME probably
+    /// Print an iterator address to the stream (presumably for debugging)
+    friend std::ostream& operator<< (std::ostream& stream, const_iterator it)
+      { return stream << reinterpret_cast<const void*>(it.aux); }
 
   private:
     friend class alignment;
@@ -184,7 +258,8 @@ public:
   const_iterator begin() const
     { return const_iterator(p->data() + p->auxen_offset()); }
 
-  const_iterator end() const { return const_iterator(NULL); /*FIXME*/ }
+  const_iterator end() const
+    { return const_iterator(p->data() + p->end_offset()); }
 
   const_iterator find(const char* tag) const;
   //@}
@@ -245,9 +320,9 @@ public:
 
   /// @name Derived information
   //@{
-  /// @brief The @e strand flag, as '+' or '-'.
-  /// @details Returns the strand information encoded in the flags field.
-  /// @return  Either '+' or '-'.
+  /// The @e strand flag, as '+' or '-'
+  /** Returns the strand information encoded in the flags field.
+  @return  Either '+' or '-'.  */
   char strand() const { return (flags() & REVERSE_STRAND)? '-' : '+'; }
 
   /// @brief The @e mate-strand flag, as '+' or '-'.
@@ -348,6 +423,7 @@ private:
     int seq_offset() const   { return cigar_offset() + 4 * c.cigar_length; }
     int qual_offset() const  { return seq_offset() + (c.read_length + 1) / 2; }
     int auxen_offset() const { return qual_offset() + c.read_length; }
+    int end_offset() const   { return sizeof(c.rest_length) + c.rest_length; }
 
     static block* create(int capacity);
     static void destroy(block* block);
@@ -366,8 +442,6 @@ private:
 
   void resize_unshare_copy(int size);
   void resize_unshare_discard(int size);
-
-  static int aux_length(const char* aux);
 
   static void unpack_seq(std::string::iterator dest,
 			 const char* raw_seq, int seq_length);
@@ -399,9 +473,9 @@ an alignment record, for example if it starts with an '@' character.
 @relatesalso alignment */
 std::istream& operator>> (std::istream& stream, alignment& aln);
 
-/** @brief Print an alignment to the stream
-@details   Writes an alignment record to a %stream as text in SAM format,
-@b without a trailing newline character.
+/// Print an alignment to the stream
+/** Writes an alignment record to a %stream as text in SAM format, @b without
+a trailing newline character.
 @relatesalso alignment */
 std::ostream& operator<< (std::ostream& stream, const alignment& aln);
 

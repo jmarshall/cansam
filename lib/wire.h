@@ -18,6 +18,25 @@
 
 namespace sam {
 
+/* FIXME
+Possible signatures:
+  aligned memory (so value, not ptr)  v  unaligned memory (ptr)
+  swap in place  v  read-as-host/write-as-bam
+
+Swap in place:  (probably only unaligned (is more general) is actually needed)
+  void swap(uint16_t*)	-- un/hostify aligned memory in place
+  void swap(void*)	-- un/hostify unaligned memory in place
+
+Read as host:
+  uint16_t hostify(uint16_t)     -- aligned memory, no explicit ptr needed
+  uint16_t hostify(const void*)  -- unaligned memory
+
+Write as bam:
+  uint16_t bamify(uint16_t) -- aligned memory, no explicit ptr needed
+  void bamify(void* dest, uint16_t) -- aligned memory (probably not useful)
+  void bamify(void* dest, uint16_t) -- unaligned memory
+*/
+
 #if defined WIRE_NOOP
 
 inline void hostify16(void*) { }
