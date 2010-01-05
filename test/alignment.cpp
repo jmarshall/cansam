@@ -47,19 +47,44 @@ void test_unpack_seq(test_harness& t) {
   t.check(threw, "pack_seq.invalid_char");
 }
 
-void test_iterators(test_harness& t, const sam::alignment& aln) {
-  sam::alignment::const_iterator it;
-  sam::alignment::const_iterator it1 = it;
-  sam::alignment::const_iterator it2(it);
+void test_iterators(test_harness& t, sam::alignment& aln) {
+  sam::alignment::iterator it;
+  it = aln.begin();
+  sam::alignment::iterator it1 = it;
+  sam::alignment::iterator it2(it);
 
-  t.check(it1 == it2, "const_iterator.==");
-  t.check(!(it1 != it2), "const_iterator.!=");
+  sam::alignment::const_iterator cit;
+  cit = aln.begin();
+  sam::alignment::const_iterator cit1 = cit;
+  sam::alignment::const_iterator cit2(cit);
+
+  t.check(it1 == it2, "iterator.==");
+  t.check(!(it1 != it2), "iterator.!=");
+
+  t.check(cit1 == cit2, "const_iterator.==");
+  t.check(!(cit1 != cit2), "const_iterator.!=");
+
+  t.check(it1 == cit2, "iterator__const_iterator.==");
+  t.check(cit1 == it2, "const_iterator__iterator.==");
+  t.check(!(it1 != cit2), "iterator__const_iterator.!=");
+  t.check(!(cit1 != it2), "const_iterator__iterator.!=");
 
 std::clog << "begin: " << aln.begin() << ", end: " << aln.end() << "\n";
 
-  for (it = aln.begin(); it != aln.end(); ++it) {
+  for (cit = aln.begin(); cit != aln.end(); ++cit) {
     // dereference it...
   }
+
+  std::string foo = "foo";
+  int bar = 37;
+
+  aln.push_back("X1", foo);
+  aln.push_back("X2", bar);
+  //aln.push_back("X3", it2);
+
+  aln.insert(aln.begin(), "Y1", foo);
+  aln.insert(aln.begin(), "Y2", bar);
+  //aln.insert(aln.begin(), "Y3", it2);
 
   it = aln.begin();
 std::clog << "And finally...\n";

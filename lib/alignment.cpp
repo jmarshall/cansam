@@ -6,12 +6,15 @@
 
 #include "sam/alignment.h"
 
+#include <stdexcept>
 #include <string>
 #include <sstream>
 #include <cstring>
 //#include <cstdlib>
 #include <climits>
 #include <cctype>
+
+#include <iostream> // FIXME NUKE-ME
 
 #include "sam/collection.h"
 #include "sam/exception.h"
@@ -645,11 +648,13 @@ int alignment::aux_field::value_int() const {
   switch (type_) {
   case 'c':  return to_int8(*data);
   case 'C':  return to_uint8(*data);
+#if 0
   case 's':  return convert::bamtoint16(data);
   case 'S':  return convert::bamtouint16(data);
   case 'i':  return convert::bamtoint32(data);
   // FIXME do something about the big ones...
   case 'I':  return convert::bamtouint32(data);
+#endif
 
   case 'f':
   case 'd':
@@ -666,6 +671,108 @@ int alignment::aux_field::value_int() const {
 	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
 	<< type_ << "')");
   }
+}
+
+alignment::iterator alignment::find(const char* key) {
+  for (iterator it = begin(); it != end(); ++it)
+    if (it->tag_equals(key))  return it;
+
+  return end();
+}
+
+alignment::const_iterator alignment::find(const char* key) const {
+  for (const_iterator it = begin(); it != end(); ++it)
+    if (it->tag_equals(key))  return it;
+
+  return end();
+}
+
+alignment::iterator
+alignment::replace_gap(iterator start, iterator limit, int gap_length) {
+  // FIXME
+  limit = limit;
+  gap_length = gap_length;
+  return start;
+}
+
+alignment::iterator
+alignment::replace(iterator start, iterator limit,
+		   const char* tag, const std::string& value) {
+  // FIXME
+  limit = limit;
+  tag = tag;
+  std::clog << "replace(std::string \"" << value << "\")\n";
+  return start;
+}
+
+alignment::iterator
+alignment::replace(iterator start, iterator limit, const char* tag, int value) {
+  // FIXME
+  limit = limit;
+  tag = tag;
+  std::clog << "replace(int " << value << ")\n";
+  return start;
+}
+
+#if 0
+alignment::iterator
+alignment::insert(iterator pos, const char* tag, int value) {
+  char buffer[sizeof(int32_t)];
+
+  // Pick the shortest representation that can hold the given value,
+  // preferring signed to unsigned.
+
+  if (value >= 0) {
+    if (value <= INT8_MAX) {
+      buffer[0] = value;
+      return insert(pos, tag, 'c', buffer, 1);
+    }
+    else if (value <= UINT8_MAX) {
+      buffer[0] = value;
+      return insert(pos, tag, 'C', buffer, 1);
+    }
+    else if (value <= INT16_MAX) {
+      // FIXME convert...
+      return insert(pos, tag, 's', buffer, 2);
+    }
+    else if (value <= UINT16_MAX) {
+      // convert...
+      return insert(pos, tag, 'S', buffer, 2);
+    }
+    else if (value <= INT32_MAX) {
+      // convert...
+      return insert(pos, tag, 'i', buffer, 4);
+    }
+    else if (value <= int(UINT32_MAX)) { // FIXME signedness of the constant...
+      // convert...
+      return insert(pos, tag, 'I', buffer, 4);
+    }
+    else
+      throw std::range_error(make_string() << "Integral aux field '"
+	  << tag[0] << tag[1] << "' is out of range (positively)");
+  }
+  else {
+    if (value >= INT8_MIN) {
+      buffer[0] = value;
+      return insert(pos, tag, 'c', buffer, 1);
+    }
+    else if (value >= INT16_MIN) {
+      // convert...
+      return insert(pos, tag, 's', buffer, 2);
+    }
+    else if (value >= INT32_MIN) {
+      // convert...
+      return insert(pos, tag, 'i', buffer, 4);
+    }
+    else
+      throw std::range_error(make_string() << "Integral aux field '"
+	  << tag[0] << tag[1] << "' is out of range (negatively)");
+  }
+}
+#endif
+
+std::ostream& operator<< (std::ostream& stream, alignment::const_iterator it) {
+  return stream << reinterpret_cast<const void*>(it.aux);
 }
 
 } // namespace sam

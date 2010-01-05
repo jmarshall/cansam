@@ -17,6 +17,10 @@
   - Utility function for (sensible!) parsing of "chr2:100,000-200,000"
   - Some form of iterator equivalent to bam_fetch()
 
+* C++ infrastructure
+  - Possibly worthwhile specialising std::iterator_traits for our home-grown
+    iterator classes.
+
 * Documentation
   - Doxygen HTML filename overachieving: build the filename myself by hacking
     on util.cpp's convertNameToFile()

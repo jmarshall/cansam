@@ -32,9 +32,8 @@ const std::ios_base::openmode bam_format = std::ios_base::binary | compressed;
 This is a base class for the SAM/BAM stream hierarchy; it is unlikely to be
 usefully instantiated itself.
 
-@note
-This hierarchy doesn't provide a stream in the sense that @e anything can be
-streamed to/from it; it only accepts SAM alignment records.  The name does
+@note This hierarchy doesn't provide a stream in the sense that @e anything can
+be streamed to/from it; it only accepts SAM alignment records.  The name does
 not parallel @c fstream and @c stringstream; it does not mean "a stream backed
 by a sam", whatever that might be.  */
 class samstream_base : public std::ios {

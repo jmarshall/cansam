@@ -30,7 +30,6 @@
     <collaborationgraph visible="$COLLABORATION_GRAPH"/>
     <allmemberslink visible="yes"/>
     <memberdecl>
-      <nestedclasses visible="yes" title=""/>
       <publictypes title=""/>
       <publicslots title=""/>
       <signals title=""/>
@@ -57,6 +56,7 @@
       <privatestaticmethods title=""/>
       <privateattributes title=""/>
       <privatestaticattributes title=""/>
+      <nestedclasses visible="yes" title=""/>
       <friends title=""/>
       <related title="" subtitle=""/>
       <membergroups visible="yes"/>

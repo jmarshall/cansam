@@ -99,7 +99,7 @@ public:
   int fd() const { return fd_; }
 
 protected:
-  // @cond private
+  // @cond infrastructure
   virtual std::streamsize xsgetn(char*, std::streamsize);
   virtual std::streamsize xsputn(const char*, std::streamsize);
 
