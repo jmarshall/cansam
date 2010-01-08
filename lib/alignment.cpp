@@ -802,8 +802,8 @@ alignment::replace_(iterator start, iterator limit,
       convert::set_bam_uint32(it->data, value);
     }
     else
-      throw std::range_error(make_string() << "Integral aux field '"
-	  << tag[0] << tag[1] << "' is out of range (positively)");
+      throw std::range_error(make_string() << "Integer aux field '"
+	  << tag[0] << tag[1] << "' is out of range");
   }
   else {
     if (value >= INT8_MIN) {
@@ -822,8 +822,8 @@ alignment::replace_(iterator start, iterator limit,
       convert::set_bam_int32(it->data, value);
     }
     else
-      throw std::range_error(make_string() << "Integral aux field '"
-	  << tag[0] << tag[1] << "' is out of range (negatively)");
+      throw std::range_error(make_string() << "Integer aux field '"
+	  << tag[0] << tag[1] << "' is out of range");
   }
 
   if (tag)

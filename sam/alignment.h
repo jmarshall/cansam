@@ -92,60 +92,56 @@ public:
 
   void reserve(int auxsize); // FIXME How much should @a size measure?
 
-  /** @name Field accessors */
+  /** @name Field accessors
+  Two variants are provided for the @em POS and @em MPOS fields: @c %pos()
+  et al return 1-based coordinates, while @c %zpos() et al return the same
+  positions in 0-based coordinates.  */
   //@{
-  /// Query name
   std::string qname() const
     { return std::string(p->data() + p->name_offset(), p->c.name_length - 1); }
 
-  /// Bitwise combination of alignment_flags
   int flags() const { return p->c.flags; }
 
-  int rindex() const { return p->c.rindex; } ///< Reference identifier (or -1)
+  /** FIXME TEXTME Reference identifier (or -1).  */
+  int rindex() const { return p->c.rindex; }
 
-  /// Reference name (or '*' @c *)
+  /** Reference name (or '*' @c *).  */
   std::string rname() const
     ;// FIXME { return collection::find(p->h.cindex).rname(p->c.rindex); }
 
-  coord_t pos() const  { return p->c.zpos+1; } ///< Leftmost position (1-based)
-  coord_t zpos() const { return p->c.zpos; }   ///< Leftmost position (0-based)
-
-  /// BAM bin number
-  int bin() const
-    { if (p->c.bin == unknown_bin)  p->c.bin = calc_zbin(zpos(), right_zpos());
-      return p->c.bin; }
-
-  int mapq() const { return p->c.mapq; } ///< Mapping quality
-
-  std::string cigar() const; ///< Cigar string
-  // FIXME raw cigar
+  coord_t pos() const  { return p->c.zpos+1; }
+  coord_t zpos() const { return p->c.zpos; }
+  int mapq() const { return p->c.mapq; }
+  std::string cigar() const;
+  // TODO raw cigar
 
   /// Mate's reference identifier (or -1; for paired reads)
   int mate_rindex() const { return p->c.mate_rindex; }
-  std::string mate_rname() const; ///< Mate's reference name (for paired reads)
 
-  /// Mate's leftmost position (1-based)
+  /** Returns the mate read's reference name.
+  @note The actual name is returned, even when this field would appear as '='
+  in a SAM file.  */
+  std::string mate_rname() const;
+
   coord_t mate_pos() const  { return p->c.mate_zpos+1; }
-  /// Mate's leftmost position (0-based)
   coord_t mate_zpos() const { return p->c.mate_zpos; }
+  scoord_t isize() const { return p->c.isize; }
 
-  scoord_t isize() const { return p->c.isize; } ///< Insert size
-
-  int length() const { return p->c.read_length; } ///< Read length
-
-  /// Sequence
   std::string seq() const
     { std::string dest(length(), 'X');
-      unpack_seq(dest.begin(), raw_seq(), length());
+      unpack_seq(dest.begin(), seq_raw_data(), length());
       return dest; }
 
-  /// Sequence (packed as two bases per byte)
-  const char* raw_seq() const { return p->data() + p->seq_offset(); }
-
-  /// Quality string
   // FIXME uh, no, needs offsetted
   std::string qual() const
     { return std::string(p->data() + p->qual_offset(), p->c.read_length); }
+
+  int length() const { return p->c.read_length; } ///< Read length
+
+  /// BAM bin number (derived, if necessary, from @em POS and @em CIGAR)
+  int bin() const
+    { if (p->c.bin == unknown_bin)  p->c.bin = calc_zbin(zpos(), right_zpos());
+      return p->c.bin; }
 
   /// Value of the auxiliary field with the given @a tag
   std::string aux(const char* tag) const;
@@ -159,6 +155,38 @@ public:
 
   double aux_double(const char* tag) const;
   double aux_double(const char* tag, double default_value) const;
+  //@}
+
+  /** @name Additional field accessors
+  Some accessors returning strings also have corresponding versions returning
+  C strings or (non-NUL-terminated) @c char arrays.  These versions are cheaper
+  as a suitable representation already exists within the alignment object, so
+  no @c std::string construction or memory allocation is necessary.
+
+  Pointers returned by an alignment object become invalid when any of
+  that object's non-const member functions are subsequently called.  */
+  //@{
+  /// Query name
+  const char* qname_c_str() const { return p->data() + p->name_offset(); }
+
+  /// Assigns query name to @a dest (and returns @a dest)
+  std::string& qname(std::string& dest) const
+    { return dest.assign(p->data() + p->name_offset(), p->c.name_length - 1); }
+
+  const char* rname_c_str() const;      ///< Reference name (or @c NULL)
+  const char* mate_rname_c_str() const; ///< Mate's reference name (or @c NULL)
+
+  /// Assigns sequence to @a dest (and returns @a dest)
+  std::string& seq(std::string& dest) const
+    { unpack_seq(dest, seq_raw_data(), length()); return dest; }
+
+  /// Sequence (packed as two bases per byte; not NUL-terminated)
+  const char* seq_raw_data() const { return p->data() + p->seq_offset(); }
+
+  /// Quality string (not NUL-terminated)
+  const char* qual_data() const { return p->data() + p->qual_offset(); }
+
+  const char* aux_c_str(const char* tag) const;
   //@}
 
   /** @name Auxiliary fields as a collection
@@ -317,35 +345,6 @@ public:
   iterator
   replace(iterator start, iterator limit, const char* tag, ValueType value)
     { return replace_(start, limit, tag, value); }
-  //@}
-
-  /** @name Additional field accessors
-  Some accessors returning strings also have corresponding versions returning
-  C strings or (non-NUL-terminated) @c char arrays.  These versions are cheaper
-  as a suitable representation already exists within the alignment object, so
-  no @c std::string construction or memory allocation is necessary.
-
-  Pointers returned by an alignment object become invalid when any of
-  that object's non-const member functions are subsequently called.  */
-  //@{
-  /// Query name
-  const char* qname_c_str() const { return p->data() + p->name_offset(); }
-
-  /// Assigns query name to @a dest (and returns @a dest)
-  std::string& qname(std::string& dest) const
-    { return dest.assign(p->data() + p->name_offset(), p->c.name_length - 1); }
-
-  const char* rname_c_str() const;      ///< Reference name (or @c NULL)
-  const char* mate_rname_c_str() const; ///< Mate's reference name (or @c NULL)
-
-  /// Assigns sequence to @a dest (and returns @a dest)
-  std::string& seq(std::string& dest) const
-    { unpack_seq(dest, raw_seq(), length()); return dest; }
-
-  /// Quality string (@b not NUL-terminated)
-  const char* qual_data() const { return p->data() + p->qual_offset(); }
-
-  const char* aux_c_str(const char* tag) const;
   //@}
 
   /** @name Field modifiers  */

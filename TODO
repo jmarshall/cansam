@@ -19,11 +19,11 @@
 
 * C++ infrastructure
   - Possibly worthwhile specialising std::iterator_traits for our home-grown
-    iterator classes.
+    iterator classes
 
 * Documentation
   - Doxygen HTML filename overachieving: build the filename myself by hacking
-    on util.cpp's convertNameToFile()
+    on util.cpp's convertNameToFile() and/or filename.cpp's generateDiskNames()
 
 * Things that samtools does that we don't:
   - Pileups

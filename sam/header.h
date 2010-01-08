@@ -21,7 +21,7 @@ FIXME Doco update, it's not a std::vector any more!
 This class represents the header fields as a vector of header_field items.
 This is by inheritance, so a header object itself is amenable to all the
 usual vector operations, such as iterating through the fields with @c begin()
-and @c end(), and modifying them with @c erase(), @c %push_back(), etc.
+and @c end(), and modifying them with @c erase(), @c push_back(), etc.
 
 A SAM header probably ought not to have two fields with the same tag,
 though this is not explicitly stated in the specification and is not enforced
