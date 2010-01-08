@@ -69,26 +69,61 @@ void test_iterators(test_harness& t, sam::alignment& aln) {
   t.check(!(it1 != cit2), "iterator__const_iterator.!=");
   t.check(!(cit1 != it2), "const_iterator__iterator.!=");
 
-std::clog << "begin: " << aln.begin() << ", end: " << aln.end() << "\n";
-
-  for (cit = aln.begin(); cit != aln.end(); ++cit) {
-    // dereference it...
-  }
+std::cout << "begin: " << aln.begin() << ", end: " << aln.end() << "\n";
 
   std::string foo = "foo";
   int bar = 37;
 
+aln.dump_on(std::cout);
+std::cout << aln << "\npush_back.X1\n";
   aln.push_back("X1", foo);
+aln.dump_on(std::cout, aln.find("X1"));
+std::cout << aln << "\npush_back.X2\n";
   aln.push_back("X2", bar);
-  //aln.push_back("X3", it2);
+  //aln.push_back("X3", cit2);
 
+aln.dump_on(std::cout);
+std::cout << aln << "\ninsert.Y1\n";
   aln.insert(aln.begin(), "Y1", foo);
+aln.dump_on(std::cout, aln.begin());
+std::cout << aln << "\ninsert.Y2\n";
   aln.insert(aln.begin(), "Y2", bar);
-  //aln.insert(aln.begin(), "Y3", it2);
+  //aln.insert(aln.begin(), "Y3", cit2);
+
+  //aln.replace(aln.begin(), aln.end(), "Y3", it2);
+
+aln.dump_on(std::cout);
+std::cout << aln << "\nset_aux.Z1\n";
+  aln.set_aux("Z1", foo);
+aln.dump_on(std::cout);
+std::cout << aln << "\nset_aux.Z2\n";
+  aln.set_aux("Z2", bar);
+aln.dump_on(std::cout);
+std::cout << aln << "\nset_aux.Z3\n";
+  aln.set_aux("Z3", cit2);
+
+std::cout << "begin: " << aln.begin() << ", end: " << aln.end() << "\nauxen:";
+  for (cit = aln.begin(); cit != aln.end(); ++cit)
+    std::cout << " {" << *cit << "}";
+std::cout << "\n";
+
+  it1 = next(next(aln.begin()));
+aln.dump_on(std::cout, it1);
+std::cout << aln << "\nset_aux.it1\n";
+  aln.set_aux(it1, foo);
+aln.dump_on(std::cout, it1);
+std::cout << aln << "\nset_aux.it1\n";
+  aln.set_aux(it1, bar);
+  //aln.set_aux(it1, cit2);
 
   it = aln.begin();
-std::clog << "And finally...\n";
+std::cout << "And finally...\n";
+  aln.dump_on(std::cout, it);
+std::cout << "pre:  it: " << it << "\n";
   it++;
+std::cout << "post: it: " << it << "\n";
+  aln.dump_on(std::cout, it);
+std::cout << "End of test_iterators()\n";
 }
 
 void test_alignments(test_harness& t) {
@@ -100,6 +135,8 @@ void test_alignments(test_harness& t) {
   sam::alignment a2 = aln;
 
   a2 = a1;
+
+  a1.set_qname("JAS5_12:1:3");
 
   test_unpack_seq(t);
   test_iterators(t, a1);

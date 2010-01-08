@@ -1,18 +1,15 @@
 #define __STDC_LIMIT_MACROS
 #include <stdint.h>
 #if !(defined UINT8_MAX && defined UINT16_MAX && defined INT32_MAX)
-#error This implementation requires 8, 16, and 32-bit integer types
+#error - This implementation requires 8-, 16-, and 32-bit integer types
 #endif
 
 #include "sam/alignment.h"
 
 #include <stdexcept>
 #include <string>
-#include <sstream>
 #include <cstring>
-//#include <cstdlib>
 #include <climits>
-#include <cctype>
 
 #include <iostream> // FIXME NUKE-ME
 
@@ -172,12 +169,20 @@ bool operator< (const alignment& a, const alignment& b) {
 // 1a. Mutators
 //=============
 
-// void alignment::set_qname(const std::string& qname)
+void alignment::set_qname(const char* qname_data, int qname_length) {
+  char* qbuffer =
+    replace_gap(p->data() + p->name_offset(), p->data() + p->cigar_offset(),
+		qname_length + 1);
+
+  p->c.name_length = qname_length + 1;
+  memcpy(qbuffer, qname_data, qname_length);
+  qbuffer[qname_length] = '\0';
+}
 
 void alignment::set_flags(int flags) {
   if (p == &empty)  resize_unshare_copy(p->size());
   p->c.flags = flags;
-  }
+}
 
 // void alignment::set_rindex(int rindex)
 // void alignment::set_rname(const std::string& rname)
@@ -398,12 +403,12 @@ int alignment::approx_sam_record_length() const {
   return len;
 }
 
-template<typename int_type>
-char* format_hex(char* dest, int_type val) {
+template<typename IntType>
+char* format_hex(char* dest, IntType val) {
   *dest++ = '0';
   *dest++ = 'x';
 
-  int_type n = val;
+  IntType n = val;
   do { dest++; n >>= 4; } while (n != 0);
 
   char* destlim = dest;
@@ -412,9 +417,9 @@ char* format_hex(char* dest, int_type val) {
   return destlim;
 }
 
-template<typename int_type>
-char* format(char* dest, int_type val) {
-  int_type n = val;
+template<typename IntType>
+char* format(char* dest, IntType val) {
+  IntType n = val;
   do { dest++; n /= 10; } while (n != 0);
 
   char* destlim = dest;
@@ -471,9 +476,14 @@ void alignment::sam_record(char* dest, int /*dest_length*/) const {
   *dest++ = '\t';
   dest = format_signed(dest, isize());
 
-  for (int i = 0; i < 0; i++) {
+  for (const_iterator it = begin(); it != end(); ++it) {
     *dest++ = '\t';
-    // FIXME iterate over the auxen loop
+    *dest++ = it->tag_[0], *dest++ = it->tag_[1];
+    *dest++ = ':';
+    *dest++ = it->type_; // FIXME sanitize BAM-only types
+    *dest++ = ':';
+    // FIXME Append the aux value
+    strcpy(dest, "FIXME"), dest += 5;
   }
 }
 
@@ -551,8 +561,36 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
 
   memcpy(p->data() + p->name_offset(), fields[qname], name_length);
 
-  for (int i = firstaux; i < nfields; i++)
-    ;
+  for (int i = firstaux; i < nfields; i++) {
+    char* aux = fields[i];
+
+    switch (aux[3]) {
+    case 'A':
+      throw std::logic_error("Aux 'A' field not implemented");  // TODO
+
+    case 'i':
+      push_back(aux, 37); //to_int(&aux[5]));
+      break;
+
+    case 'f':
+      throw std::logic_error("Aux 'f' field not implemented");  // TODO
+
+    case 'd':
+      throw std::logic_error("Aux 'd' field not implemented");  // TODO
+
+    case 'Z':
+      push_back(aux, &aux[5]);
+      break;
+
+    case 'H':
+      throw std::logic_error("Aux 'H' field not implemented");  // TODO
+
+    default:
+      throw bad_format(make_string()
+	  << "Aux field '" << aux[0] << aux[1] << "' has invalid type ('"
+	  << aux[3] << "') for SAM format");
+    }
+  }
 }
 
 #if 0
@@ -560,12 +598,6 @@ int alignment::to_flags(const string& str) {
   const char* s = str.data();
   return to_flags(s, s + str.length());
 }
-
-// FIXME move us
-inline bool tag_eq(const char* s1, const char* s2) {
-  return s1[0] == s2[0] && s1[1] == s2[1];
-}
-
 #endif
 
 // 4. Iterators
@@ -596,10 +628,9 @@ int alignment::aux_field::size() const {
 
   case 'Z':
   case 'H':
-    // The alignment::block adds a sentinel, so this "string" is NUL-terminated
-    // even if the alignment record is malformatted.
-    // FIXME Is this right for H?
-    return 2 + 1 + strlen(data);
+    // The alignment::block adds a sentinel, so this string is NUL-terminated
+    // even if the alignment record is malformed.
+    return 2 + 1 + strlen(data) + 1;
 
   default:
     throw bad_format(make_string()
@@ -627,11 +658,10 @@ string alignment::aux_field::value() const {
 
   case 'f':
   case 'd':
-    throw exception("Implement aux_field::value(f/d)"); // FIXME
+    throw std::logic_error("Implement aux_field::value(f/d)"); // TODO
 
   case 'Z':
   case 'H':
-    // FIXME Is this right for H?
     return string(data);
 
   default:
@@ -641,20 +671,15 @@ string alignment::aux_field::value() const {
   }
 }
 
-static inline signed char    to_int8(char c) { return c; }
-static inline unsigned char to_uint8(char c) { return c; }
-
 int alignment::aux_field::value_int() const {
   switch (type_) {
-  case 'c':  return to_int8(*data);
-  case 'C':  return to_uint8(*data);
-#if 0
-  case 's':  return convert::bamtoint16(data);
-  case 'S':  return convert::bamtouint16(data);
-  case 'i':  return convert::bamtoint32(data);
+  case 'c':  { signed char   value = data[0]; return value; }
+  case 'C':  { unsigned char value = data[0]; return value; }
+  case 's':  return convert::int16(data);
+  case 'S':  return convert::uint16(data);
+  case 'i':  return convert::int32(data);
   // FIXME do something about the big ones...
-  case 'I':  return convert::bamtouint32(data);
-#endif
+  case 'I':  return convert::uint32(data);
 
   case 'f':
   case 'd':
@@ -687,65 +712,94 @@ alignment::const_iterator alignment::find(const char* key) const {
   return end();
 }
 
-alignment::iterator
-alignment::replace_gap(iterator start, iterator limit, int gap_length) {
-  // FIXME
-  limit = limit;
-  gap_length = gap_length;
+int alignment::erase(const char* key) {
+  int count = 0;
+  iterator it = begin();
+  while (it != end())
+    if (it->tag_equals(key))  it = erase(it), count++;
+    else  ++it;
+
+  return count;
+}
+
+// Replace the fields in  [start,limit)  by  gap_length  bytes, to be filled in
+// as a new auxiliary field by the caller.  Returns  start  (perhaps adjusted);
+// if the alignment::block needed to be resized, all other iterators etc are
+// invalidated.
+// FIXME char* v iterators in doco above
+char* alignment::replace_gap(char* start, char* limit, int gap_length) {
+  int SENLEN = 0;  // FIXME TODO What about this sentinel?
+
+  int delta = gap_length - (limit - start);
+  int newsize = p->size() + delta + SENLEN;
+
+  if (p->capacity() < newsize) {
+    char* olddata = p->data();
+    resize_unshare_copy(newsize);
+    char* newdata = p->data();
+
+    start = &newdata[start - olddata];
+    limit = &newdata[limit - olddata];
+  }
+
+  memmove(start + gap_length, limit, end().ptr - limit + SENLEN);
+  p->c.rest_length += delta;
+
   return start;
 }
 
 alignment::iterator
-alignment::replace(iterator start, iterator limit,
-		   const char* tag, const std::string& value) {
-  // FIXME
-  limit = limit;
-  tag = tag;
-  std::clog << "replace(std::string \"" << value << "\")\n";
-  return start;
+alignment::replace_string(iterator start, iterator limit,
+	    const char* tag, char type, const char* value, int value_length) {
+  iterator it = replace_gap(start, limit, 2 + 1 + value_length + 1);
+
+  if (tag)
+    it->tag_[0] = tag[0], it->tag_[1] = tag[1];
+  it->type_ = type;
+  memcpy(it->data, value, value_length);
+  it->data[value_length] = '\0';
+
+  return it;
 }
 
 alignment::iterator
-alignment::replace(iterator start, iterator limit, const char* tag, int value) {
-  // FIXME
-  limit = limit;
-  tag = tag;
-  std::clog << "replace(int " << value << ")\n";
-  return start;
-}
-
-#if 0
-alignment::iterator
-alignment::insert(iterator pos, const char* tag, int value) {
-  char buffer[sizeof(int32_t)];
+alignment::replace_(iterator start, iterator limit,
+		    const char* tag, int value) {
+  iterator it;
 
   // Pick the shortest representation that can hold the given value,
   // preferring signed to unsigned.
 
   if (value >= 0) {
     if (value <= INT8_MAX) {
-      buffer[0] = value;
-      return insert(pos, tag, 'c', buffer, 1);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(int8_t));
+      it->type_ = 'c';
+      it->data[0] = value;
     }
     else if (value <= UINT8_MAX) {
-      buffer[0] = value;
-      return insert(pos, tag, 'C', buffer, 1);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(uint8_t));
+      it->type_ = 'C';
+      it->data[0] = value;
     }
     else if (value <= INT16_MAX) {
-      // FIXME convert...
-      return insert(pos, tag, 's', buffer, 2);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(int16_t));
+      it->type_ = 's';
+      convert::set_bam_int16(it->data, value);
     }
     else if (value <= UINT16_MAX) {
-      // convert...
-      return insert(pos, tag, 'S', buffer, 2);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(uint16_t));
+      it->type_ = 'S';
+      convert::set_bam_uint16(it->data, value);
     }
     else if (value <= INT32_MAX) {
-      // convert...
-      return insert(pos, tag, 'i', buffer, 4);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(int32_t));
+      it->type_ = 'i';
+      convert::set_bam_int32(it->data, value);
     }
     else if (value <= int(UINT32_MAX)) { // FIXME signedness of the constant...
-      // convert...
-      return insert(pos, tag, 'I', buffer, 4);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(uint32_t));
+      it->type_ = 'I';
+      convert::set_bam_uint32(it->data, value);
     }
     else
       throw std::range_error(make_string() << "Integral aux field '"
@@ -753,26 +807,45 @@ alignment::insert(iterator pos, const char* tag, int value) {
   }
   else {
     if (value >= INT8_MIN) {
-      buffer[0] = value;
-      return insert(pos, tag, 'c', buffer, 1);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(int8_t));
+      it->type_ = 'c';
+      it->data[0] = value;
     }
     else if (value >= INT16_MIN) {
-      // convert...
-      return insert(pos, tag, 's', buffer, 2);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(int16_t));
+      it->type_ = 's';
+      convert::set_bam_int16(it->data, value);
     }
     else if (value >= INT32_MIN) {
-      // convert...
-      return insert(pos, tag, 'i', buffer, 4);
+      it = replace_gap(start, limit, 2 + 1 + sizeof(int32_t));
+      it->type_ = 'i';
+      convert::set_bam_int32(it->data, value);
     }
     else
       throw std::range_error(make_string() << "Integral aux field '"
 	  << tag[0] << tag[1] << "' is out of range (negatively)");
   }
-}
-#endif
 
-std::ostream& operator<< (std::ostream& stream, alignment::const_iterator it) {
-  return stream << reinterpret_cast<const void*>(it.aux);
+  if (tag)
+    it->tag_[0] = tag[0], it->tag_[1] = tag[1];
+
+  return it;
+}
+
+alignment::iterator
+alignment::replace_(iterator start, iterator limit,
+		    const char* tag, const_iterator value) {
+  int value_size = value->size();
+
+  iterator it = replace_gap(start, limit, value_size);
+
+  if (tag == NULL)  tag = value->tag_;
+  it->tag_[0] = tag[0], it->tag_[1] = tag[1];
+
+  it->type_ = value->type_;
+  memcpy(it->data, value->data, value_size - (2 + 1));
+
+  return it;
 }
 
 } // namespace sam

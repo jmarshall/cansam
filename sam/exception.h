@@ -7,7 +7,7 @@ Blah blah.  */
 #define CANSAM_EXCEPTION_H
 
 #include <string>
-#include <ios>
+#include <ios> // FIXME For ios_base::failure but maybe we don't want to be one?
 
 namespace sam {
 

@@ -29,24 +29,19 @@ This documentation was generated from comments in the source code using
 
 
 /// @namespace sam
-/// @brief All of Cansam is encapsulated within this namespace.
+/// @brief All of Cansam is encapsulated within this namespace
 namespace sam {
 } // end of namespace sam
 
-/// @namespace cansam
-/// @brief General utilities that are not specific to SAM processing
-namespace cansam {
-} // end of namespace cansam
-
 /* Not sure if this is a good idea... */
+/// @namespace std
+/// @brief Standard C++ namespace
 namespace std {
 /** @class std::ios
-    @brief the relevant parts of std::ios
+    @brief The relevant parts of std::ios
 
 blah */
 class ios {
-int state_flags;
-int exceptions();
 };
 }
 

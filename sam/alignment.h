@@ -7,10 +7,9 @@
 
 #include <string>
 #include <vector>
-//#include <algorithm>  // FIXME NUKE-ME, but for specialising std::swap IIRC
 #include <iterator>
-
-#include <ostream> // FIXME NUKE-ME, but figure out who's getting us <iosfwd>
+//#include <algorithm>  // FIXME NUKE-ME, but for specialising std::swap IIRC
+#include <iosfwd>
 
 #include <stdint.h>
 
@@ -37,44 +36,61 @@ enum alignment_flag {
   DUPLICATE           = 0x400  ///< PCR duplicate or optical duplicate
 };
 
+/// Returns the BAM bin number (1-based)
 /** Returns the BAM bin number for an alignment spanning [@a pos, @a right],
     i.e., a 1-based range.  */
 int calc_bin(coord_t pos, coord_t right);
 
+/// Returns the BAM bin number (0-based)
 /** Returns the BAM bin number for an alignment spanning [@a zpos, @a zright],
     i.e., a 0-based range.  */
 int calc_zbin(coord_t zpos, coord_t zright);
 
 /** @class sam::alignment sam/alignment.h
-    @brief SAM/BAM alignment record */
+    @brief SAM/BAM alignment record
+
+Blah blah blah about alignment records, including how they are represented and
+the performance implications for user code, e.g., use swap() in preference to
+assignment, and about thread considerations.
+
+The various auxiliary field function templates take a @em ValueType parameter,
+which may be of any of the following types:
+  - <tt>const std::string&</tt> or <tt>const char*</tt>
+  - @c int
+  - @c char (eventually)
+  - @c float (eventually)
+  - @c double (eventually)
+  - @c std::vector<uint8_t> (eventually)
+  - @c const_iterator
+*/
 class alignment {
 public:
-  /// Construct an empty alignment.
+  /// Construct an empty alignment
   alignment() : p(&empty) { }
 
 #if 0
-  /// Construct an alignment by splitting up a tab-separated text string.
+  /// Construct an alignment by splitting up a tab-separated text string
   // FIXME what reference_thingie does this use?
   explicit alignment(const std::string& line) { assign(line); }
 #endif
 
-  /// Construct a copy of an alignment.
+  /// Construct a copy of an alignment
   alignment(const alignment& aln);
 
-  /// Destroy this alignment object.
+  /// Destroy this alignment object
   ~alignment() { if (p != &empty)  block::destroy(p); }
 
-  /// Copy an alignment.
+  /// Copy an alignment
   alignment& operator= (const alignment& aln);
 
-  /// Assign to this alignment by splitting up a tab-separated text string.
+  /// Assign to this alignment by splitting up a tab-separated text string
   // FIXME what reference_thingie does this use?
   alignment& assign(const std::string& line);
 
-  /// Swap this alignment with another.
+  /// Swap this alignment with another
   void swap(alignment& aln) { block* tmp = p; p = aln.p; aln.p = tmp; }
 
-  void reserve(int auxsize);
+  void reserve(int auxsize); // FIXME How much should @a size measure?
 
   /** @name Field accessors */
   //@{
@@ -149,14 +165,14 @@ public:
   Alignment records provide limited collection-style access to their
   auxiliary fields.
 
-  The @c iterator and @c const_iterator classes are <b>forward iterators</b>
-  providing all the usual iterator functionality: copying, assignment,
-  pre- and post-increment, equality and inequality tests, and dereferencing,
-  which produces an aux_field through which the pointed-to auxiliary field's
-  properties can be accessed.
+  The @c sam::alignment::iterator and @c sam::alignment::const_iterator classes
+  are <b>forward iterators</b> providing all the usual iterator functionality:
+  copying, assignment, pre- and post-increment, equality and inequality tests,
+  and dereferencing, which produces an aux_field through which the pointed-to
+  auxiliary field's properties can be accessed (but not modified; see also
+  the iterator variant of set_aux() below).
 
-  This access is read-only; to change a field's value, use the iterator
-  variants of set_aux() listed below.  */
+  The possible types for the @c ValueType parameter are listed below.  */
   //@{
   /** @class sam::alignment::aux_field sam/alignment.h
       @brief Helper class representing an auxiliary field as seen via an
@@ -166,8 +182,8 @@ public:
   (a reference to) an instance of this class.
 
   @note There are no mutator methods, even if it is a mutable @c iterator that
-  has been dereferenced; use the iterator variants of sam::alignment::set_aux()
-  to change the value of an auxiliary field via an @c iterator.  */
+  has been dereferenced; use sam::alignment::set_aux() to change the value of
+  an auxiliary field via an @c iterator.  */
   // FIXME maybe rename to tagfield, and there will also be a header::tagfield
   class aux_field {
   public:
@@ -198,6 +214,8 @@ public:
     int size() const;
 
   private:
+    friend class alignment;
+
     char tag_[2];
     char type_;
     char data[1];
@@ -209,23 +227,23 @@ public:
   class iterator : public std::iterator<std::forward_iterator_tag, aux_field> {
   public:
     iterator() { }
-    iterator(const iterator& it) : aux(it.aux) { }
+    iterator(const iterator& it) : ptr(it.ptr) { }
     ~iterator() { }
-    iterator& operator= (iterator it) { aux = it.aux; return *this; }
+    iterator& operator= (iterator it) { ptr = it.ptr; return *this; }
 
-    aux_field& operator* () const { return *reinterpret_cast<aux_field*>(aux); }
-    aux_field* operator-> () const { return reinterpret_cast<aux_field*>(aux); }
+    aux_field& operator* () const { return *reinterpret_cast<aux_field*>(ptr); }
+    aux_field* operator-> () const { return reinterpret_cast<aux_field*>(ptr); }
 
-    iterator& operator++ () { aux += (*this)->size(); return *this; }
+    iterator& operator++ () { ptr += (*this)->size(); return *this; }
     iterator operator++ (int)
-      { char* orig = aux; aux += (*this)->size(); return iterator(orig); }
+      { char* orig = ptr; ptr += (*this)->size(); return iterator(orig); }
 
   private:
     friend class alignment;
     friend class const_iterator;
-    explicit iterator(char* p) : aux(p) { }
+    explicit iterator(char* p) : ptr(p) { }
 
-    char* aux;
+    char* ptr;
   };
 
   class const_iterator :
@@ -233,35 +251,35 @@ public:
 			 ptrdiff_t, const aux_field*, const aux_field&> {
   public:
     const_iterator() { }
-    const_iterator(const const_iterator& it) : aux(it.aux) { }
-    const_iterator(iterator it) : aux(it.aux) { }
+    const_iterator(const const_iterator& it) : ptr(it.ptr) { }
+    const_iterator(iterator it) : ptr(it.ptr) { }
     ~const_iterator() { }
     const_iterator& operator= (const_iterator it)
-      { aux = it.aux; return *this; }
+      { ptr = it.ptr; return *this; }
 
     const aux_field& operator* () const
-      { return *reinterpret_cast<const aux_field*>(aux); }
+      { return *reinterpret_cast<const aux_field*>(ptr); }
 
     const aux_field* operator-> () const
-      { return reinterpret_cast<const aux_field*>(aux); }
+      { return reinterpret_cast<const aux_field*>(ptr); }
 
-    const_iterator& operator++ () { aux += (*this)->size(); return *this; }
+    const_iterator& operator++ () { ptr += (*this)->size(); return *this; }
     const_iterator operator++ (int)
-      { const char* orig = aux;
-	aux += (*this)->size(); return const_iterator(orig); }
+      { const char* orig = ptr;
+	ptr += (*this)->size(); return const_iterator(orig); }
 
     friend inline bool operator== (const_iterator it1, const_iterator it2)
-      { return it1.aux == it2.aux; }
+      { return it1.ptr == it2.ptr; }
     friend inline bool operator!= (const_iterator it1, const_iterator it2)
-      { return it1.aux != it2.aux; }
+      { return it1.ptr != it2.ptr; }
 
     friend std::ostream& operator<< (std::ostream& stream, const_iterator it);
 
   private:
     friend class alignment;
-    explicit const_iterator(const char* p) : aux(p) { }
+    explicit const_iterator(const char* p) : ptr(p) { }
 
-    const char* aux;
+    const char* ptr;
   };
 
   typedef iterator::reference reference;
@@ -280,44 +298,35 @@ public:
   iterator find(const char* tag);
   const_iterator find(const char* tag) const;
 
-  void push_back(const char* tag, const std::string& value)
-    { replace(end(), end(), tag, value); }
-  void push_back(const char* tag, int value)
-    { replace(end(), end(), tag, value); }
+  template<typename ValueType>
+  void push_back(const char* tag, ValueType value)
+    { replace_(end(), end(), tag, value); }
 
-#if 1
-  iterator insert(iterator position, const char* tag, const std::string& value)
-    { return replace(position, position, tag, value); }
-  iterator insert(iterator position, const char* tag, int value)
-    { return replace(position, position, tag, value); }
-#else
-  template<typename value_type>
-  iterator insert(iterator position, const char* tag, value_type value)
-    { return replace(position, position, tag, value); }
-#endif
+  template<typename ValueType>
+  iterator insert(iterator position, const char* tag, ValueType value)
+    { return replace_(position, position, tag, value); }
 
   iterator erase(iterator position)
-    //{ return replace_gap(position, next(position), 0); }
-    { iterator first = position; return replace_gap(first, ++position, 0); }
+    { return replace_gap(position, next(position), 0); }
   iterator erase(iterator start, iterator limit)
     { return replace_gap(start, limit, 0); }
 
   void clear() { replace_gap(begin(), end(), 0); }
 
-  iterator replace(iterator start, iterator limit,
-		   const char* tag, const std::string& value);
-  iterator replace(iterator start, iterator limit, const char* tag, int value);
+  template<typename ValueType>
+  iterator
+  replace(iterator start, iterator limit, const char* tag, ValueType value)
+    { return replace_(start, limit, tag, value); }
   //@}
 
   /** @name Additional field accessors
-      Accessors returning strings also have corresponding versions returning
-      C strings, which are slightly cheaper as generally a NUL-terminated
-      string is already available and no string construction memory allocation
-      is needed.
-      
-      Returned pointers point within the blahblah, and are valid as long as
-      no non-const member functions (including the destructor!) are called
-      for this alignment.  FIXME  */
+  Some accessors returning strings also have corresponding versions returning
+  C strings or (non-NUL-terminated) @c char arrays.  These versions are cheaper
+  as a suitable representation already exists within the alignment object, so
+  no @c std::string construction or memory allocation is necessary.
+
+  Pointers returned by an alignment object become invalid when any of
+  that object's non-const member functions are subsequently called.  */
   //@{
   /// Query name
   const char* qname_c_str() const { return p->data() + p->name_offset(); }
@@ -341,7 +350,9 @@ public:
 
   /** @name Field modifiers  */
   //@{
-  void set_qname(const std::string& qname);
+  void set_qname(const std::string& qname)
+    { set_qname(qname.data(), qname.length()); }
+
   void set_flags(int flags);
   void set_rindex(int rindex);
   void set_rname(const std::string& rname);
@@ -354,44 +365,33 @@ public:
   void set_mate_pos(coord_t pos);
   void set_mate_zpos(coord_t zpos);
   void set_isize(scoord_t isize);
-
-  // FIXME put length first?
   void set_seq(const std::string& seq);
-  void set_raw_seq(const char* seq, int length);
-  void set_raw_seq_qual(const char* seq, int length, const char* qual);
-
-  /* Replace() primitives:
-  replace_gap(iterator start, iterator limit, int gap_length); [returns rewired start]
-  replace(iterator start, iterator limit, const char* tag, const std::string& value);
-    { replace_gap(st,lim,3+value.length()+1); memcpy; }
-  replace(iterator start, iterator limit, const char* tag, int value);
-    { if (value <= INT8_MAX) { replace_gap(st,lim,3+1); cvt_into; } else if... }
-  // etc
-
-  Now implement in terms of this:
-
-  void set_aux(const char* tag, const std::string& value);	// lim = pos = find(tag); if (pos != end()) ++lim; replace(pos, lim, tag, value)
-  void set_aux(iterator position, const std::string& value);	// replace(pos, next(pos), orig->tag(), value)
-
-  void push_back(const char* tag, const std::string& value);	// replace(end(), end(), tag, value)
-  iterator insert(iterator position, const char* tag, value);	// replace(pos, pos, tag, value)
-
-  void erase(const char* tag);					// pos = find(tag); if (pos != end()) replace_gap(pos, next(pos), 0)
-  iterator erase(iterator position)				// replace_gap(pos, next(pos), 0)
-  iterator erase(iterator first, iterator last);		// replace_gap(first, last, 0)
-
-  void clear() { erase(begin(), end()); }
-
-  */
 
   /// Update an existing @a tag's value, or add a new auxiliary field
-  void set_aux(const char* tag, const std::string& value);
-  void set_aux(const char* tag, int value);
+  template<typename ValueType>
+  void set_aux(const char* tag, ValueType value)
+    { iterator position = find(tag); iterator limit = position;
+      if (position != end())  ++limit;
+      replace_(position, limit, tag, value); }
 
-  iterator set_aux(iterator position, const std::string& value);
-  iterator set_aux(iterator position, int value);
+  /// Update the existing auxiliary field's value
+  template<typename ValueType>
+  iterator set_aux(iterator position, ValueType value)
+    { return replace_(position, next(position), NULL, value); }
 
-  void erase(const char* tag);
+  /// Erase all auxiliary fields with the given @a tag
+  /** @return The number of fields erased (usually no more than 1).  */
+  int erase(const char* tag);
+  //@}
+
+  /** @name Additional field modifiers  */
+  //@{
+  void set_qname(const char* qname)
+    { set_qname(qname, std::char_traits<char>::length(qname)); }
+
+  // FIXME put length first?
+  void set_raw_seq(const char* seq, int length);
+  void set_raw_seq_qual(const char* seq, int length, const char* qual);
   //@}
 
   /// @name Derived information
@@ -401,11 +401,11 @@ public:
   @return Either '+' or '-'.  */
   char strand() const { return (flags() & REVERSE_STRAND)? '-' : '+'; }
 
-  /// @brief The @e mate-strand flag, as '+' or '-'.
-  /// @details Returns the mate read's strand information encoded in the
-  /// flags field.  This is only meaningful if the alignment in fact has
-  /// a mate, i.e., if it is paired.
-  /// @return Either '+' or '-'.
+  /// The @e mate-strand flag, as '+' or '-'
+  /** Returns the mate read's strand information encoded in the flags field.
+  This is only meaningful if the alignment in fact has a mate, i.e., if it
+  is paired.
+  @return Either '+' or '-'.  */
   char mate_strand() const {return (flags() & MATE_REVERSE_STRAND)? '-' : '+';}
 
   /// The @e pair-order flags, as -1 or +1 (or 0 when unset)
@@ -428,6 +428,9 @@ public:
   int approx_sam_record_length() const;
   void sam_record(char*, int) const;
   //@}
+
+  // FIXME nuke me or otherwise hide me!
+  void dump_on(std::ostream&, const_iterator = const_iterator(0)) const;
 
   /// Pack sequence string into two-base-per-byte encoding
   /** Writes @a seq_length/2 (rounded up) bytes of encoded sequence data to
@@ -518,7 +521,32 @@ private:
   void resize_unshare_copy(int size);
   void resize_unshare_discard(int size);
 
-  iterator replace_gap(iterator start, iterator limit, int gap_length);
+  void set_qname(const char* qname, int qname_length);
+
+  char* replace_gap(char* start, char* limit, int gap_length);
+  iterator replace_gap(iterator start, iterator limit, int gap_length)
+    { return iterator(replace_gap(start.ptr, limit.ptr, gap_length)); }
+
+  iterator replace_string(iterator start, iterator limit,
+      const char* tag, char type, const char* value, int value_length);
+
+  iterator replace_(iterator start, iterator limit,
+		    const char* tag, const std::string& value)
+    { return replace_string(start, limit, tag, 'Z',
+			    value.data(), value.length()); }
+
+  iterator replace_(iterator start, iterator limit,
+		    const char* tag, const char* value)
+    { return replace_string(start, limit, tag, 'Z',
+			    value, std::char_traits<char>::length(value)); }
+
+  iterator replace_(iterator start, iterator limit, const char* tag, int value);
+
+  // TODO Add replace_ for char ('A'), float ('f'), double ('d'),
+  // and const std::vector<uint8_t>& ('H') (and maybe a string adapter for 'H')
+
+  iterator replace_(iterator start, iterator limit,
+		    const char* tag, const_iterator value);
 
   static void unpack_seq(std::string::iterator dest,
 			 const char* raw_seq, int seq_length);
@@ -553,10 +581,15 @@ an alignment record, for example if it starts with an '@' character.
 std::istream& operator>> (std::istream& stream, alignment& aln);
 
 /// Print an alignment to the stream
-/** Writes an alignment record to a %stream as text in SAM format, @b without
+/** Writes an alignment record to a stream as text in SAM format, @b without
 a trailing newline character.
 @relatesalso alignment */
 std::ostream& operator<< (std::ostream& stream, const alignment& aln);
+
+/// Print an auxiliary field to the stream
+/** Writes an auxiliary field to a stream as text in SAM format.
+@relatesalso alignment::aux_field */
+std::ostream& operator<< (std::ostream& stream, const alignment::aux_field& aux);
 
 } // namespace sam
 

@@ -48,7 +48,6 @@ public:
   // FIXME or call it rindex or so?
   int findseq(const std::string& rname) const;
 
-  /// 
   std::string rname(int rindex) const;
 
 #if 0

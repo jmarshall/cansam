@@ -8,10 +8,10 @@
 #include <string>
 
 #include "sam/types.h"
-#include "sam/alignment.h"
-#include "sam/header.h"
 
 namespace sam {
+
+class alignment;
 
 /*. @name Additional openmode flags */
 //.{

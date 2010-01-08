@@ -125,7 +125,7 @@ public:
   void clear() { fields.clear(); sync(); }
 
   iterator erase(iterator pos) { pos = fields.erase(pos); sync(); return pos; }
-  void erase(const char* tag); 
+  void erase(const char* tag);
 
   iterator insert(iterator it, const char* tag, const std::string& value);
   iterator insert(iterator it, const char* tag, int value);

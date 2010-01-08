@@ -1,4 +1,4 @@
-CXXFLAGS = -Wall -Wextra -O2 -I. -ansi -pedantic
+CXXFLAGS = -Wall -Wextra -O2 -g -I.
 LDFLAGS  = -L.
 
 OUTPUTS = libcansam.a samcat samsort simplecat test/runtests
@@ -15,7 +15,7 @@ libcansam.a: $(LIBOBJS)
 	ranlib $@
 
 lib/alignment.o: lib/alignment.cpp sam/alignment.h sam/exception.h \
-		 lib/utilities.h
+		 lib/utilities.h lib/wire.h
 lib/collection.o: lib/collection.cpp sam/collection.h
 lib/exception.o: lib/exception.cpp sam/exception.h
 lib/header.o: lib/header.cpp sam/header.h

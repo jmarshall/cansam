@@ -5,6 +5,7 @@
 
 #include <cstring>
 
+#include "sam/alignment.h"
 #include "sam/stream.h"
 #include "lib/zio.h"
 #include "lib/wire.h"
@@ -33,20 +34,32 @@ public:
   virtual ~bamio() { }
 
   virtual bool get_headers(isamstream&);
-  virtual bool get(isamstream& strm, alignment& aln);
-  virtual void put(osamstream& strm, const alignment& aln);
+  virtual bool get(isamstream& stream, alignment& aln);
+  virtual void put(osamstream& stream, const alignment& aln);
 };
 
 samstream_base::bamio::bamio(const char* text, std::streamsize textsize) {
+  #warning bamio::bamio() unimplemented
+  text=text, textsize=textsize;
 }
 
-bool samstream_base::bamio::get_headers(isamstream& strm) {
+bool samstream_base::bamio::get_headers(isamstream& stream) {
+  #warning bamio::get_headers() unimplemented
+  stream.eof();
+  return false;
 }
 
-bool samstream_base::bamio::get(isamstream& strm, alignment& aln) {
+bool samstream_base::bamio::get(isamstream& stream, alignment& aln) {
+  #warning bamio::get() unimplemented
+  stream.eof();
+  aln.find("X0");
+  return false;
 }
 
-void samstream_base::bamio::put(osamstream& strm, const alignment& aln) {
+void samstream_base::bamio::put(osamstream& stream, const alignment& aln) {
+  #warning bamio::put() unimplemented
+  stream.eof();
+  aln.find("X0");
 }
 
 
@@ -126,7 +139,7 @@ char* samstream_base::samio::flush_buffer(char* ptr) {
 }
 
 /* Reads a newline-terminated line of tab-delimited text into  fields,
-and returns the number of fields present (or 0 at EOF). 
+and returns the number of fields present (or 0 at EOF).
 
 */
 int samstream_base::samio::getline(isamstream& stream) {
@@ -181,12 +194,15 @@ int samstream_base::samio::getline(isamstream& stream) {
     }
     else
       s++;
- 
+
   begin = s;
   return fields.size() - 1;
 }
 
-bool samstream_base::samio::get_headers(isamstream& strm) {
+bool samstream_base::samio::get_headers(isamstream& stream) {
+  #warning samio::get_headers() unimplemented
+  stream.eof();
+  return false;
 }
 
 bool samstream_base::samio::get(isamstream& stream, alignment& aln) {
@@ -204,7 +220,10 @@ std::clog << "\n";
   return true;
 }
 
-void samstream_base::samio::put(osamstream& strm, const alignment& aln) {
+void samstream_base::samio::put(osamstream& stream, const alignment& aln) {
+  #warning samio::put() unimplemented
+  stream.eof();
+  aln.find("X0");
 }
 
 
@@ -244,7 +263,7 @@ samstream_base::sambamio::new_in(std::streambuf* sbuf) {
 
 // Construct a new concrete sambamio according to MODE.
 samstream_base::sambamio*
-samstream_base::sambamio::new_out(std::streambuf* sbuf, openmode mode) {
+samstream_base::sambamio::new_out(std::streambuf* /*sbuf*/, openmode mode) {
   if (mode & binary)
     return new bamio(NULL, 0 /*, mode & compressed*/);
 #if 0
