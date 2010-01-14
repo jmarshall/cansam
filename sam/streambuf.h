@@ -76,6 +76,8 @@ public:
 		   int perm = 0664);
 
   /// Open a file that will be closed when this buffer is destroyed
+  /** @param flags  flags as used by the @c open(2) system call
+  */
   rawfilebuf* open(const char* fname, int flags, int perm = 0664);
 
   /// Associate an open file descriptor that will be closed when this buffer

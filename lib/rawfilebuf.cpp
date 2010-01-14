@@ -43,6 +43,7 @@ rawfilebuf::open(const char* fname, std::ios_base::openmode mode, int perm) {
   if (mode & ios::binary)  flags |= O_BINARY;
 #endif
 #ifdef O_TEXT
+  // FIXME  Actually probably not a good idea, at least on Cygwin
   if (! (mode & ios::binary))  flags |= O_TEXT;
 #endif
 

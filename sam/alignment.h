@@ -259,6 +259,9 @@ public:
     ~iterator() { }
     iterator& operator= (iterator it) { ptr = it.ptr; return *this; }
 
+    bool operator== (iterator it) const { return ptr == it.ptr; }
+    bool operator!= (iterator it) const { return ptr != it.ptr; }
+
     aux_field& operator* () const { return *reinterpret_cast<aux_field*>(ptr); }
     aux_field* operator-> () const { return reinterpret_cast<aux_field*>(ptr); }
 
@@ -285,6 +288,9 @@ public:
     const_iterator& operator= (const_iterator it)
       { ptr = it.ptr; return *this; }
 
+    bool operator== (const_iterator it) const { return ptr == it.ptr; }
+    bool operator!= (const_iterator it) const { return ptr != it.ptr; }
+
     const aux_field& operator* () const
       { return *reinterpret_cast<const aux_field*>(ptr); }
 
@@ -296,15 +302,9 @@ public:
       { const char* orig = ptr;
 	ptr += (*this)->size(); return const_iterator(orig); }
 
-    friend inline bool operator== (const_iterator it1, const_iterator it2)
-      { return it1.ptr == it2.ptr; }
-    friend inline bool operator!= (const_iterator it1, const_iterator it2)
-      { return it1.ptr != it2.ptr; }
-
-    friend std::ostream& operator<< (std::ostream& stream, const_iterator it);
-
   private:
     friend class alignment;
+    friend std::ostream& operator<< (std::ostream& stream, const_iterator it);
     explicit const_iterator(const char* p) : ptr(p) { }
 
     const char* ptr;
@@ -556,6 +556,13 @@ private:
   // @endcond
 };
 
+// @cond infrastructure
+inline bool operator== (alignment::iterator it1, alignment::const_iterator it2)
+  { return alignment::const_iterator(it1) == it2; }
+inline bool operator!= (alignment::iterator it1, alignment::const_iterator it2)
+  { return alignment::const_iterator(it1) != it2; }
+// @endcond
+
 /// Compare alignments by genomic location
 /** The alignments are ordered by reference index (with unmapped, -1, sorting
 last), position, query name, and ordering flag.
@@ -584,6 +591,9 @@ std::istream& operator>> (std::istream& stream, alignment& aln);
 a trailing newline character.
 @relatesalso alignment */
 std::ostream& operator<< (std::ostream& stream, const alignment& aln);
+
+/// Print an iterator or const_iterator to the stream
+std::ostream& operator<< (std::ostream& stream, alignment::const_iterator it);
 
 /// Print an auxiliary field to the stream
 /** Writes an auxiliary field to a stream as text in SAM format.

@@ -9,7 +9,8 @@
 #include <stdexcept>
 #include <string>
 #include <cstring>
-#include <climits>
+#include <cstdlib>  // for strtol()
+#include <climits>  // for UCHAR_MAX
 
 #include <iostream> // FIXME NUKE-ME
 

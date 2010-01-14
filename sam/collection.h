@@ -13,6 +13,8 @@
 
 namespace sam {
 
+class header;
+
 #if 0
 /*. @class sam::reference sam/collection.h
     @brief Reference sequence record, corresponding to an @@SQ header */
@@ -43,7 +45,14 @@ private:
 class collection {
 public:
   collection();
+  collection(const collection& collection);
+  collection& operator= (const collection& collection);
   ~collection();
+
+  // @cond infrastructure
+  typedef std::vector<header*>::iterator iterator;  // FIXME or something...
+
+  // @endcond
 
   // FIXME or call it rindex or so?
   int findseq(const std::string& rname) const;
@@ -66,6 +75,7 @@ public:
   static collection& find(unsigned cindex) { return *collections[cindex]; }
 
 private:
+  std::vector<header*> headers;
   //std::vector<something> refseqs;
   std::map<std::string, int> refmap;
 

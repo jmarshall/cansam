@@ -5,9 +5,9 @@
 #ifndef CANSAM_HEADER_H
 #define CANSAM_HEADER_H
 
-#include <iosfwd>
 #include <string>
-#include <vector>
+#include <iterator>
+#include <iosfwd>
 
 #include "sam/types.h"
 
@@ -16,12 +16,10 @@ namespace sam {
 /** @class sam::header sam/header.h
     @brief SAM/BAM header record, representing a single '@@' header line
 
-FIXME Doco update, it's not a std::vector any more!
-
-This class represents the header fields as a vector of header_field items.
-This is by inheritance, so a header object itself is amenable to all the
-usual vector operations, such as iterating through the fields with @c begin()
-and @c end(), and modifying them with @c erase(), @c push_back(), etc.
+This class blah FIXME blah collection-style blah, so a header object itself
+is amenable to the usual collection operations, such as iterating through the
+fields with @c begin() and @c end(), and modifying them with @c erase(),
+@c push_back(), etc.
 
 A SAM header probably ought not to have two fields with the same tag,
 though this is not explicitly stated in the specification and is not enforced
@@ -29,6 +27,101 @@ by this class.  Thus find() and field() in fact return the @b first field with
 the specified tag.  In the unlikely event that you expect a tag to occur in
 several fields, you should iterate until @c end() checking for other instances
 of the tag yourself.  */
+#if 1
+
+class header {
+public:
+  header() { }
+  explicit header(const std::string& line) : str_(line) { }
+  virtual ~header() { }
+
+  // FIXME Infrastructure: copy ctor, assign, swap, reserve
+
+  std::string str() const { return str_; }
+
+  std::string type() const { return str_.substr(1, 2); }
+
+  std::string text() const;
+
+  // FIXME and with the default values and <int> and maybe <coord_t>...
+  std::string field(const char* tag) const;
+
+  /** @name Fields as a collection
+  Headers provide limited collection-style access to their fields.  */
+  //@{
+  /** @class sam::header::tagfield sam/header.h
+      @brief Helper class representing a header field as seen via an iterator
+  */
+  class tagfield {
+  public:
+    /// Two-character field tag
+    std::string tag() const { return std::string(tag_, sizeof(tag_)); }
+
+    /// Field value
+    std::string value() const;
+
+    /// Returns whether the field's tag is the same as the given @a key_tag
+    bool tag_equals(const char* key_tag) const
+      { return tag_[0] == key_tag[0] && tag_[1] == key_tag[1]; }
+
+  private:
+    friend class header;
+
+#if 0
+    tagfield();
+
+    const char tag_[2];
+    const char colon;
+    const char strvalue[1];
+#else
+    // FIXME  Probably will need to make these const
+    char tag_[2];
+    char colon;
+    char strvalue[1];
+#endif
+  };
+
+  // @cond infrastructure
+  class const_iterator;
+
+  class iterator :
+    public std::iterator<std::bidirectional_iterator_tag, tagfield> {
+  public:
+    iterator() { }
+    iterator(const iterator& it) : str(it.str), pos(it.pos) { }
+    iterator& operator= (iterator it)
+      { str = it.str; pos = it.pos; return *this; }
+    ~iterator() { }
+
+    bool operator== (iterator it) const {return str == it.str && pos == it.pos;}
+    bool operator!= (iterator it) const {return str != it.str || pos != it.pos;}
+
+    tagfield& operator* () const {}
+    tagfield* operator-> () const { return reinterpret_cast<const tagfield*>(str->data() + pos); }
+    //tagfield* operator-> () const { return (str->data() + pos); }
+
+    iterator& operator++() {}
+
+    iterator operator++(int)
+      { size_t orig = pos; ++(*this); return iterator(str, orig); }
+
+  private:
+    explicit iterator(std::string* s, size_t p) : str(s), pos(p) { }
+
+    std::string* str;
+    size_t pos;
+  };
+  // @endcond
+
+  //@}
+
+private:
+  virtual void sync() { }
+
+  std::string str_;
+};
+
+#else
 class header {
 private:
   // @cond private
@@ -142,6 +235,7 @@ private:
   std::string type_;
   std::vector<header_field> fields;
 };
+#endif
 
 /** @brief Returns the kind (header/alignment) of the next available record
 @param stream  The input stream to be peeked at.
@@ -163,6 +257,7 @@ std::istream& operator>> (std::istream& stream, header& hdr);
 std::ostream& operator<< (std::ostream& stream, const header& hdr);
 
 
+#if 0
 /** @class sam::reference sam/header.h
     @brief Reference sequence record, corresponding to a single '@@SQ' header */
 class reference : public header {
@@ -201,6 +296,7 @@ private:
 
   iterator name_it;
 };
+#endif
 
 } // namespace sam
 

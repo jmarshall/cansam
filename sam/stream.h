@@ -11,8 +11,6 @@
 
 namespace sam {
 
-class alignment;
-
 /*. @name Additional openmode flags */
 //.{
 /// Consider the stream to be compressed
@@ -25,6 +23,9 @@ const std::ios_base::openmode sam_format
 /// Flags appropriate for a BAM file (equivalent to @c binary|compressed)
 const std::ios_base::openmode bam_format = std::ios_base::binary | compressed;
 //.}
+
+class alignment;
+class collection;
 
 /** @class sam::samstream_base sam/stream.h
     @brief Base class for SAM/BAM streams
@@ -85,6 +86,10 @@ public:
 
   virtual ~isamstream();
 
+  /// Read the collection of headers
+  /** Blah blah blah FIXME */
+  isamstream& operator>> (collection& headers);
+
   /// Read an alignment record
   /** Similarly to @c std::istream's extraction operators, this reads one
   alignment record into @a aln and returns the stream.  The @c iostate flags
@@ -92,8 +97,11 @@ public:
   as selected via @c exceptions().  */
   isamstream& operator>> (alignment& aln);
 
+#if 0
   /// Seek back to the first alignment record in the stream
+  // FIXME Or to the start of the stream, i.e., the collection?
   isamstream& rewind();
+#endif
 
   // FIXME  Some form of seek/tell -- or maybe that's in samstream_base
 };
