@@ -7,7 +7,10 @@
 
 using std::string;
 
-void cat(std::istream& in, std::ostream& out) {
+void cat(std::istream&, std::ostream&) {
+  // FIXME
+  std::clog << "FIXME reimplement with sam::isamstream etc\n";
+#if 0
   sam::header header;
   while (in >> header)
     out << header << '\n';
@@ -28,6 +31,7 @@ void cat(std::istream& in, std::ostream& out) {
     std::clog << '\n';
 #endif
     }
+#endif
 }
 
 int main(int argc, char** argv) {

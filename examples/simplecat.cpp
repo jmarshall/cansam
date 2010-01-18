@@ -8,6 +8,8 @@
 #include "sam/alignment.h"
 
 void cat(std::istream& in, bool print_headers) {
+  // FIXME there is no hope, as istream >> aln is silly to implement
+#if 0
   sam::header header;
   while (in >> header)
     if (print_headers)
@@ -18,6 +20,7 @@ void cat(std::istream& in, bool print_headers) {
   sam::alignment aln;
   while (in >> aln)
     std::cout << aln << '\n';
+#endif
 }
 
 int main(int argc, char** argv) {

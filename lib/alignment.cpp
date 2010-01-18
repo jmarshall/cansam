@@ -181,7 +181,7 @@ void alignment::set_qname(const char* qname_data, int qname_length) {
 }
 
 void alignment::set_flags(int flags) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.flags = flags;
 }
 
@@ -189,19 +189,19 @@ void alignment::set_flags(int flags) {
 // void alignment::set_rname(const std::string& rname)
 
 void alignment::set_pos(coord_t pos) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.zpos = pos - 1;
   p->c.bin = unknown_bin;
 }
 
 void alignment::set_zpos(coord_t zpos) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.zpos = zpos;
   p->c.bin = unknown_bin;
 }
 
 void alignment::set_mapq(int mapq) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.mapq = mapq;
 }
 
@@ -210,17 +210,17 @@ void alignment::set_mapq(int mapq) {
 // void alignment::set_mate_rname(const std::string& mate_rname)
 
 void alignment::set_mate_pos(coord_t pos) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.mate_zpos = pos - 1;
 }
 
 void alignment::set_mate_zpos(coord_t zpos) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.mate_zpos = zpos;
 }
 
 void alignment::set_isize(scoord_t isize) {
-  if (p == &empty)  resize_unshare_copy(p->size());
+  if (p == &empty_block)  resize_unshare_copy(p->size());
   p->c.isize = isize;
 }
 
@@ -256,7 +256,7 @@ shared by all the default-constructed alignments.  (It's shared so that we can
 have a constant-time default constructor.)  This block lies about its capacity
 so that tests of the form "p->capacity() < some_size" always trigger when  p
 is the empty block.  */
-struct alignment::block alignment::empty = {
+struct alignment::block alignment::empty_block = {
   { 0 /* 41, if truth be told */, 0 },
   { 33, -1, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0 },
   { '\0' /* an empty qname C-string */ }
@@ -280,7 +280,7 @@ void alignment::block::copy(block* dest, const block* src) {
 
 // Deallocate the block.
 void alignment::block::destroy(block* p) {
-  // FIXME do if != &empty test here?  Otherwise inline?
+  // FIXME do if != &empty_block test here?  Otherwise inline?
   char* cp = reinterpret_cast<char*>(p);
   delete [] cp;
 }
@@ -293,7 +293,7 @@ void alignment::resize_unshare_copy(int size) {
   block* oldp = p;
   block::copy(newp, oldp);
   p = newp;
-  if (oldp != &empty)  block::destroy(oldp);
+  if (oldp != &empty_block)  block::destroy(oldp);
 }
 
 /* Resize the alignment's block, unsharing it if it is currently the shared
@@ -303,7 +303,7 @@ void alignment::resize_unshare_discard(int size) {
   block* newp = block::create(size);
   block* oldp = p;
   p = newp;
-  if (oldp != &empty)  block::destroy(oldp);
+  if (oldp != &empty_block)  block::destroy(oldp);
 }
 
 /* This assignment operator simply copies the pointed-to block, but must first
@@ -404,7 +404,7 @@ int alignment::approx_sam_record_length() const {
   return len;
 }
 
-template<typename IntType>
+template <typename IntType>
 char* format_hex(char* dest, IntType val) {
   *dest++ = '0';
   *dest++ = 'x';
@@ -416,24 +416,6 @@ char* format_hex(char* dest, IntType val) {
   do { *--dest = "0123456789ABCDEF"[val & 0xf]; val >>= 4; } while (val != 0);
 
   return destlim;
-}
-
-template<typename IntType>
-char* format(char* dest, IntType val) {
-  IntType n = val;
-  do { dest++; n /= 10; } while (n != 0);
-
-  char* destlim = dest;
-  do { *--dest = (val % 10) + '0'; val /= 10; } while (val != 0);
-
-  return destlim;
-}
-
-char* format_signed(char* dest, int_fast32_t val) {
-  uint_fast32_t uval = val;
-  if (val < 0)
-    *dest++ = '-', uval = -uval;
-  return format(dest, uval);
 }
 
 void alignment::sam_record(char* dest, int /*dest_length*/) const {
@@ -450,17 +432,17 @@ void alignment::sam_record(char* dest, int /*dest_length*/) const {
   else if (0 /*fmtflags & hex*/)
     dest = format_hex(dest, flags());
   else
-    dest = format(dest, flags());
+    dest = format::decimal(dest, flags());
 
   *dest++ = '\t';
   if (rindex() < 0)  *dest++ = '*';
   else  strcpy(dest, "REFNAME"), dest += 7; // FIXME
 
   *dest++ = '\t';
-  dest = format(dest, pos());
+  dest = format::decimal(dest, pos());
 
   *dest++ = '\t';
-  dest = format(dest, mapq());
+  dest = format::decimal(dest, mapq());
 
   *dest++ = '\t';
   strcpy(dest, "CIGAR"), dest += 5; // FIXME
@@ -472,10 +454,10 @@ void alignment::sam_record(char* dest, int /*dest_length*/) const {
 
   *dest++ = '\t';
   // FIXME Do we need to do anything special for 0 or -1 i.e. unmapped?
-  dest = format(dest, mate_pos());
+  dest = format::decimal(dest, mate_pos());
 
   *dest++ = '\t';
-  dest = format_signed(dest, isize());
+  dest = format::decimal(dest, isize());
 
   for (const_iterator it = begin(); it != end(); ++it) {
     *dest++ = '\t';
@@ -604,7 +586,7 @@ int alignment::to_flags(const string& str) {
 // 4. Iterators
 //=============
 
-int alignment::aux_field::size() const {
+int alignment::tagfield::size() const {
   switch (type_) {
   case 'A':
     return 2 + 1 + 1;
@@ -644,7 +626,7 @@ static string stringize(int) {
   return "FIXME"; // FIXME
 }
 
-string alignment::aux_field::value() const {
+string alignment::tagfield::value() const {
   switch (type_) {
   case 'A':
     return string(1, data[0]);
@@ -659,7 +641,7 @@ string alignment::aux_field::value() const {
 
   case 'f':
   case 'd':
-    throw std::logic_error("Implement aux_field::value(f/d)"); // TODO
+    throw std::logic_error("Implement tagfield::value(f/d)"); // TODO
 
   case 'Z':
   case 'H':
@@ -672,7 +654,7 @@ string alignment::aux_field::value() const {
   }
 }
 
-int alignment::aux_field::value_int() const {
+int alignment::tagfield::value_int() const {
   switch (type_) {
   case 'c':  { signed char   value = data[0]; return value; }
   case 'C':  { unsigned char value = data[0]; return value; }

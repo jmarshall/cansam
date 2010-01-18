@@ -1,13 +1,13 @@
 CXXFLAGS = -Wall -Wextra -O2 -g -I.
 LDFLAGS  = -L.
 
-OUTPUTS = libcansam.a samcat samsort simplecat test/runtests
+OUTPUTS = libcansam.a samcat samsort test/runtests
 all: $(OUTPUTS)
 
 lib: libcansam.a
 
 LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
-	  lib/samstream.o lib/istream.o lib/ostream.o lib/rawfilebuf.o \
+	  lib/samstream.o lib/ostream.o lib/rawfilebuf.o \
 	  lib/exception.o lib/utilities.o lib/zio.o
 
 libcansam.a: $(LIBOBJS)
@@ -56,7 +56,7 @@ test/runtests: $(TEST_OBJS) libcansam.a
 test/runtests.o: test/runtests.cpp test/test.h
 test/alignment.o: test/alignment.cpp test/test.h sam/alignment.h
 test/header.o: test/header.cpp test/test.h sam/header.h
-test/sam.o: test/sam.cpp test/test.h sam/stream.h
+test/sam.o: test/sam.cpp test/test.h sam/alignment.h sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 
 .PHONY: all clean doc docclean lib tags test

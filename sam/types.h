@@ -17,7 +17,7 @@ typedef long scoord_t;
 /// Returns an incremented copy of the given @a iterator
 /** This is a simple version of the upcoming <tt>std::%next()</tt>
 function template. */
-template<typename InputIterator>
+template <typename InputIterator>
 inline InputIterator next(InputIterator iterator) { return ++iterator; }
 
 } // namespace sam

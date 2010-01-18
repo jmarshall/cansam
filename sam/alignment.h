@@ -66,7 +66,7 @@ which may be of any of the following types:
 class alignment {
 public:
   /// Construct an empty alignment
-  alignment() : p(&empty) { }
+  alignment() : p(&empty_block) { }
 
 #if 0
   /// Construct an alignment by splitting up a tab-separated text string
@@ -78,7 +78,7 @@ public:
   alignment(const alignment& aln);
 
   /// Destroy this alignment object
-  ~alignment() { if (p != &empty)  block::destroy(p); }
+  ~alignment() { if (p != &empty_block)  block::destroy(p); }
 
   /// Copy an alignment
   alignment& operator= (const alignment& aln);
@@ -196,13 +196,13 @@ public:
   The @c sam::alignment::iterator and @c sam::alignment::const_iterator classes
   are <b>forward iterators</b> providing all the usual iterator functionality:
   copying, assignment, pre- and post-increment, equality and inequality tests,
-  and dereferencing, which produces an aux_field through which the pointed-to
-  auxiliary field's properties can be accessed (but not modified; see also
-  the iterator variant of set_aux() below).
+  and dereferencing, which produces an alignment::tagfield through which the
+  pointed-to auxiliary field's properties can be accessed (but not modified;
+  see also the iterator variant of set_aux() below).
 
   The possible types for the @c ValueType parameter are listed below.  */
   //@{
-  /** @class sam::alignment::aux_field sam/alignment.h
+  /** @class sam::alignment::tagfield sam/alignment.h
       @brief Helper class representing an auxiliary field as seen via an
 	     iterator
 
@@ -212,8 +212,7 @@ public:
   @note There are no mutator methods, even if it is a mutable @c iterator that
   has been dereferenced; use sam::alignment::set_aux() to change the value of
   an auxiliary field via an @c iterator.  */
-  // FIXME maybe rename to tagfield, and there will also be a header::tagfield
-  class aux_field {
+  class tagfield {
   public:
     /// Two-character field tag
     std::string tag() const { return std::string(tag_, sizeof tag_); }
@@ -252,7 +251,7 @@ public:
   // @cond infrastructure
   class const_iterator;
 
-  class iterator : public std::iterator<std::forward_iterator_tag, aux_field> {
+  class iterator : public std::iterator<std::forward_iterator_tag, tagfield> {
   public:
     iterator() { }
     iterator(const iterator& it) : ptr(it.ptr) { }
@@ -262,8 +261,8 @@ public:
     bool operator== (iterator it) const { return ptr == it.ptr; }
     bool operator!= (iterator it) const { return ptr != it.ptr; }
 
-    aux_field& operator* () const { return *reinterpret_cast<aux_field*>(ptr); }
-    aux_field* operator-> () const { return reinterpret_cast<aux_field*>(ptr); }
+    tagfield& operator* () const { return *reinterpret_cast<tagfield*>(ptr); }
+    tagfield* operator-> () const { return reinterpret_cast<tagfield*>(ptr); }
 
     iterator& operator++ () { ptr += (*this)->size(); return *this; }
     iterator operator++ (int)
@@ -278,8 +277,8 @@ public:
   };
 
   class const_iterator :
-    public std::iterator<std::forward_iterator_tag, aux_field,
-			 ptrdiff_t, const aux_field*, const aux_field&> {
+    public std::iterator<std::forward_iterator_tag, tagfield,
+			 ptrdiff_t, const tagfield*, const tagfield&> {
   public:
     const_iterator() { }
     const_iterator(const const_iterator& it) : ptr(it.ptr) { }
@@ -291,11 +290,11 @@ public:
     bool operator== (const_iterator it) const { return ptr == it.ptr; }
     bool operator!= (const_iterator it) const { return ptr != it.ptr; }
 
-    const aux_field& operator* () const
-      { return *reinterpret_cast<const aux_field*>(ptr); }
+    const tagfield& operator* () const
+      { return *reinterpret_cast<const tagfield*>(ptr); }
 
-    const aux_field* operator-> () const
-      { return reinterpret_cast<const aux_field*>(ptr); }
+    const tagfield* operator-> () const
+      { return reinterpret_cast<const tagfield*>(ptr); }
 
     const_iterator& operator++ () { ptr += (*this)->size(); return *this; }
     const_iterator operator++ (int)
@@ -304,7 +303,7 @@ public:
 
   private:
     friend class alignment;
-    friend std::ostream& operator<< (std::ostream& stream, const_iterator it);
+    friend std::ostream& operator<< (std::ostream&, const_iterator);
     explicit const_iterator(const char* p) : ptr(p) { }
 
     const char* ptr;
@@ -326,11 +325,13 @@ public:
   iterator find(const char* tag);
   const_iterator find(const char* tag) const;
 
-  template<typename ValueType>
+  bool empty() const { return p->auxen_offset() == p->end_offset(); }
+
+  template <typename ValueType>
   void push_back(const char* tag, ValueType value)
     { replace_(end(), end(), tag, value); }
 
-  template<typename ValueType>
+  template <typename ValueType>
   iterator insert(iterator position, const char* tag, ValueType value)
     { return replace_(position, position, tag, value); }
 
@@ -341,7 +342,7 @@ public:
 
   void clear() { replace_gap(begin(), end(), 0); }
 
-  template<typename ValueType>
+  template <typename ValueType>
   iterator
   replace(iterator start, iterator limit, const char* tag, ValueType value)
     { return replace_(start, limit, tag, value); }
@@ -367,14 +368,14 @@ public:
   void set_seq(const std::string& seq);
 
   /// Update an existing @a tag's value, or add a new auxiliary field
-  template<typename ValueType>
+  template <typename ValueType>
   void set_aux(const char* tag, ValueType value)
     { iterator position = find(tag); iterator limit = position;
       if (position != end())  ++limit;
       replace_(position, limit, tag, value); }
 
   /// Update the existing auxiliary field's value
-  template<typename ValueType>
+  template <typename ValueType>
   iterator set_aux(iterator position, ValueType value)
     { return replace_(position, next(position), NULL, value); }
 
@@ -552,7 +553,7 @@ private:
 
   static const uint16_t unknown_bin = 0xffff;
   static const int order_value[];
-  static block empty;
+  static block empty_block;
   // @endcond
 };
 
@@ -592,13 +593,13 @@ a trailing newline character.
 @relatesalso alignment */
 std::ostream& operator<< (std::ostream& stream, const alignment& aln);
 
-/// Print an iterator or const_iterator to the stream
-std::ostream& operator<< (std::ostream& stream, alignment::const_iterator it);
-
 /// Print an auxiliary field to the stream
 /** Writes an auxiliary field to a stream as text in SAM format.
-@relatesalso alignment::aux_field */
-std::ostream& operator<< (std::ostream& stream, const alignment::aux_field& aux);
+@relatesalso alignment::tagfield */
+std::ostream& operator<< (std::ostream& stream, const alignment::tagfield& aux);
+
+/// Print an iterator or const_iterator to the stream
+std::ostream& operator<< (std::ostream& stream, alignment::const_iterator it);
 
 } // namespace sam
 
