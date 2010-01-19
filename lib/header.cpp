@@ -34,14 +34,14 @@ string header::tagfield::value_str() const {
   return string(data_, limit - data_);
 }
 
-size_t header::find_(const char* tag) const {
+size_t header::find_or_eos(const char* tag) const {
   char key[] = { '\t', tag[0], tag[1], ':' };
   size_t pos = str_.find(key, 3, sizeof key);
   return (pos != string::npos)? pos : str_.length();
 }
 
 header::const_iterator header::find_or_throw(const char* tag) const {
-  size_t pos = find_(tag);
+  size_t pos = find_or_eos(tag);
   if (pos == str_.length())
     throw bad_format(make_string()
 	<< "Header field '" << tag[0] << tag[1] << "' not found");

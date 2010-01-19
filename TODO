@@ -18,8 +18,7 @@
   - Some form of iterator equivalent to bam_fetch()
 
 * C++ infrastructure
-  - Possibly worthwhile specialising std::iterator_traits for our home-grown
-    iterator classes
+  - Make it work with -fno-implicit-templates
 
 * Documentation
   - Doxygen HTML filename overachieving: build the filename myself by hacking

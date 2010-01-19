@@ -5,7 +5,7 @@
 
 using sam::header;
 
-void foo(header& h) {
+void test_foo(header& h) {
   std::cout << h;
   std::cout << h.begin();
   std::cout << *(h.begin());
@@ -13,6 +13,10 @@ void foo(header& h) {
 
 void exercise_header(header& hdr) {
   const header& chdr = hdr;
+
+  hdr.set_field("X1", 37);
+  hdr.field<int>("X1");
+  hdr.field("X1", 1);
 
   header::iterator it = hdr.begin();
   header::iterator& rit1 = ++it;

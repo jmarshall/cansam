@@ -55,7 +55,9 @@ public:
     { return find_or_throw(tag)->template value<ValueType>(); }
 
   template <typename ValueType>
-  ValueType field(const char* tag, ValueType default_value) const;
+  ValueType field(const char* tag, ValueType default_value) const
+    { const_iterator it = find(tag);
+      return (it != end())? it->value<ValueType>() : default_value; }
 
   /** @name Fields as a collection
   Headers provide limited collection-style access to their fields.
@@ -173,9 +175,9 @@ public:
   iterator end() { return iterator(cstr_ + str_.length()); }
   const_iterator end() const { return const_iterator(cstr_ + str_.length()); }
 
-  iterator find(const char* tag) { return iterator(cstr_ + find_(tag)); }
+  iterator find(const char* tag) { return iterator(cstr_ + find_or_eos(tag)); }
   const_iterator find(const char* tag) const
-    { return const_iterator(cstr_ + find_(tag)); }
+    { return const_iterator(cstr_ + find_or_eos(tag)); }
 
   bool empty() const { return str_.length() <= 3; }
 
@@ -216,7 +218,7 @@ protected:
   // @endcond
 
 private:
-  size_t find_(const char* tag) const;
+  size_t find_or_eos(const char* tag) const;
   const_iterator find_or_throw(const char* tag) const;
 
   iterator replace_string(size_t pos, size_t length,
@@ -243,11 +245,6 @@ template <> std::string header::tagfield::value<std::string>() const { return va
 template <> int header::tagfield::value<int>() const { return 4; }
 template <> coord_t header::tagfield::value<coord_t>() const { return 5; }
 
-template <typename ValueType>
-ValueType header::field(const char* tag, ValueType default_value) const {
-  const_iterator it = find(tag);
-  return (it != end())? it->value<ValueType>() : default_value;
-}
 
 template <typename ValueType>
 void header::set_field(const char* tag, ValueType value) {

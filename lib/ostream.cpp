@@ -25,6 +25,8 @@ std::ostream& operator<< (std::ostream& out, const header& header) {
 #endif
 }
 
+int foo(const header& header) { return header.field<int>("AT", 5); }
+
 std::ostream& operator<< (std::ostream& out, const header::tagfield& field) {
   const char* limit = header::tagfield::nexttab(field.tag_);
   return out << string(field.tag_, limit - field.tag_);
