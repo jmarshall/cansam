@@ -5,8 +5,12 @@
 #include <sstream>
 #include <limits>
 
+#if 0
+#include <type_traits>
+#else
 #include <boost/type_traits/is_signed.hpp>
 #include <boost/type_traits/make_unsigned.hpp>
+#endif
 
 #include "sam/types.h"
 

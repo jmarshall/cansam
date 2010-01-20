@@ -19,7 +19,6 @@ lib/alignment.o: lib/alignment.cpp sam/alignment.h sam/exception.h \
 lib/collection.o: lib/collection.cpp sam/collection.h
 lib/exception.o: lib/exception.cpp sam/exception.h
 lib/header.o: lib/header.cpp sam/header.h
-lib/istream.o: lib/istream.cpp sam/header.h sam/alignment.h
 lib/ostream.o: lib/ostream.cpp sam/header.h sam/alignment.h
 lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/streambuf.h
 lib/sambamio.o: lib/sambamio.cpp sam/stream.h lib/wire.h

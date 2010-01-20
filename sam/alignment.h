@@ -249,6 +249,7 @@ public:
   };
 
   // @cond infrastructure
+  typedef std::char_traits<char> traits_type;
   class const_iterator;
 
   class iterator : public std::iterator<std::forward_iterator_tag, tagfield> {
@@ -387,7 +388,7 @@ public:
   /** @name Additional field modifiers  */
   //@{
   void set_qname(const char* qname)
-    { set_qname(qname, std::char_traits<char>::length(qname)); }
+    { set_qname(qname, traits_type::length(qname)); }
 
   // FIXME put length first?
   void set_raw_seq(const char* seq, int length);
@@ -538,7 +539,7 @@ private:
   iterator replace_(iterator start, iterator limit,
 		    const char* tag, const char* value)
     { return replace_string(start, limit, tag, 'Z',
-			    value, std::char_traits<char>::length(value)); }
+			    value, traits_type::length(value)); }
 
   iterator replace_(iterator start, iterator limit, const char* tag, int value);
 

@@ -23,7 +23,7 @@ string header::tagfield::tag() const {
   if (! (tag_[0] && tag_[1] && colon_ == ':'))
     throw bad_format("Malformatted header field");
 
-  return std::string(tag_, sizeof tag_);
+  return string(tag_, sizeof tag_);
 }
 
 string header::tagfield::value_str() const {
@@ -32,6 +32,12 @@ string header::tagfield::value_str() const {
     throw bad_format("Malformatted header field");
 
   return string(data_, limit - data_);
+}
+
+template<> int header::tagfield::value<int>() const {
+}
+
+template<> coord_t header::tagfield::value<coord_t>() const {
 }
 
 size_t header::find_or_eos(const char* tag) const {
@@ -117,24 +123,33 @@ header::replace_(size_t pos, size_t length,
 }
 #endif
 
-#if 0
-std::string header::field(const char* tag,
-			  const std::string& default_value) const {
-  for (const_iterator it = begin(); it != end(); ++it)
-    if (it->tag() == tag)  return it->field();
-
-  return default_value;
-}
-#endif
-
 
 // Reference sequences
 // ===================
 
+string reference::name_length_string(const string& name, coord_t length) {
+  string s;
+  // FIXME Should be format::coord_digits (and similarly below)
+  s.reserve(7 + name.length() + 4 + format::int_digits);
+  s += "@SQ\tSN:";
+  s += name;
+  s += "\tLN:";
+  char buffer[format::int_digits];
+  s.append(buffer, format::decimal(buffer, length));
+
+  return s;
+}
+
+reference::reference(const string& name, coord_t length)
+  : header(name_length_string(name, length)), name_(name), visible_(false) {
+}
+
 void reference::sync() {
   header::sync();
+  name_ = field<string>("SN");
 
-  // FIXME ensure our copies are up to date
+  // If a reference has been modified, it should be displayed in the header.
+  visible_ = true;
 }
 
 } // namespace sam

@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+using std::string;
 using sam::header;
 
 void test_foo(header& h) {
@@ -62,6 +63,10 @@ void exercise_header(header& hdr) {
 
   cit == it;
   cit != it;
+
+  string s = cit->value<string>();
+  int i = cit->value<int>();
+  sam::coord_t x = cit->value<sam::coord_t>();
 }
 
 void test_headers(test_harness& t) {

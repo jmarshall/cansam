@@ -30,10 +30,12 @@ of the tag yourself.  */
 class header {
 public:
   header() { }
+  // FIXME or should be protected
   explicit header(const std::string& line) : str_(line), cstr_(str_.c_str()) { }
   virtual ~header() { }
 
-  // FIXME Infrastructure: copy ctor, assign, swap, reserve
+  // FIXME Infrastructure: ctors, copy ctor, assign, swap, reserve
+  // FIXME Maybe... or maybe not sensible for polymorphic heap class
 
   /// The header's two-character type code
   std::string type() const;
@@ -89,7 +91,7 @@ public:
     std::string value_str() const;
 
     template <typename ValueType>
-    ValueType value() const;
+    ValueType value() const { return value_str(); }
 
     /// Returns whether the field's tag is the same as the given @a key_tag
     bool tag_equals(const char* key_tag) const
@@ -112,6 +114,8 @@ public:
   };
 
   // @cond infrastructure
+  typedef std::char_traits<char> traits_type;
+
   class const_iterator :
     public std::iterator<std::bidirectional_iterator_tag, tagfield,
 			 ptrdiff_t, const tagfield*, const tagfield&> {
@@ -189,7 +193,9 @@ public:
   iterator insert(iterator position, const char* tag, ValueType value)
     { return replace_(position.ptr - cstr_, 0, tag, value); }
 
-  iterator erase(iterator position) { return erase(position, next(position)); }
+  iterator erase(iterator position)
+    { iterator next = position; return erase(position, ++next); }
+
   iterator erase(iterator start, iterator limit);
   void clear();
 
@@ -206,7 +212,7 @@ public:
   /// Update the existing header field's value
   template <typename ValueType>
   iterator set_field(iterator position, ValueType value)
-    { return replace(position, next(position), NULL, value); }
+    { iterator next = position; return replace(position, ++next, NULL, value); }
 
   /// Erase all fields with the given @a tag
   /** @return The number of fields erased (usually no more than 1).  */
@@ -230,8 +236,7 @@ private:
 
   iterator replace_(size_t pos, size_t length,
 		    const char* tag, const char* value)
-    { return replace_string(pos, length, tag,
-			    value, std::char_traits<char>::length(value)); }
+    {return replace_string(pos, length, tag, value, traits_type::length(value));}
 
   iterator replace_(size_t pos, size_t length, const char* tag, int value);
   iterator replace_(size_t pos, size_t length,
@@ -241,10 +246,8 @@ private:
   const char* cstr_;
 };
 
-template <> std::string header::tagfield::value<std::string>() const { return value_str(); }
-template <> int header::tagfield::value<int>() const { return 4; }
-template <> coord_t header::tagfield::value<coord_t>() const { return 5; }
-
+template<> int header::tagfield::value<int>() const;
+template<> coord_t header::tagfield::value<coord_t>() const;
 
 template <typename ValueType>
 void header::set_field(const char* tag, ValueType value) {
@@ -273,8 +276,6 @@ std::ostream& operator<< (std::ostream& stream, header::const_iterator it);
 class reference : public header {
 public:
   reference(const std::string& name, coord_t length);
-//    : name_(name), length_(length)
-//    { name_it = find("SN"); }
 
   ~reference() { }
 
@@ -284,10 +285,10 @@ public:
   std::string name() const { return name_; }
   const char* name_c_str() const { return name_.c_str(); }
   coord_t length() const { return field<coord_t>("LN"); }
-  std::string species() const { return field_str("SP"); }
-  std::string assembly() const { return field_str("AS"); }
-  std::string uri() const { return field_str("UR"); }
-  std::string checksum() const { return field_str("M5"); }
+  std::string species() const { return field<std::string>("SP"); }
+  std::string assembly() const { return field<std::string>("AS"); }
+  std::string uri() const { return field<std::string>("UR"); }
+  std::string checksum() const { return field<std::string>("M5"); }
 
   void set_name(const std::string& name) { set_field("SN", name); }
   void set_length(coord_t length) { set_field("LN", length); }
@@ -299,6 +300,8 @@ public:
 
 private:
   virtual void sync();
+
+  static std::string name_length_string(const std::string&, coord_t);
 
   std::string name_;
   bool visible_;
