@@ -122,8 +122,8 @@ public:
   public:
     const_iterator() { }
     const_iterator(const const_iterator& it) : ptr(it.ptr) { }
-    const_iterator& operator= (const_iterator it) {ptr = it.ptr; return *this;}
     ~const_iterator() { }
+    const_iterator& operator= (const_iterator it) {ptr = it.ptr; return *this;}
 
     bool operator== (const_iterator it) const { return ptr == it.ptr; }
     bool operator!= (const_iterator it) const { return ptr != it.ptr; }
@@ -152,8 +152,8 @@ public:
   public:
     iterator() { }
     iterator(const iterator& it) : const_iterator(it.ptr) { }
-    iterator& operator= (iterator it) { ptr = it.ptr; return *this; }
     ~iterator() { }
+    iterator& operator= (iterator it) { ptr = it.ptr; return *this; }
 
     iterator& operator++ () { const_iterator::operator++(); return *this; }
     iterator operator++ (int)
@@ -271,13 +271,15 @@ std::ostream& operator<< (std::ostream& stream, const header::tagfield& field);
 std::ostream& operator<< (std::ostream& stream, header::const_iterator it);
 
 
-/** @class sam::reference sam/header.h
+/** @class sam::refsequence sam/header.h
     @brief Reference sequence record, corresponding to a single '@@SQ' header */
-class reference : public header {
+class refsequence : public header {
 public:
-  reference(const std::string& name, coord_t length);
+  refsequence(const std::string& name, coord_t length, int index);
 
-  ~reference() { }
+  ~refsequence() { }
+
+  int index() const { return index_; }
 
   /** @name Reference sequence fields
   Accessors and modifiers for the defined reference sequence fields.  */
@@ -304,6 +306,7 @@ private:
   static std::string name_length_string(const std::string&, coord_t);
 
   std::string name_;
+  int index_;
   bool visible_;
 };
 

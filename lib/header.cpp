@@ -127,7 +127,7 @@ header::replace_(size_t pos, size_t length,
 // Reference sequences
 // ===================
 
-string reference::name_length_string(const string& name, coord_t length) {
+string refsequence::name_length_string(const string& name, coord_t length) {
   string s;
   // FIXME Should be format::coord_digits (and similarly below)
   s.reserve(7 + name.length() + 4 + format::int_digits);
@@ -140,15 +140,18 @@ string reference::name_length_string(const string& name, coord_t length) {
   return s;
 }
 
-reference::reference(const string& name, coord_t length)
-  : header(name_length_string(name, length)), name_(name), visible_(false) {
+refsequence::refsequence(const string& name, coord_t length, int index)
+  : header(name_length_string(name, length)),
+    name_(name), index_(index), visible_(false) {
 }
 
-void reference::sync() {
+void refsequence::sync() {
   header::sync();
   name_ = field<string>("SN");
 
-  // If a reference has been modified, it should be displayed in the header.
+  // FIXME if (this == &unmapped_refseq) throw barf;
+
+  // If a reference has ever been modified, it should appear in the header.
   visible_ = true;
 }
 

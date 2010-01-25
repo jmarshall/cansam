@@ -7,6 +7,8 @@
   - done, actually:
       - bam_calend (is right_pos()/right_zpos())
 
+* Extra header sam/samfwd.h or so that declares all our classes
+
 * Move any information in REFCOUNT and UNCOUNTED into lib/alignment.cpp
 
 * Maybe refcount the alignments so that assignment is cheap too, and you

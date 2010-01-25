@@ -89,6 +89,20 @@ sam::bad_format, and other streambufs might throw anything at all but surely
 not sam::bad_format, so other exceptions set badbit, corresponding to serious
 streambuf problems such as I/O errors.  */
 
+isamstream& isamstream::operator>> (collection& headers) {
+  try {
+    if (! io) throw "hmmmm"; // FIXME
+    io->get(*this, headers);
+  }
+  catch (const sambamio::eof_exception&) {
+    // An exception was thrown while setting eofbit within io->get().
+    // Propagate it as an externally-known exception type.
+    throw std::ios::failure("eof");
+  }
+
+  return *this;
+}
+
 isamstream& isamstream::operator>> (alignment& aln) {
   try {
     if (! io->get(*this, aln)) {

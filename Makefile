@@ -21,7 +21,8 @@ lib/exception.o: lib/exception.cpp sam/exception.h
 lib/header.o: lib/header.cpp sam/header.h
 lib/ostream.o: lib/ostream.cpp sam/header.h sam/alignment.h
 lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/streambuf.h
-lib/sambamio.o: lib/sambamio.cpp sam/stream.h lib/wire.h
+lib/sambamio.o: lib/sambamio.cpp sam/alignment.h sam/collection.h sam/stream.h \
+		lib/zio.h lib/wire.h
 lib/samstream.o: lib/samstream.cpp sam/stream.h sam/exception.h
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
 lib/zio.o: lib/zio.cpp lib/zio.h

@@ -5,6 +5,7 @@
 
 namespace sam {
 
+class collection;
 class alignment;
 
 class samstream_base::sambamio {
@@ -16,7 +17,7 @@ public:
 
   virtual ~sambamio() { }
 
-  virtual bool get_headers(isamstream&) = 0;
+  virtual bool get(isamstream&, collection&) = 0;
 
   // Returns true when an alignment has been successfully read,
   // false at EOF, or throws an exception on formatting or I/O errors.

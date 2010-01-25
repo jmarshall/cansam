@@ -14,6 +14,7 @@
 #include <stdint.h>
 
 #include "sam/types.h"
+#include "sam/header.h"
 #include "sam/collection.h"
 
 namespace sam {
@@ -77,7 +78,7 @@ public:
   /// Construct a copy of an alignment
   alignment(const alignment& aln);
 
-  /// Destroy this alignment object
+  //  Destroy this alignment object (not interesting enough to warrant ///)
   ~alignment() { if (p != &empty_block)  block::destroy(p); }
 
   /// Copy an alignment
@@ -102,12 +103,15 @@ public:
 
   int flags() const { return p->c.flags; }
 
-  /** FIXME TEXTME Reference identifier (or -1).  */
+  /** Returns an index uniquely identifying the read's reference sequence
+  within the collection of which it is a part.
+  @return The index, or -1 if @em RNAME indicates that the read is unmapped. */
   int rindex() const { return p->c.rindex; }
 
-  /** Reference name (or '*' @c *).  */
+  /** Returns the name of the read's reference sequence.
+  @return The name, or "*" if @em RNAME indicates that the read is unmapped. */
   std::string rname() const
-    ;// FIXME { return collection::find(p->h.cindex).rname(p->c.rindex); }
+    { return collection::find(p->h.cindex).findseq(p->c.rindex).name(); }
 
   coord_t pos() const  { return p->c.zpos+1; }
   coord_t zpos() const { return p->c.zpos; }
@@ -115,13 +119,19 @@ public:
   std::string cigar() const;
   // TODO raw cigar
 
-  /// Mate's reference identifier (or -1; for paired reads)
+  /** Returns, for paired reads, an index uniquely identifying the mate read's
+  reference sequence within the collection of which it is a part.
+  @return The index, or -1 if the read is unpaired or @em MRNM indicates that
+  the mate is unmapped.  */
   int mate_rindex() const { return p->c.mate_rindex; }
 
-  /** Returns the mate read's reference name.
-  @note The actual name is returned, even when this field would appear as '='
+  /** Returns, for paired reads, the name of the mate read's reference sequence.
+  @return The name, or "*" if the read is unpaired or @em MRNM indicates that
+  the mate is unmapped.
+  @note The actual name is returned, even when this field would appear as "="
   in a SAM file.  */
-  std::string mate_rname() const;
+  std::string mate_rname() const
+    { return collection::find(p->h.cindex).findseq(p->c.mate_rindex).name(); }
 
   coord_t mate_pos() const  { return p->c.mate_zpos+1; }
   coord_t mate_zpos() const { return p->c.mate_zpos; }
@@ -173,8 +183,14 @@ public:
   std::string& qname(std::string& dest) const
     { return dest.assign(p->data() + p->name_offset(), p->c.name_length - 1); }
 
-  const char* rname_c_str() const;      ///< Reference name (or @c NULL)
-  const char* mate_rname_c_str() const; ///< Mate's reference name (or @c NULL)
+  ///< Reference name (or @c NULL)
+  const char* rname_c_str() const
+    { return collection::find(p->h.cindex).findseq(p->c.rindex).name_c_str(); }
+
+  /// Mate's reference name (or @c NULL)
+  const char* mate_rname_c_str() const
+    { return
+	collection::find(p->h.cindex).findseq(p->c.mate_rindex).name_c_str(); }
 
   /// Assigns sequence to @a dest (and returns @a dest)
   std::string& seq(std::string& dest) const

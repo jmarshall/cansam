@@ -1,14 +1,18 @@
 #include "lib/sambamio.h"
 
 #include <streambuf>
+#include <string>
 #include <vector>
 
-#include <cstring>
+//#include <cstring>
 
 #include "sam/alignment.h"
+#include "sam/collection.h"
 #include "sam/stream.h"
 #include "lib/zio.h"
 #include "lib/wire.h"
+
+using std::string;
 
 namespace sam {
 
@@ -33,9 +37,9 @@ public:
   bamio(const char* text, std::streamsize textsize);
   virtual ~bamio() { }
 
-  virtual bool get_headers(isamstream&);
-  virtual bool get(isamstream& stream, alignment& aln);
-  virtual void put(osamstream& stream, const alignment& aln);
+  virtual bool get(isamstream&, collection&);
+  virtual bool get(isamstream&, alignment&);
+  virtual void put(osamstream&, const alignment&);
 };
 
 samstream_base::bamio::bamio(const char* text, std::streamsize textsize) {
@@ -43,21 +47,29 @@ samstream_base::bamio::bamio(const char* text, std::streamsize textsize) {
   text=text, textsize=textsize;
 }
 
-bool samstream_base::bamio::get_headers(isamstream& stream) {
-  #warning bamio::get_headers() unimplemented
+bool samstream_base::bamio::get(isamstream& stream, collection& headers) {
+  /* read magic
+     read l_text, text
+     headers.clear();
+     for each header line, headers.push_back(line);
+     nref = read n_ref
+     for (
+  */
+  #warning bamio::get(headers) unimplemented
   stream.eof();
+  headers.begin();
   return false;
 }
 
 bool samstream_base::bamio::get(isamstream& stream, alignment& aln) {
-  #warning bamio::get() unimplemented
+  #warning bamio::get(aln) unimplemented
   stream.eof();
   aln.find("X0");
   return false;
 }
 
 void samstream_base::bamio::put(osamstream& stream, const alignment& aln) {
-  #warning bamio::put() unimplemented
+  #warning bamio::put(aln) unimplemented
   stream.eof();
   aln.find("X0");
 }
@@ -70,7 +82,7 @@ public:
   samio(const char* text, std::streamsize textsize);
   virtual ~samio();
 
-  virtual bool get_headers(isamstream&);
+  virtual bool get(isamstream&, collection&);
   virtual bool get(isamstream&, alignment&);
   virtual void put(osamstream&, const alignment&);
 
@@ -81,6 +93,7 @@ private:
   size_t bufsize;
 
   std::vector<char*> fields;
+  int peek(isamstream&);
   int getline(isamstream&);
   char* flush_buffer(char*);
 };
@@ -136,6 +149,13 @@ char* samstream_base::samio::flush_buffer(char* ptr) {
   delete [] oldbuffer;
 
   return ptr;
+}
+
+int samstream_base::samio::peek(isamstream& stream) {
+  #warning samio::peek() unimplemented
+  #warning - or is ungetline() a better idea?
+  stream.eof();
+  return EOF;
 }
 
 /* Reads a newline-terminated line of tab-delimited text into  fields,
@@ -199,9 +219,15 @@ int samstream_base::samio::getline(isamstream& stream) {
   return fields.size() - 1;
 }
 
-bool samstream_base::samio::get_headers(isamstream& stream) {
-  #warning samio::get_headers() unimplemented
-  stream.eof();
+bool samstream_base::samio::get(isamstream& stream, collection& headers) {
+  headers.clear();
+
+  while (peek(stream) == '@') {
+    int nfields = getline(stream);
+    headers.push_back(string(fields[0], fields[nfields] - fields[0]));
+  }
+
+  #warning samio::get(headers) unimplemented
   return false;
 }
 
@@ -221,7 +247,7 @@ std::clog << "\n";
 }
 
 void samstream_base::samio::put(osamstream& stream, const alignment& aln) {
-  #warning samio::put() unimplemented
+  #warning samio::put(aln) unimplemented
   stream.eof();
   aln.find("X0");
 }

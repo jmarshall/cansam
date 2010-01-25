@@ -30,22 +30,12 @@ namespace sam {
 // For order(); 0, FIRST_IN_PAIR, SECOND_IN_PAIR, FIRST_IN_PAIR|SECOND_IN_PAIR.
 const int alignment::order_value[4] = { 0, -1, +1, 0 };
 
-#if 1
-string alignment::rname() const {
-  return "FIXME"; // FIXME
-}
-#endif
-
 string alignment::cigar() const {
   return "FIXME"; // FIXME
 }
 
 scoord_t alignment::cigar_span() const {
   return 0;  // FIXME
-}
-
-string alignment::mate_rname() const {
-  return "FIXME"; // FIXME
 }
 
 void alignment::pack_seq(char* dest, const char* seq, int seq_length) {
