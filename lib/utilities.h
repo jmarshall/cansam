@@ -64,14 +64,11 @@ class make_string {
 public:
   make_string() { }
 
-  make_string& operator<< (const char* text) { buffer << text; return *this; }
-  make_string& operator<< (char c) { unsigned char uc = c; return *this << uc; }
-  make_string& operator<< (unsigned char c);
-
-#if 0
   template <typename T>
   make_string& operator<< (const T& t) { buffer << t; return *this; }
-#endif
+
+  make_string& operator<< (char c) { unsigned char uc = c; return *this << uc; }
+  make_string& operator<< (unsigned char c);
 
   operator std::string () const { return buffer.str(); }
 

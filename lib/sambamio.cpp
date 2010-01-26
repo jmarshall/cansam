@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-//#include <cstring>
+#include <cstring>
 
 #include "sam/alignment.h"
 #include "sam/collection.h"
@@ -268,6 +268,7 @@ samstream_base::sambamio::new_in(std::streambuf* sbuf) {
 
   char buf[16];
   std::streamsize n = sbuf->sgetn(buf, sizeof buf);
+  // FIXME eofbit?
 
   // Does the stream start with the GZIP magic number?
   if (n >= 2 && buf[0] == '\x1f' && buf[1] == '\x8b') {

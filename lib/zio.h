@@ -1,27 +1,35 @@
-#ifndef CANSAM_FLATE_H
-#define CANSAM_FLATE_H
+#ifndef CANSAM_BGZFBUF_H
+#define CANSAM_BGZFBUF_H
 
 #include <streambuf>
 
-namespace sam {
-namespace internal {
+#include "lib/buffer.h"
 
-class flatebuf {
+namespace sam {
+
+class bgzfbuf {
 public:
-  flatebuf(std::streambuf* sbuf) : sbuf_(sbuf) { }
-  ~flatebuf() { }
+  bgzfbuf(std::streambuf* sbuf0);
+  ~bgzfbuf();
 
   // Reads up to LENGTH decompressed bytes into BUFFER, returning how many
   // bytes were in fact read.
-  size_t read_uncompressed(char* buffer, size_t length);
+  size_t sgetn(char* buffer, size_t length);
 
-  void write_compressed(const char* buffer, size_t length);
+  void sputn(const char* buffer, size_t length);
 
 private:
-  std::streambuf* sbuf_;
+  std::streamsize sbuf_sgetn(char* buffer, std::streamsize length);
+  bool underflow();
+  size_t buffer_inflate(char* data, size_t length);
+
+  std::streambuf* sbuf;
+  bool at_eof;
+
+  read_buffer buffer;
+  read_buffer cdata;
 };
 
-} // namespace internal
 } // namespace sam
 
 #endif
