@@ -1,5 +1,6 @@
 CXXFLAGS = -Wall -Wextra -O2 -g -I.
 LDFLAGS  = -L.
+LDLIBS   = -lz
 
 OUTPUTS = libcansam.a samcat samsort test/runtests
 all: $(OUTPUTS)
@@ -8,7 +9,7 @@ lib: libcansam.a
 
 LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
 	  lib/samstream.o lib/ostream.o lib/rawfilebuf.o \
-	  lib/exception.o lib/utilities.o lib/zio.o
+	  lib/exception.o lib/utilities.o
 
 libcansam.a: $(LIBOBJS)
 	$(AR) cr $@ $(LIBOBJS)
@@ -21,24 +22,23 @@ lib/exception.o: lib/exception.cpp sam/exception.h
 lib/header.o: lib/header.cpp sam/header.h
 lib/ostream.o: lib/ostream.cpp sam/header.h sam/alignment.h
 lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/streambuf.h
-lib/sambamio.o: lib/sambamio.cpp sam/alignment.h sam/collection.h sam/stream.h \
-		lib/zio.h lib/buffer.h lib/wire.h
+lib/sambamio.o: lib/sambamio.cpp lib/sambamio.h sam/alignment.h \
+		sam/collection.h sam/exception.h sam/stream.h \
+		lib/buffer.h lib/utilities.h lib/wire.h lib/bgzf.h
 lib/samstream.o: lib/samstream.cpp sam/stream.h sam/exception.h
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
-lib/zio.o: lib/zio.cpp lib/zio.h lib/buffer.h sam/exception.h \
-	   lib/bgzf.h lib/wire.h lib/utilities.h
 
 
 MISC_OBJS = utilities/samcat.o utilities/samsort.o examples/simplecat.o
 
 samcat: utilities/samcat.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o -lcansam
+	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o -lcansam $(LDLIBS)
 
 samsort: utilities/samsort.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o -lcansam
+	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o -lcansam $(LDLIBS)
 
 simplecat: examples/simplecat.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ examples/simplecat.o -lcansam
+	$(CXX) $(LDFLAGS) -o $@ examples/simplecat.o -lcansam $(LDLIBS)
 
 utilities/samcat.o: utilities/samcat.cpp sam/header.h sam/alignment.h
 utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h
@@ -52,7 +52,7 @@ TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
 	    test/wire.o
 
 test/runtests: $(TEST_OBJS) libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) -lcansam
+	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) -lcansam $(LDLIBS)
 
 test/runtests.o: test/runtests.cpp test/test.h
 test/alignment.o: test/alignment.cpp test/test.h sam/alignment.h

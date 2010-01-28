@@ -4,6 +4,7 @@
 
 #include "sam/header.h"
 #include "sam/alignment.h"
+#include "sam/stream.h"
 
 using std::string;
 
@@ -43,8 +44,8 @@ int main(int argc, char** argv) {
 "  -v       Display file information and statistics\n"
 "";
 
-  bool bam_output = false;
-  string output_fname;
+  string output_fname = "-";
+  std::ios::openmode output_mode = sam::sam_format;
   bool verbose = false;
 
   if (argc == 1) {
@@ -66,13 +67,15 @@ int main(int argc, char** argv) {
   int c;
   while ((c = getopt(argc, argv, ":bo:v")) >= 0)
     switch (c) {
-    case 'b':  bam_output = true;  break;
+    case 'b':  output_mode = sam::bam_format;  break;
     case 'o':  output_fname = optarg;  break;
     case 'v':  verbose = true;  break;
     default:
       std::cerr << usage;
       return EXIT_FAILURE;
     }
+
+  sam::osamstream out(output_fname, std::ios::out | output_mode);
 
   if (optind == argc)
     cat(std::cin, std::cout);

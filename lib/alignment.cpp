@@ -322,6 +322,11 @@ alignment& alignment::assign(const string& /*line*/) {
 }
 #endif
 
+void alignment::reserve(int auxsize) {
+  #warning alignment::reserve() unimplemented
+  auxsize = auxsize;
+}
+
 // FIXME Where do these functions go?
 int to_flags(const char* s) {
   int val;

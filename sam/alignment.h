@@ -481,6 +481,7 @@ public:
   static void unpack_qual(char* dest, const char* phred, int seq_length);
 
 private:
+public: // FIXME Get bamio access to all this
   // @cond private
   struct block_header {
     uint16_t capacity;

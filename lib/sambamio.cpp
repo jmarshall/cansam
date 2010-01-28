@@ -6,15 +6,22 @@
 
 #include <cstring>
 
+#include <zlib.h>
+
 #include "sam/alignment.h"
 #include "sam/collection.h"
+#include "sam/exception.h"
 #include "sam/stream.h"
-#include "lib/zio.h"
+#include "lib/bgzf.h"
+#include "lib/buffer.h"
+#include "lib/utilities.h"
 #include "lib/wire.h"
 
 using std::string;
 
 namespace sam {
+
+inline size_t min(size_t a, size_t b) { return (a < b)? a : b; }
 
 /* A sam::alignment object contains only a pointer to a variable-sized memory
 block containing all the alignment data represented mostly in the same way as
@@ -40,11 +47,128 @@ public:
   virtual bool get(isamstream&, collection&);
   virtual bool get(isamstream&, alignment&);
   virtual void put(osamstream&, const alignment&);
+
+private:
+  size_t read(isamstream&, void*, size_t);
+  bool underflow(isamstream&);
+  void fill_cdata(isamstream&);
+  size_t inflate_into_buffer(char*, size_t);
+
+  read_buffer buffer;
+  read_buffer cdata;
 };
 
-samstream_base::bamio::bamio(const char* text, std::streamsize textsize) {
-  #warning bamio::bamio() unimplemented
-  text=text, textsize=textsize;
+samstream_base::bamio::bamio(const char* text, std::streamsize textsize)
+  : buffer(65536), cdata(65536) {
+  memcpy(buffer.end, text, textsize);
+  buffer.end += textsize;
+}
+
+// Fill  cdata  by reading from the streambuf.  Reads as much as will fit into
+// the buffer, which is probably several BGZF blocks.  This reduces the number
+// of read(2) system calls for sequential access, and (with modern disk block
+// sizes) shouldn't mean too much data is discarded by any subsequent seek().
+void samstream_base::bamio::fill_cdata(isamstream& stream) {
+  cdata.flush();
+  // FIXME Probably remove rdbuf_sgetn and put its code here instead.
+  cdata.end += stream.rdbuf_sgetn(cdata.end, cdata.capacity() - cdata.size());
+}
+
+// FIXME Maybe don't have underflow() skip the header so we can do
+// inflateInit() normal not raw mode and get CRC checking
+
+string zlib_error_message(const char* function, const z_stream& z) {
+  string s = "zlib::";
+  s += function;
+  s += "() failed";
+  if (z.msg)
+    s += ": ", s += z.msg;
+  return s;
+}
+
+// Decompress the specified data into  buffer, discarding whatever may have
+// been there previously.
+size_t samstream_base::bamio::inflate_into_buffer(char* data, size_t length) {
+  z_stream z;
+  z.zalloc = Z_NULL;
+  z.zfree  = Z_NULL;
+
+  z.next_in  = reinterpret_cast<unsigned char*>(data);
+  z.avail_in = length;
+  if (inflateInit2(&z, -15) != Z_OK)
+    throw bad_format(zlib_error_message("inflateInit2", z));
+
+  buffer.clear();
+  z.next_out  = reinterpret_cast<unsigned char*>(buffer.begin);
+  z.avail_out = buffer.capacity();
+  if (inflate(&z, Z_FINISH) != Z_STREAM_END) {
+    string message = zlib_error_message("inflate", z);
+    (void) inflateEnd(&z);
+    throw bad_format(message);
+  }
+
+  buffer.end += z.total_out;
+
+  if (inflateEnd(&z) != Z_OK)
+    throw bad_format(zlib_error_message("inflateEnd", z));
+
+  return z.total_in;
+}
+
+// Decompress one BGZF block into  buffer,  which is assumed to be previously
+// empty, from  cdata,  which is refilled by reading from the streambuf if
+// necessary.  Returns true if  buffer  is nonempty afterwards.
+bool samstream_base::bamio::underflow(isamstream& stream) {
+  if (cdata.size() < BGZF::hsize) {
+    fill_cdata(stream);
+    // If there's still no data, we're cleanly at EOF.
+    if (cdata.size() == 0)  return false;
+  }
+
+  if (BGZF::is_bgzf_header(cdata.begin, cdata.size())) {
+    size_t blockonly_length = BGZF::block_size(cdata.begin) - BGZF::hsize;
+    cdata.begin += BGZF::hsize;
+    if (cdata.size() < blockonly_length) {
+      fill_cdata(stream);
+      if (cdata.size() < blockonly_length)
+	throw bad_format(make_string()
+	    << "Truncated BGZF block (expected " << blockonly_length
+	    << " bytes after header; got " << cdata.size() << ")");
+    }
+
+    cdata.begin += inflate_into_buffer(cdata.begin, blockonly_length);
+    return true;
+  }
+  else
+    throw bad_format("Invalid BGZF block header");
+}
+
+size_t samstream_base::bamio::read(isamstream& stream,
+				   void* destv, size_t desired_length) {
+  char* dest = static_cast<char*>(destv);
+
+  // TODO  Ideally this would unpack just enough of the stream to fill DEST
+  // and decompress directly into the destination buffer, thus saving a copy.
+  // However, for now it is easier (and perhaps faster) to decompress an
+  // entire block at once.
+
+  size_t length = 0;
+
+  while (true) {
+    size_t copy_length = min(desired_length, buffer.end - buffer.begin);
+    memcpy(dest, buffer.begin, copy_length);
+    buffer.begin += copy_length;
+    dest += copy_length;
+    length += copy_length;
+    desired_length -= copy_length;
+
+    if (desired_length == 0)
+      break;
+    else if (! underflow(stream))
+      break;
+  }
+
+  return length;
 }
 
 bool samstream_base::bamio::get(isamstream& stream, collection& headers) {
@@ -62,10 +186,35 @@ bool samstream_base::bamio::get(isamstream& stream, collection& headers) {
 }
 
 bool samstream_base::bamio::get(isamstream& stream, alignment& aln) {
-  #warning bamio::get(aln) unimplemented
-  stream.eof();
-  aln.find("X0");
-  return false;
+  uint32_t rest_length;
+
+  size_t n = read(stream, &rest_length, sizeof rest_length);
+  if (n < sizeof rest_length) {
+    if (n == 0)  return false;
+    else  throw bad_format("Truncated BAM alignment record");
+  }
+
+  convert::set_uint32(rest_length);
+  aln.reserve(rest_length); // FIXME er plus/minus a bit
+
+  n = read(stream, &aln.p->c.rindex, rest_length);
+  if (n < rest_length)
+    throw bad_format(make_string()
+	<< "Truncated BAM alignment record (got " << n
+	<< " bytes of an expected remainder of " << rest_length << ")");
+
+  aln.p->h.cindex = 5; // FIXME stream.cindex;
+  aln.p->c.rest_length = rest_length;
+  convert::set_int32(aln.p->c.rindex);
+  convert::set_int32(aln.p->c.zpos);
+  convert::set_uint16(aln.p->c.bin);
+  convert::set_uint16(aln.p->c.cigar_length);
+  convert::set_uint16(aln.p->c.flags);
+  convert::set_int32(aln.p->c.read_length);
+  convert::set_int32(aln.p->c.mate_rindex);
+  convert::set_int32(aln.p->c.mate_zpos);
+  convert::set_int32(aln.p->c.isize);
+  return true;
 }
 
 void samstream_base::bamio::put(osamstream& stream, const alignment& aln) {

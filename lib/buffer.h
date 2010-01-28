@@ -1,5 +1,5 @@
-#ifndef CANSAM_BUFFER_H
-#define CANSAM_BUFFER_H
+#ifndef BUFFER_H
+#define BUFFER_H
 
 #include <cstring>
 #include <boost/scoped_array.hpp>

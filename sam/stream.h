@@ -58,6 +58,7 @@ protected:
 
   // @cond private
   bool setstate_wouldthrow(iostate state);
+  std::streamsize rdbuf_sgetn(char* buffer, std::streamsize length);
 
   samstream_base(std::streambuf* sbuf, bool owned, sambamio* io0)
     : std::ios(sbuf), io(io0), filename_(), owned_rdbuf_(owned) { }

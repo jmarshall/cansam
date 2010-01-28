@@ -50,8 +50,8 @@ Write as bam:
 
 Proposed names:
 
-? void set_uint16(uint16_t&)	-- convert unaligned memory bam to host
-? void set_bam16(uint16_t&) 	-- convert unaligned memory host to bam
+? void set_uint16(uint16_t&)	-- convert aligned memory bam to host
+? void set_bam16(uint16_t&) 	-- convert aligned memory host to bam
 
 ? uint16_t uint16(uint16_t)	-- convert bam to host (for aligned)
 # uint16_t uint16(const void*)	-- read unaligned memory as host
@@ -63,15 +63,31 @@ Proposed names:
 ? = maybe useful to have this one
 */
 
+/* Conversion functions are provided for various combinations of aligned vs.
+unaligned memory, and converting in-place vs. reading-as-host/writing-as-bam.
+
+Convert a variable or aligned memory in-place...
+   void set_uint16(uint16_t&)     ...to host representation
+   void set_bam16(uint16_t&)      ...to the BAM wire format
+
+Return a (host-representation) value...
+   uint16_t uint16(const void*)   ...by reading BAM-formatted unaligned memory
+
+Write a (host-represented) value...
+   void set_bam_uint16(void*, uint16_t)  ...to unaligned memory in BAM format
+
+Similar functions are provided for {int,uint}{16,32}.  */
+// FIXME Also likely eventually for {int,uint}{64}.
+
 #if defined WIRE_NOOP
 
-#if 0
-// FIXME Later, if they're needed...
 inline void set_uint16(uint16_t&) { }
 inline void set_uint32(uint32_t&) { }
 inline void set_bam16(uint16_t&) { }
 inline void set_bam32(uint32_t&) { }
 
+#if 0
+// FIXME Later, if they're needed...
 inline uint16_t uint16(uint16_t x) { return x; }
 inline uint32_t uint32(uint32_t x) { return x; }
 inline uint16_t bam_uint16(uint16_t x) { return x; }
@@ -118,11 +134,6 @@ inline void set_bam_uint32(void* pv, uint32_t x) {
   p[3] = x;
 }
 
-inline int16_t int16(const void* pv) { return uint16(pv); }
-inline int32_t int32(const void* pv) { return uint32(pv); }
-inline void set_bam_int16(void* pv, int16_t x) { set_bam_uint16(pv, x); }
-inline void set_bam_int32(void* pv, int32_t x) { set_bam_uint32(pv, x); }
-
 #elif defined WIRE_ROTATE_BYTES
 
 inline void set_uint16(void* pv) {
@@ -154,6 +165,16 @@ inline uint16_t bam_uint16(uint16_t x) { return uint16(x); }
 inline uint32_t bam_uint32(uint32_t x) { return uint32(x); }
 
 #endif
+
+inline void set_int16(int16_t& x) { uint16_t ux = x; set_uint16(ux); x = ux; }
+inline void set_int32(int32_t& x) { uint32_t ux = x; set_uint32(ux); x = ux; }
+inline void set_bam16(int16_t& x) { uint16_t ux = x; set_bam16(ux); x = ux; }
+inline void set_bam32(int32_t& x) { uint32_t ux = x; set_bam32(ux); x = ux; }
+
+inline int16_t int16(const void* pv) { return uint16(pv); }
+inline int32_t int32(const void* pv) { return uint32(pv); }
+inline void set_bam_int16(void* pv, int16_t x) { set_bam_uint16(pv, x); }
+inline void set_bam_int32(void* pv, int32_t x) { set_bam_uint32(pv, x); }
 
 } // namespace convert
 } // namespace sam

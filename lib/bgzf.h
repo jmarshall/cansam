@@ -1,5 +1,5 @@
-#ifndef CANSAM_BGZF_H
-#define CANSAM_BGZF_H
+#ifndef BGZF_H
+#define BGZF_H
 
 #include <cstring>
 #include "lib/wire.h"

@@ -1,5 +1,5 @@
-#ifndef CANSAM_UTILITIES_H
-#define CANSAM_UTILITIES_H
+#ifndef UTILITIES_H
+#define UTILITIES_H
 
 #include <string>
 #include <sstream>

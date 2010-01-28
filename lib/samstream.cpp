@@ -3,6 +3,8 @@
 #include <fstream>
 #include <cctype>
 
+#include <unistd.h>
+
 #include "sam/exception.h"
 #include "sam/streambuf.h"
 #include "lib/sambamio.h"
@@ -47,16 +49,36 @@ bool samstream_base::setstate_wouldthrow(iostate state) {
   return false;
 }
 
+std::streamsize
+samstream_base::rdbuf_sgetn(char* buffer, std::streamsize length) {
+  if (eof())
+    return 0;
+
+  std::streamsize n = rdbuf()->sgetn(buffer, length);
+  if (n == 0) {
+    if (setstate_wouldthrow(eofbit))
+      throw sambamio::eof_exception();
+  }
+
+  return n;
+}
+
 
 std::streambuf*
-new_and_open(const std::string& filename, std::ios_base::openmode mode) {
+new_and_open(const std::string& filename, std::ios::openmode mode) {
   // TODO Eventually might look for URL schemes and make a different streambuf
 
-  return new rawfilebuf(filename.c_str(), mode);
+  if (filename == "-") {
+    rawfilebuf* sbuf = new rawfilebuf();
+    sbuf->attach((mode & std::ios::out)? STDOUT_FILENO : STDIN_FILENO);
+    return sbuf;
+  }
+  else
+    return new rawfilebuf(filename.c_str(), mode);
 }
 
 isamstream::isamstream(const std::string& filename, openmode mode)
-  : samstream_base(new_and_open(filename, mode), true, NULL) {
+  : samstream_base(new_and_open(filename, mode | in), true, NULL) {
   set_filename(filename);
   if (is_open())
     io = sambamio::new_in(rdbuf());
@@ -142,6 +164,18 @@ isamstream& isamstream::operator>> (alignment& aln) {
   return *this;
 }
 
+
+osamstream::osamstream(const std::string& filename, openmode mode)
+  : samstream_base(new_and_open(filename, mode | out), true, NULL) {
+  set_filename(filename);
+  if (is_open())
+    io = sambamio::new_out(rdbuf(), mode);
+}
+
+osamstream::~osamstream() {
+  // FIXME
+}
+
 osamstream& osamstream::operator<< (const alignment& aln) {
   try {
     io->put(*this, aln);
@@ -161,27 +195,6 @@ osamstream& osamstream::operator<< (const alignment& aln) {
   return *this;
 }
 
-// ********************************************************************
-
-#if 0
-// FIXME
-int get4() { return 37; }
-
-// Read the BAM reference table (n_ref, l_name/name/l_ref...).
-void samstream_base::read_reftable() {
-  int n = get4();
-
-  char* data; // FIXME
-
-  reftable.resize(n);
-  for (int i = 0; i < n; i++) {
-    int len = get4();
-    reftable[i].name.assign(data, len - 1);
-    data += len;
-    reftable[i].length = get4();
-  }
-}
-#endif
 
 std::ios_base::openmode extension(const string& filename) {
   using std::ios;
