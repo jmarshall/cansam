@@ -205,8 +205,8 @@ public:
   const char* aux_c_str(const char* tag) const;
   //@}
 
-  /** @name Auxiliary fields as a collection
-  Alignment records provide limited collection-style access to their
+  /** @name Container functionality
+  Alignment records provide limited container-style access to their
   auxiliary fields.
 
   The @c sam::alignment::iterator and @c sam::alignment::const_iterator classes
@@ -353,7 +353,7 @@ public:
     { return replace_(position, position, tag, value); }
 
   iterator erase(iterator position)
-    { return replace_gap(position, next(position), 0); }
+    { iterator next = position; return replace_gap(position, ++next, 0); }
   iterator erase(iterator start, iterator limit)
     { return replace_gap(start, limit, 0); }
 
@@ -394,7 +394,7 @@ public:
   /// Update the existing auxiliary field's value
   template <typename ValueType>
   iterator set_aux(iterator position, ValueType value)
-    { return replace_(position, next(position), NULL, value); }
+    {iterator next = position; return replace_(position, ++next, NULL, value);}
 
   /// Erase all auxiliary fields with the given @a tag
   /** @return The number of fields erased (usually no more than 1).  */

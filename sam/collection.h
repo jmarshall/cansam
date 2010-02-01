@@ -36,6 +36,10 @@ public:
   /// Copy a collection, by copying all the headers within
   collection& operator= (const collection& collection);
 
+  /** @name Container functionality
+  Collections provide limited container-style access to their headers.  */
+  //@{
+
   // @cond infrastructure
   typedef header_array::iterator iterator;  // FIXME or something...
   typedef header_array::const_iterator const_iterator;
@@ -54,6 +58,7 @@ public:
 
   bool empty() const { return headers.empty(); }
   void clear();
+  //@}
 
   refsequence& findseq(const std::string& name);
   refsequence& findseq(const char* name);

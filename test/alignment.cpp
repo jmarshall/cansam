@@ -107,7 +107,7 @@ std::cout << "begin: " << aln.begin() << ", end: " << aln.end() << "\nauxen:";
     std::cout << " {" << *cit << "}";
 std::cout << "\n";
 
-  it1 = next(next(aln.begin()));
+  it1 = aln.begin(), ++it1, ++it1;
 aln.dump_on(std::cout, it1);
 std::cout << aln << "\nset_aux.it1\n";
   aln.set_aux(it1, foo);

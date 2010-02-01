@@ -16,8 +16,8 @@ namespace sam {
 /** @class sam::header sam/header.h
     @brief SAM/BAM header record, representing a single '@@' header line
 
-This class blah FIXME blah collection-style blah, so a header object itself
-is amenable to the usual collection operations, such as iterating through the
+This class blah FIXME blah container-style blah, so a header object itself
+is amenable to the usual container operations, such as iterating through the
 fields with @c begin() and @c end(), and modifying them with @c erase(),
 @c push_back(), etc.
 
@@ -61,8 +61,8 @@ public:
     { const_iterator it = find(tag);
       return (it != end())? it->value<ValueType>() : default_value; }
 
-  /** @name Fields as a collection
-  Headers provide limited collection-style access to their fields.
+  /** @name Container functionality
+  Headers provide limited container-style access to their fields.
 
   The @c sam::header::iterator and @c sam::header::const_iterator classes are
   <b>bidirectional iterators</b> providing all the usual iterator functionality:

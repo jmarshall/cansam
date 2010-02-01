@@ -60,8 +60,8 @@ private:
 
 samstream_base::bamio::bamio(const char* text, std::streamsize textsize)
   : buffer(65536), cdata(65536) {
-  memcpy(buffer.end, text, textsize);
-  buffer.end += textsize;
+  memcpy(cdata.end, text, textsize);
+  cdata.end += textsize;
 }
 
 // Fill  cdata  by reading from the streambuf.  Reads as much as will fit into
