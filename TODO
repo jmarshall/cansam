@@ -11,6 +11,9 @@
 
 * Move any information in REFCOUNT and UNCOUNTED into lib/alignment.cpp
 
+* Reorder the variable-length fields in memory, swapping READ_NAME and CIGAR,
+  so that CIGAR is naturally-aligned.
+
 * Maybe refcount the alignments so that assignment is cheap too, and you
   don't need to obfuscate with swap() -- EXCEPT it wreaks havoc with threading
 

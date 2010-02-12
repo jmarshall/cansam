@@ -7,8 +7,6 @@
 #include <ios>
 #include <string>
 
-#include "sam/types.h"
-
 namespace sam {
 
 /*. @name Additional openmode flags */
@@ -26,6 +24,7 @@ const std::ios_base::openmode bam_format = std::ios_base::binary | compressed;
 
 class alignment;
 class collection;
+class sambamio;
 
 /** @class sam::samstream_base sam/stream.h
     @brief Base class for SAM/BAM streams
@@ -54,11 +53,8 @@ public:
   void set_filename(const std::string& filename) { filename_ = filename; }
 
 protected:
-  class sambamio;
-
-  // @cond private
+  // @cond infrastructure
   bool setstate_wouldthrow(iostate state);
-  std::streamsize rdbuf_sgetn(char* buffer, std::streamsize length);
 
   samstream_base(std::streambuf* sbuf, bool owned, sambamio* io0)
     : std::ios(sbuf), io(io0), filename_(), owned_rdbuf_(owned) { }
@@ -67,8 +63,7 @@ protected:
   // @endcond
 
 private:
-  class bamio;
-  class samio;
+  friend class sambamio;
 
   std::string filename_;
   bool owned_rdbuf_;

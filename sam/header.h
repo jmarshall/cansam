@@ -6,12 +6,18 @@
 #define CANSAM_HEADER_H
 
 #include <string>
+#include <vector>
+#include <map>
 #include <iterator>
 #include <iosfwd>
 
 #include "sam/types.h"
 
 namespace sam {
+
+class sambamio;
+class bamio;
+class samio;
 
 /** @class sam::header sam/header.h
     @brief SAM/BAM header record, representing a single '@@' header line
@@ -31,6 +37,7 @@ class header {
 public:
   header() { }
   // FIXME or should be protected
+  // FIXME Hmmm... who ate all the tabs?  or ought to?
   explicit header(const std::string& line) : str_(line), cstr_(str_.c_str()) { }
   virtual ~header() { }
 
@@ -45,10 +52,8 @@ public:
   bool type_equals(const char* key_type) const
     { return cstr_[0]=='@' && cstr_[1]==key_type[0] && cstr_[2]==key_type[1]; }
 
-  std::string text() const;
-
   /// Returns the (tab-separated) string representing this header
-  std::string str() const { return str_; }
+  std::string str() const;
 
   std::string field_str(const char* tag) const;
 
@@ -62,7 +67,8 @@ public:
       return (it != end())? it->value<ValueType>() : default_value; }
 
   /** @name Container functionality
-  Headers provide limited container-style access to their fields.
+  Headers that have fields provide limited container-style access
+  to their fields.
 
   The @c sam::header::iterator and @c sam::header::const_iterator classes are
   <b>bidirectional iterators</b> providing all the usual iterator functionality:
@@ -101,13 +107,13 @@ public:
     friend class const_iterator;
     friend std::ostream& operator<< (std::ostream&, const tagfield&);
 
-    inline static const char* nexttab(const char* s)
-      { char c; do { c = *++s; } while (c != '\0' && c != '\t');  return s; }
+    inline static const char* next(const char* s)
+      { while (*++s != '\0') { }  return s; }
 
-    inline static const char* prevtab(const char* s)
-      { while (*--s != '\t') { }  return s; }
+    inline static const char* prev(const char* s)
+      { while (*--s != '\0') { }  return s; }
 
-    char tab_;
+    char nul_;
     char tag_[2];
     char colon_;
     char data_[1];
@@ -132,11 +138,11 @@ public:
       { return reinterpret_cast<const tagfield*>(ptr); }
     const tagfield& operator* () const { return *operator->(); }
 
-    const_iterator& operator++ () {ptr = tagfield::nexttab(ptr); return *this;}
+    const_iterator& operator++ () { ptr = tagfield::next(ptr); return *this; }
     const_iterator operator++ (int)
       { const char* orig = ptr; ++(*this); return const_iterator(orig); }
 
-    const_iterator& operator-- () {ptr = tagfield::prevtab(ptr); return *this;}
+    const_iterator& operator-- () { ptr = tagfield::prev(ptr); return *this; }
     const_iterator operator-- (int)
       { const char* orig = ptr; --(*this); return const_iterator(orig); }
 
@@ -219,9 +225,11 @@ public:
   int erase(const char* tag);
 
 protected:
-  // @cond private
+  /// Enable derived classes to update their state when a header is modified
+  /** Called whenever a header is modified.  Blah blah blah.
+  @note Derived classes augmenting this method should ensure that the first
+  thing their overriding function does is invoke @c header::sync().  */
   virtual void sync() { cstr_ = str_.c_str(); }
-  // @endcond
 
 private:
   size_t find_or_eos(const char* tag) const;
@@ -260,8 +268,8 @@ void header::set_field(const char* tag, ValueType value) {
 /// Print a header to the stream
 /** Writes a header to an output stream as text in SAM format, @b without
 a trailing newline character.
-@relatesalso header  */
-std::ostream& operator<< (std::ostream& stream, const header& hdr);
+@relatesalso header */
+std::ostream& operator<< (std::ostream& stream, const header& header);
 
 /// Print a header field to the stream
 /** @relatesalso header::tagfield */
@@ -276,6 +284,9 @@ std::ostream& operator<< (std::ostream& stream, header::const_iterator it);
 class refsequence : public header {
 public:
   refsequence(const std::string& name, coord_t length, int index);
+
+  // FIXME should be private; is only for header virtual ctor
+  refsequence(const std::string& nul_delimited_text, int index);
 
   ~refsequence() { }
 
@@ -300,15 +311,94 @@ public:
   void set_checksum(const std::string& sum) { set_field("M5", sum); }
   //@}
 
-private:
+protected:
   virtual void sync();
 
+private:
   static std::string name_length_string(const std::string&, coord_t);
 
   std::string name_;
   int index_;
-  bool visible_;
 };
+
+/** @class sam::collection sam/header.h
+    @brief Header information for a collection of SAM/BAM records */
+class collection {
+private:
+  // TODO  This might be becoming boost::ptr_vector<header>
+  typedef std::vector<header*> header_array;
+
+public:
+  /// Construct an empty collection
+  collection();
+
+  /// Construct a copy of a collection, by copying all the headers within
+  collection(const collection& collection);
+
+  //  Destroy this collection object (not interesting enough to warrant ///)
+  ~collection();
+
+  /// Copy a collection, by copying all the headers within
+  collection& operator= (const collection& collection);
+
+  /** @name Container functionality
+  Collections provide limited container-style access to their headers.  */
+  //@{
+
+  // @cond infrastructure
+  typedef header_array::iterator iterator;  // FIXME or something...
+  typedef header_array::const_iterator const_iterator;
+  typedef header_array::reference reference;
+  typedef header_array::const_reference const_reference;
+  typedef header_array::difference_type difference_type;
+  // @endcond
+
+  iterator begin() { return headers.begin(); }
+  const_iterator begin() const { return headers.begin(); }
+
+  iterator end() { return headers.end(); }
+  const_iterator end() const { return headers.end(); }
+
+  void push_back(const std::string& header_line);
+
+  bool empty() const { return headers.empty(); }
+  void clear();
+  //@}
+
+  refsequence& findseq(const std::string& name);
+  refsequence& findseq(const char* name);
+  refsequence& findseq(int index);
+
+  // FIXME prob not public
+  static collection& find(unsigned cindex) { return *collections[cindex]; }
+
+private:
+  friend class sambamio;
+  friend class bamio;
+  friend class samio;
+  friend std::ostream& operator<< (std::ostream&, const collection&);
+
+  void allocate_cindex();
+  void free_cindex() { collections[cindex] = NULL; cindex = 0; }
+  void reallocate_cindex() { collections[cindex] = NULL; allocate_cindex(); }
+
+  void push_back(const std::string& nul_delimited_text, int flags);
+
+  int cindex;
+  std::vector<header*> headers;
+  std::vector<refsequence*> refseqs;
+  std::map<std::string, refsequence*> refnames;
+  bool refseqs_in_headers;
+
+  static std::vector<collection*> collections;
+};
+
+/// Print a collection of headers to the stream
+/** Writes the headers to an output stream as text in SAM format, with each
+header terminated by a newline character.  If @a stream has @c showpoint set,
+also writes a representation of the reference list and other internal data.
+@relatesalso collection */
+std::ostream& operator<< (std::ostream& stream, const collection& headers);
 
 } // namespace sam
 

@@ -26,49 +26,15 @@ are not properly aligned.
 namespace sam {
 namespace convert {
 
-/* FIXME
-Possible signatures:
-  aligned memory (so value, not ptr)  v  unaligned memory (ptr)
-  swap in place  v  read-as-host/write-as-bam
-
-Swap in place:  (probably only unaligned (is more general) is actually needed)
-  void swap(uint16_t*)	-- un/hostify aligned memory in place
-  void swap(uint16_t&)	-- un/hostify register or aligned memory in place
-? void swap(void*)	-- un/hostify unaligned memory in place
-
-(actually unaligned swap is useless as it doesn't solve the how-will-you-look-
-at-it---it's-unaligned problem)
-
-Read as host:
-? uint16_t hostify(uint16_t)     -- aligned memory, no explicit ptr needed
-# uint16_t hostify(const void*)  -- unaligned memory
-
-Write as bam:
-? uint16_t bamify(uint16_t) -- aligned memory, no explicit ptr needed
-  void bamify(void* dest, uint16_t) -- aligned memory (probably not useful)
-# void bamify(void* dest, uint16_t) -- unaligned memory
-
-Proposed names:
-
-? void set_uint16(uint16_t&)	-- convert aligned memory bam to host
-? void set_bam16(uint16_t&) 	-- convert aligned memory host to bam
-
-? uint16_t uint16(uint16_t)	-- convert bam to host (for aligned)
-# uint16_t uint16(const void*)	-- read unaligned memory as host
-
-? uint16_t bam_uint16(uint16_t) 	-- convert host to bam (for aligned)
-# void set_bam_uint16(void*, uint16_t)	-- write bam to unaligned memory
-
-# = already in use
-? = maybe useful to have this one
-*/
-
 /* Conversion functions are provided for various combinations of aligned vs.
 unaligned memory, and converting in-place vs. reading-as-host/writing-as-bam.
 
 Convert a variable or aligned memory in-place...
    void set_uint16(uint16_t&)     ...to host representation
    void set_bam16(uint16_t&)      ...to the BAM wire format
+
+Convert unaligned memory in-place...
+   void set_bam16(void*)          ...to the BAM wire format
 
 Return a (host-representation) value...
    uint16_t uint16(const void*)   ...by reading BAM-formatted unaligned memory
@@ -85,19 +51,8 @@ inline void set_uint16(uint16_t&) { }
 inline void set_uint32(uint32_t&) { }
 inline void set_bam16(uint16_t&) { }
 inline void set_bam32(uint32_t&) { }
-
-#if 0
-// FIXME Later, if they're needed...
-inline uint16_t uint16(uint16_t x) { return x; }
-inline uint32_t uint32(uint32_t x) { return x; }
-inline uint16_t bam_uint16(uint16_t x) { return x; }
-inline uint32_t bam_uint32(uint32_t x) { return x; }
-
-inline int16_t int16(int16_t x) { return x; }
-inline int32_t int32(int32_t x) { return x; }
-inline int16_t bam_int16(int16_t x) { return x; }
-inline int32_t bam_int32(int32_t x) { return x; }
-#endif
+inline void set_bam16(void*) { }
+inline void set_bam32(void*) { }
 
 // These are endianness-independent, and make the most pessimistic assumptions
 // about not being able to do better than char-access to unaligned memory.

@@ -35,7 +35,8 @@ coord_t to_int(const string& str,
 make_string& make_string::operator<< (unsigned char c) {
   if (isgraph(c))  buffer << c;
   else if (c == '\0')  buffer << "\\0";
-  else  buffer << "\\x" << std::hex << std::setw(2) << unsigned(c);
+  else  buffer << "\\x" << std::hex << std::setfill('0') << std::setw(2)
+	       << unsigned(c);
 
   return *this;
 }

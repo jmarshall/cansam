@@ -1,10 +1,12 @@
 #include "sam/stream.h"
 
 #include <fstream>
-#include <cctype>
+#include <cctype>   // for tolower()
 
-#include <unistd.h>
+#include <unistd.h> // FIXME for...?
 
+// FIXME do we actually need all these, or could we just forward declare?
+#include "sam/alignment.h"
 #include "sam/exception.h"
 #include "sam/streambuf.h"
 #include "lib/sambamio.h"
@@ -35,6 +37,7 @@ samstream_base::~samstream_base() {
   delete io;
 
   if (owned_rdbuf_) {
+    exceptions(goodbit);  // Prevent exceptions caused by emptying rdbuf().
     std::streambuf* sbuf = rdbuf(NULL);
     delete sbuf;
   }
@@ -49,27 +52,13 @@ bool samstream_base::setstate_wouldthrow(iostate state) {
   return false;
 }
 
-std::streamsize
-samstream_base::rdbuf_sgetn(char* buffer, std::streamsize length) {
-  if (eof())
-    return 0;
-
-  std::streamsize n = rdbuf()->sgetn(buffer, length);
-  if (n == 0) {
-    if (setstate_wouldthrow(eofbit))
-      throw sambamio::eof_exception();
-  }
-
-  return n;
-}
-
-
 std::streambuf*
 new_and_open(const std::string& filename, std::ios::openmode mode) {
   // TODO Eventually might look for URL schemes and make a different streambuf
 
   if (filename == "-") {
     rawfilebuf* sbuf = new rawfilebuf();
+    // TODO On some platforms, may need setmode(O_BINARY) or similar
     sbuf->attach((mode & std::ios::out)? STDOUT_FILENO : STDIN_FILENO);
     return sbuf;
   }

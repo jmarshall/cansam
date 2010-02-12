@@ -1,8 +1,7 @@
 #include <ostream>
 
-#include "sam/header.h"
 #include "sam/alignment.h"
-
+#include "sam/header.h"
 #include "lib/utilities.h"  // FIXME NUKE-ME want make_string for dump_on()
 
 using std::string;
@@ -10,7 +9,7 @@ using std::string;
 namespace sam {
 
 std::ostream& operator<< (std::ostream& out, const header& header) {
-#ifdef WE_HAVE_COMMENTS_BUGGER_IT
+#if 1
   return out << header.str();
 #else
   out << '@' << header.type();
@@ -25,11 +24,34 @@ std::ostream& operator<< (std::ostream& out, const header& header) {
 #endif
 }
 
-int foo(const header& header) { return header.field<int>("AT", 5); }
+std::ostream& operator<< (std::ostream& out, const collection& headers) {
+  for (collection::const_iterator it = headers.begin();
+       it != headers.end(); ++it)
+    out << **it << '\n';
+
+  if (out.flags() & std::ios::showpoint) {
+    int i = 0;
+    out << "Reflist:";
+    for (std::vector<refsequence*>::const_iterator it = headers.refseqs.begin();
+	 it != headers.refseqs.end(); ++it, ++i)
+      out << " " << i << "->" << (*it)->name();
+    out << "\nRefmap:";
+    for (std::map<std::string, refsequence*>::const_iterator
+	 it = headers.refnames.begin(); it != headers.refnames.end(); ++it)
+      out << " " << it->first << "->" << it->second->name();
+    out << "\n";
+  }
+
+  return out;
+}
 
 std::ostream& operator<< (std::ostream& out, const header::tagfield& field) {
-  const char* limit = header::tagfield::nexttab(field.tag_);
+#ifdef STILL_TAB_DELIMITED
+  const char* limit = header::tagfield::next(field.tag_);
   return out << string(field.tag_, limit - field.tag_);
+#else
+  return out << field.tag_;
+#endif
 }
 
 std::ostream& operator<< (std::ostream& out, header::const_iterator it) {
@@ -43,7 +65,7 @@ std::ostream& operator<< (std::ostream& out, const alignment& aln) {
       << '\t' << aln.rname() << '\t' << std::dec << aln.pos()
       << '\t' << aln.mapq() << '\t' << aln.cigar();
 
-  if (aln.mate_rname() == aln.rname())  out << "\t=";
+  if (aln.mate_rindex() == aln.rindex() && aln.rindex() >= 0)  out << "\t=";
   else  out << '\t' << aln.mate_rname();
 
   out << '\t' << aln.mate_pos() << '\t' << aln.isize() << '\t' << aln.seq()
@@ -72,49 +94,20 @@ std::ostream& operator<< (std::ostream& out, alignment::const_iterator it) {
 void alignment::dump_on(std::ostream& out, const_iterator marker) const {
   make_string text;
   const char* s = p->data();
-  const char* limit = &s[p->capacity() - sizeof(block_header)];
-  while (s < limit)
+  const char* limit = &s[p->capacity()];
+  while (s < limit) {
+    if (s == qname_c_str())  text << "]NAME:[";
+    if (s == p->data() + p->cigar_offset())  text << "]CIG:[";
+    if (s == seq_raw_data())  text << "]SEQ:[";
+    if (s == qual_raw_data())  text << "]QUAL:[";
+    if (s == begin().ptr)  text << "]AUXEN:[";
+
     if (s == marker.ptr)  text << " [" << *s++ << "] ";
     else  text << *s++;
-
-  out << "Capacity:" << p->capacity() << ", cindex:" << p->h.cindex
-      << ", data:" << string(text) << "\n";
-}
-
-#if 0
-std::ostream& operator<< (std::ostream& out, const tagfield& field) {
-  out << field.tag << ':';
-  if (field.type != '@')
-    out << field.type << ':';
-
-  switch (field.type) {
-  case '@':
-  case 'A':
-  case 'H':
-  case 'Z':
-    out << field.str;
-    break;
-
-  case 'c':
-  case 'C':
-  case 's':
-  case 'S':
-  case 'i':
-  case 'I':
-    out << field.i;
-    break;
-
-  case 'f':
-    out << field.f;
-    break;
-
-  case 'd':
-    out << field.d;
-    break;
   }
 
-  return out;
+  out << "Capacity:" << p->capacity() << ", cindex:" << p->h.cindex
+      << ", data:[" << string(text) << "]\n";
 }
-#endif
 
 } // namespace sam

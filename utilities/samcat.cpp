@@ -2,37 +2,30 @@
 #include <string>
 #include <cstdlib>
 
-#include "sam/header.h"
 #include "sam/alignment.h"
+#include "sam/header.h"
 #include "sam/stream.h"
 
 using std::string;
+using namespace sam;
 
-void cat(std::istream&, std::ostream&) {
-  // FIXME
-  std::clog << "FIXME reimplement with sam::isamstream etc\n";
-#if 0
-  sam::header header;
-  while (in >> header)
-    out << header << '\n';
+void cat(isamstream& in, osamstream&) {
+  in.exceptions(std::ios::failbit | std::ios::badbit);
 
-  in.clear();
+  collection headers;
+  in >> headers;
 
-  sam::alignment aln;
+  std::cout << std::showpoint << headers;
+
+//  in.clear();
+
+  alignment aln;
+//  std::cout << "default ctored: "; aln.dump_on(std::cout);
   while (in >> aln) {
-    out << aln << '\n';
-#if 0
-    std::clog << "name{" << aln.qname << "} flags{" << aln.flags << "} rname{"
-	<< aln.rname << "} pos{" << aln.pos << "} mapq{" << aln.mapq
-	<< "} cigar{" << aln.cigar << "} mrname{" << aln.mate_rname
-	<< "} mpos{" << aln.mate_pos << "} isize{" << aln.isize
-	<< "} seq{" << aln.seq << "} qual{" << aln.qual << "}";
-    if (! aln.extras.empty())
-	std::clog << " extras{" << aln.extras << "}";
-    std::clog << '\n';
-#endif
-    }
-#endif
+    std::cout << "in loop: "; aln.dump_on(std::cout);
+    // out << aln << '\n';
+    std::cout << aln << '\n';
+  }
 }
 
 int main(int argc, char** argv) {
@@ -45,7 +38,7 @@ int main(int argc, char** argv) {
 "";
 
   string output_fname = "-";
-  std::ios::openmode output_mode = sam::sam_format;
+  std::ios::openmode output_mode = sam_format;
   bool verbose = false;
 
   if (argc == 1) {
@@ -67,7 +60,7 @@ int main(int argc, char** argv) {
   int c;
   while ((c = getopt(argc, argv, ":bo:v")) >= 0)
     switch (c) {
-    case 'b':  output_mode = sam::bam_format;  break;
+    case 'b':  output_mode = bam_format;  break;
     case 'o':  output_fname = optarg;  break;
     case 'v':  verbose = true;  break;
     default:
@@ -75,19 +68,19 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
 
-  sam::osamstream out(output_fname, std::ios::out | output_mode);
+  osamstream out(output_fname, std::ios::out | output_mode);
 
-  if (optind == argc)
-    cat(std::cin, std::cout);
+  if (optind == argc) {
+    isamstream in("-");
+    cat(in, out);
+  }
   else
     for (int i = optind; i < argc; i++) {
-      string arg = argv[i];
-      if (arg == "-")
-	cat(std::cin, std::cout);
-      else {
-	//std::ifstream str
-	std::cout << "processing {" << arg << "}\n";
-      }
+      isamstream in(argv[i]);
+      if (in.is_open())
+	cat(in, out);
+      else
+	std::cerr << "error opening " << argv[i] << " or something\n";
     }
 
   return EXIT_SUCCESS;

@@ -12,11 +12,35 @@ namespace sam {
 // Infrastructure
 // ==============
 
+/* A sam::header object represents its header text in two private fields:
+
+   str_    Header text as a std::string, with all tabs replaced by NULs
+   cstr_   Cached value of str_.c_str(), updated whenever str_ is changed
+
+The  cstr_  field avoids needing to call str_.c_str() in begin()/end()/etc,
+which could (in theory, and not in C++0x) invalidate iterators and pointers
+pointing at characters within  str_.  These sam::header member functions
+must not, of course, invalidate such pointers, as that would invalidate the
+sam::header::iterators that they are used in conjunction with.
+
+We store the text with NULs instead of tabs so that sam::header::tagfield
+can offer C-string access, and because that is how lines are read by sambamio.
+This is the case even for odd headers such as comments, in which tabs are
+effectively ordinary characters that do not necessarily delimit fields.  */
+
 string header::type() const {
   if (! (str_.length() >= 3 && str_[0] == '@'))
     throw bad_format("Malformatted header type");
 
   return str_.substr(1, 2);
+}
+
+string header::str() const {
+  string s = str_;
+  size_t pos = 0;
+  while ((pos = s.find('\0', pos)) != string::npos)
+    s[pos++] = '\t';
+  return s;
 }
 
 string header::tagfield::tag() const {
@@ -27,7 +51,7 @@ string header::tagfield::tag() const {
 }
 
 string header::tagfield::value_str() const {
-  const char* limit = nexttab(tag_);
+  const char* limit = next(tag_);
   if (! (limit >= data_ && colon_ == ':'))
     throw bad_format("Malformatted header field");
 
@@ -41,7 +65,7 @@ template<> coord_t header::tagfield::value<coord_t>() const {
 }
 
 size_t header::find_or_eos(const char* tag) const {
-  char key[] = { '\t', tag[0], tag[1], ':' };
+  char key[] = { '\0', tag[0], tag[1], ':' };
   size_t pos = str_.find(key, 3, sizeof key);
   return (pos != string::npos)? pos : str_.length();
 }
@@ -80,7 +104,7 @@ int header::erase(const char* key_tag) {
 header::iterator
 header::replace_string(size_t pos, size_t length,
 		       const char* tag, const char* value, int value_length) {
-  char key[] = { '\t', tag[0], tag[1], ':' };
+  char key[] = { '\0', tag[0], tag[1], ':' };
 
   if (length >= sizeof key) {
     str_.replace(pos, sizeof key, key, sizeof key);
@@ -131,18 +155,24 @@ string refsequence::name_length_string(const string& name, coord_t length) {
   string s;
   // FIXME Should be format::coord_digits (and similarly below)
   s.reserve(7 + name.length() + 4 + format::int_digits);
-  s += "@SQ\tSN:";
+  s.assign("@SQ\0SN:", 7);
   s += name;
-  s += "\tLN:";
+  s.append("\0LN:", 4);
   char buffer[format::int_digits];
-  s.append(buffer, format::decimal(buffer, length));
+  s.append(buffer, format::decimal(buffer, length) - buffer);
 
   return s;
 }
 
 refsequence::refsequence(const string& name, coord_t length, int index)
   : header(name_length_string(name, length)),
-    name_(name), index_(index), visible_(false) {
+    name_(name), index_(index) {
+}
+
+// TEXT is NUL-delimited.
+refsequence::refsequence(const std::string& text, int index)
+  : header(text), index_(index) {
+  name_ = field<string>("SN");
 }
 
 void refsequence::sync() {
@@ -151,8 +181,8 @@ void refsequence::sync() {
 
   // FIXME if (this == &unmapped_refseq) throw barf;
 
-  // If a reference has ever been modified, it should appear in the header.
-  visible_ = true;
+  // FIXME If even one reference is ever modified, they all should appear
+  // in the header.
 }
 
 } // namespace sam

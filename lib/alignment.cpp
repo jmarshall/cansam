@@ -14,9 +14,8 @@
 
 #include <iostream> // FIXME NUKE-ME
 
-#include "sam/collection.h"
 #include "sam/exception.h"
-
+#include "sam/header.h"
 #include "lib/utilities.h"
 #include "lib/wire.h"
 
@@ -31,7 +30,23 @@ namespace sam {
 const int alignment::order_value[4] = { 0, -1, +1, 0 };
 
 string alignment::cigar() const {
-  return "FIXME"; // FIXME
+  // TODO Probably will build some kind of sam::cigar class...
+
+  int cigar_length = p->c.cigar_length;
+
+  if (cigar_length == 0)
+    return "*";
+
+  string text;
+  char buffer[format::int_digits];
+  const char* cigar_data = p->data() + p->cigar_offset();
+  for (int i = 0; i < cigar_length; i++, cigar_data += sizeof(uint32_t)) {
+    uint32_t code = convert::uint32(cigar_data);
+    text.append(buffer, format::decimal(buffer, code >> 4) - buffer);
+    text += "MIDNSHP?????????"[code & 0xf];
+  }
+
+  return text;
 }
 
 scoord_t alignment::cigar_span() const {
@@ -133,7 +148,8 @@ void alignment::pack_qual(char* dest, const char* qual, int seq_length) {
   }
 }
 
-void alignment::unpack_qual(char* dest, const char* phred, int seq_length) {
+void alignment::unpack_qual(string::iterator dest,
+			    const char* phred, int seq_length) {
   for (int i = 0; i < seq_length; i++) {
     char q = *phred++;
     if (q < 0)  q = 0;
@@ -230,10 +246,6 @@ int calc_bin(coord_t pos, coord_t right) {
   return calc_zbin(pos - 1, right - 1);
 }
 
-void alignment::sync() const {
-  bin();
-}
-
 // 3. Infrastructure
 //==================
 
@@ -247,30 +259,28 @@ have a constant-time default constructor.)  This block lies about its capacity
 so that tests of the form "p->capacity() < some_size" always trigger when  p
 is the empty block.  */
 struct alignment::block alignment::empty_block = {
-  { 0 /* 41, if truth be told */, 0 },
+  { 0 /* 37, if truth be told */, 0 },
   { 33, -1, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0 },
   { '\0' /* an empty qname C-string */ }
 };
 
 // Allocate a new block and initialise its capacity field.
-alignment::block* alignment::block::create(int capacity) {
-  char* cp = new char[capacity];
+alignment::block* alignment::block::create(int payload_size) {
+  char* cp = new char[sizeof(block_header) + payload_size];
   block* p = reinterpret_cast<block*>(cp);
 
-  p->h.capacity = capacity;
+  p->h.capacity = payload_size;
   return p;
 }
 
 // Copy the block contents (but don't overwrite DEST's capacity field),
 // assuming that the destination's capacity suffices for the source's size.
 void alignment::block::copy(block* dest, const block* src) {
-  memcpy(&dest->h.cindex, &src->h.cindex,
-	 src->size() - sizeof(src->h.capacity));
+  memcpy(&dest->h.cindex, &src->h.cindex, sizeof(src->h.cindex) + src->size());
 }
 
-// Deallocate the block.
+// Deallocate the block (which must not be empty_block).
 void alignment::block::destroy(block* p) {
-  // FIXME do if != &empty_block test here?  Otherwise inline?
   char* cp = reinterpret_cast<char*>(p);
   delete [] cp;
 }
@@ -278,8 +288,8 @@ void alignment::block::destroy(block* p) {
 /* Resize the alignment's block, unsharing it if it is currently the shared
 empty block, while maintaining the existing contents.  Used by mutators to
 ensure the block is sufficiently sized and writable.  */
-void alignment::resize_unshare_copy(int size) {
-  block* newp = block::create(size);
+void alignment::resize_unshare_copy(int payload_size) {
+  block* newp = block::create(payload_size);
   block* oldp = p;
   block::copy(newp, oldp);
   p = newp;
@@ -289,8 +299,8 @@ void alignment::resize_unshare_copy(int size) {
 /* Resize the alignment's block, unsharing it if it is currently the shared
 empty block, but not maintaining the existing contents.  Used by assignments
 to ensure the block is sufficiently sized and writable.  */
-void alignment::resize_unshare_discard(int size) {
-  block* newp = block::create(size);
+void alignment::resize_unshare_discard(int payload_size) {
+  block* newp = block::create(payload_size);
   block* oldp = p;
   p = newp;
   if (oldp != &empty_block)  block::destroy(oldp);
@@ -299,6 +309,7 @@ void alignment::resize_unshare_discard(int size) {
 /* This assignment operator simply copies the pointed-to block, but must first
 ensure that the destination is large enough and is not the shared empty block,
 and must explicitly check for the self-assignment case.  */
+// FIXME Should we de-pessimize the empty = empty case?
 alignment& alignment::operator= (const alignment& aln) {
   int newsize = aln.p->size();
   if (p->capacity() < newsize)
@@ -310,9 +321,13 @@ alignment& alignment::operator= (const alignment& aln) {
   return *this;
 }
 
-alignment::alignment(const alignment& aln)
-  : p(block::create(aln.p->size())) {
-  block::copy(p, aln.p);
+alignment::alignment(const alignment& aln) {
+  if (aln.p == &empty_block)
+    p = &empty_block;
+  else {
+    p = block::create(aln.p->size());
+    block::copy(p, aln.p);
+  }
 }
 
 #if 1
@@ -322,9 +337,14 @@ alignment& alignment::assign(const string& /*line*/) {
 }
 #endif
 
-void alignment::reserve(int auxsize) {
-  #warning alignment::reserve() unimplemented
-  auxsize = auxsize;
+// FIXME This is pretty crap, and ought to be in utilities.h
+int decimal(const char* s) {
+  // FIXME strtol() accepts leading whitespace, which we don't really want.
+  char* slim;
+  int x = strtol(s, &slim, 10);
+  if (*slim != '\0')
+    throw bad_format("Trailing gunge in decimal field");
+  return x;
 }
 
 // FIXME Where do these functions go?
@@ -345,8 +365,7 @@ int to_flags(const char* s) {
   return val;
 }
 
-// FIXME  As in, the number of operators
-int calc_cigar_length(const char* s) {
+int cigar_operator_count(const char* s) {
   int n = 0;
 
   if (s[0] == '*' && s[1] == '\0') {
@@ -360,32 +379,6 @@ int calc_cigar_length(const char* s) {
 
   return n;
 }
-
-#if 0
-int sam_aux_length(char type, const char* value, int value_length) {
-  switch (type) {
-  case 'A':
-    if (value_length != 1)
-      throw bad_format("Type 'A' aux field has length other than 1");
-    return 1;
-
-  case 'i':
-  case 'f':
-  case 'd':
-  case 'Z':
-  case 'H':
-    break;
-  }
-}
-#else
-// FIXME
-int sam_aux_length(char, const char*, int) {
-  return 20;
-}
-#endif
-
-int lookup_in_refthingie(const char*) { return -1; }
-int itoa(const char*) { return 0; }
 
 int alignment::approx_sam_record_length() const {
   int len = 0;
@@ -465,7 +458,7 @@ void alignment::sam_record(char* dest, int /*dest_length*/) const {
   }
 }
 
-void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthingie*/) {
+void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex) {
   // An alignment in SAM format is a tab-separated line containing fields
   // ordered as:
   // qname flag rname pos mapq cigar mrname mpos isize seq qual aux...
@@ -477,7 +470,7 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
     throw bad_format("Too few fields in SAM record");
 
   int name_length = fields[qname+1] - fields[qname]; // including terminator
-  int cigar_length = calc_cigar_length(fields[cigar]);
+  int cigar_length = cigar_operator_count(fields[cigar]);
   int seq_length = fields[seq+1] - fields[seq] - 1;
   int qual_length = fields[qual+1] - fields[qual] - 1;
 
@@ -493,35 +486,44 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
       throw bad_format("SEQ and QUAL differ in length");
   }
 
-  int size = sizeof(block_header) + sizeof(bamcore)
-	     + name_length + (cigar_length * sizeof(uint32_t))
+  int size = sizeof(bamcore) + name_length + (cigar_length * sizeof(uint32_t))
 	     + (seq_length+1)/2 + seq_length;
 
-  for (int i = firstaux; i < nfields; i++) {
-    int length = fields[i+1] - fields[i] - 1;
-    char* aux = fields[i];
-    if (length < 5 || aux[2] != ':' || aux[4] != ':')
-      throw bad_format("Malformatted aux field");
-    size += 3 + sam_aux_length(aux[3], &aux[5], length - 5);
-  }
+  int aux_size = 0;
+  // These aux fields will be properly validated in push_back_sam() below.
+  for (int i = firstaux; i < nfields; i++)
+    aux_size +=
+	alignment::tagfield::size_sam(fields[i], fields[i+1] - fields[i] - 1);
 
-  if (p->capacity() < size)
-    resize_unshare_discard(size);
+  if (p->capacity() < size + aux_size)
+    resize_unshare_discard(size + aux_size);
 
-  p->h.cindex = 0; // FIXME somethingie
+  p->h.cindex = cindex;
+  collection& collection = collection::find(cindex);
 
-  p->c.rest_length = size - sizeof(block_header) - sizeof(p->c.rest_length);
-  p->c.rindex = lookup_in_refthingie(fields[rname]); // a name or "*"
-  p->c.zpos = itoa(fields[pos]) - 1; // a 1-based pos or 0
+  // The aux space will be added to rest_length during push_back_sam() below.
+  p->c.rest_length = size - sizeof(p->c.rest_length);
+
+  p->c.rindex = collection.findseq(fields[rname]).index(); // a name or "*"
+  p->c.zpos = decimal(fields[pos]) - 1; // a 1-based pos or 0
   p->c.name_length = name_length;
-  p->c.mapq = itoa(fields[mapq]); // 0..255
+  p->c.mapq = decimal(fields[mapq]); // 0..255
   p->c.bin = -1;
   p->c.cigar_length = cigar_length;
   p->c.flags = to_flags(fields[flag]);
   p->c.read_length = seq_length;
-  p->c.mate_rindex = lookup_in_refthingie(fields[mrname]); // a name or "*"
-  p->c.mate_zpos = itoa(fields[mpos]) - 1; // a 1-based pos or 0
-  p->c.isize = itoa(fields[isize]); // an insert size or 0
+
+  //a name or "*" or "="
+  if (fields[mrname][0] == '=' && fields[mrname][1] == '\0')
+    p->c.mate_rindex = p->c.rindex;
+  else
+    p->c.mate_rindex = collection.findseq(fields[mrname]).index();
+
+  p->c.mate_zpos = decimal(fields[mpos]) - 1; // a 1-based pos or 0
+  p->c.isize = decimal(fields[isize]); // an insert size or 0
+
+  memcpy(p->data() + p->name_offset(), fields[qname], name_length);
+  // cigar
 
   // In BAM: int32_t read_len is given, seq is (read_len+1)/2 bytes;
   //         qual is read_len bytes (Phred qualities), maybe 0xFF x read_len.
@@ -529,45 +531,55 @@ void alignment::assign(int nfields, const std::vector<char*>& fields /*, refthin
   // In SAM: either seq is "*" so read_len is 0, or seq is read_len base chars;
   //         qual is "*" (so 0xFF x read_len) or it's P-33 x read_len qualchars.
 
-  // cigar
-
   pack_seq(p->data() + p->seq_offset(), fields[seq], seq_length);
   if (qual_length > 0)
     pack_qual(p->data() + p->qual_offset(), fields[qual], seq_length);
   else
     memset(p->data() + p->qual_offset(), '\xff', seq_length);
 
-  memcpy(p->data() + p->name_offset(), fields[qname], name_length);
+  for (int i = firstaux; i < nfields; i++)
+    push_back_sam(fields[i], fields[i+1] - fields[i] - 1);
+}
 
-  for (int i = firstaux; i < nfields; i++) {
-    char* aux = fields[i];
+void alignment::push_back_sam(const char* aux, int length) {
+  // A SAM-formatted aux field is in the format "TG:T:[VALUE]".
 
-    switch (aux[3]) {
-    case 'A':
-      throw std::logic_error("Aux 'A' field not implemented");  // TODO
+  if (length < 5 || aux[2] != ':' || aux[4] != ':')
+    throw bad_format("Malformatted aux field");
 
-    case 'i':
-      push_back(aux, 37); //to_int(&aux[5]));
-      break;
+//std::clog << "push_back_sam(\"" << aux << "\", " << length << ")\n";
+  const char* tag = aux;
+  const char* value = &aux[5];
+  int value_length = length - 5;
 
-    case 'f':
-      throw std::logic_error("Aux 'f' field not implemented");  // TODO
+  switch (aux[3]) {
+  case 'A':
+    if (value_length != 1)
+      throw bad_format("Type 'A' aux field has length other than 1");
+    push_back(tag, value[0]);
+    break;
 
-    case 'd':
-      throw std::logic_error("Aux 'd' field not implemented");  // TODO
+  case 'i':
+    push_back(tag, decimal(value));
+    break;
 
-    case 'Z':
-      push_back(aux, &aux[5]);
-      break;
+  case 'f':
+    throw std::logic_error("Aux 'f' field not implemented");  // TODO
 
-    case 'H':
-      throw std::logic_error("Aux 'H' field not implemented");  // TODO
+  case 'd':
+    throw std::logic_error("Aux 'd' field not implemented");  // TODO
 
-    default:
-      throw bad_format(make_string()
-	  << "Aux field '" << aux[0] << aux[1] << "' has invalid type ('"
-	  << aux[3] << "') for SAM format");
-    }
+  case 'Z':
+    replace_string(end(), end(), tag, 'Z', value, value_length);
+    break;
+
+  case 'H':
+    throw std::logic_error("Aux 'H' field not implemented");  // TODO
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag[0] << tag[1] << "' has invalid type ('"
+	<< aux[3] << "') for SAM format");
   }
 }
 
@@ -577,6 +589,32 @@ int alignment::to_flags(const string& str) {
   return to_flags(s, s + str.length());
 }
 #endif
+
+// FIXME Someone set up us the templatey love!
+
+std::string alignment::aux(const char* tag) const {
+  const_iterator it = find(tag);
+  if (it != end())  return it->value();
+  else  throw "no such tag";
+}
+
+std::string
+alignment::aux(const char* tag, const std::string& default_value) const {
+  const_iterator it = find(tag);
+  return (it != end())? it->value() : default_value;
+}
+
+int alignment::aux_int(const char* tag) const {
+  const_iterator it = find(tag);
+  if (it != end())  return it->value_int();
+  else  throw "no such tag";
+}
+
+int alignment::aux_int(const char* tag, int default_value) const {
+  const_iterator it = find(tag);
+  return (it != end())? it->value_int() : default_value;
+}
+
 
 // 4. Iterators
 //=============
@@ -617,8 +655,48 @@ int alignment::tagfield::size() const {
   }
 }
 
-static string stringize(int) {
-  return "FIXME"; // FIXME
+int alignment::tagfield::size_sam(const char* text, int text_length) {
+  // Return 0 (invalid) if the text is clearly not of the form "TG:T:[VALUE]".
+  if (text_length < 5)  return 0;
+
+  const char* value = &text[5];
+  int length = text_length - 5;
+
+  switch (text[3]) {
+  case 'A':
+    return 2 + 1 + 1;
+
+  case 'i':
+    if (value[0] != '-') {
+      if (length <= 2)  // <= 99
+	return 2 + 1 + sizeof(uint8_t);
+      else if (length <= 4 || (length == 5 && value[0] <= '5'))  // <= 59999
+	return 2 + 1 + sizeof(uint16_t);
+      else
+	return 2 + 1 + sizeof(uint32_t);
+    }
+    else {
+      if (length <= 3)  // >= -99
+	return 2 + 1 + sizeof(int8_t);
+      else if (length <= 5 || (length == 6 && value[1] <= '2'))  // >= -29999
+	return 2 + 1 + sizeof(int16_t);
+      else
+	return 2 + 1 + sizeof(int32_t);
+    }
+
+  case 'f':
+    return 2 + 1 + 4;
+
+  case 'd':
+    return 2 + 1 + 8;
+
+  case 'Z':
+  case 'H':
+    return 2 + 1 + length + 1;
+
+  default:
+    return 0;
+  }
 }
 
 string alignment::tagfield::value() const {
@@ -627,12 +705,19 @@ string alignment::tagfield::value() const {
     return string(1, data[0]);
 
   case 'c':
-  case 'C':
   case 's':
+  case 'i': {
+    char buffer[format::int_digits];
+    return string(buffer, format::decimal(buffer, value_int()) - buffer);
+  }
+
+  case 'C':
   case 'S':
-  case 'i':
-  case 'I':
-    return stringize(value_int());
+  case 'I': {
+    // FIXME These ones should be value_uint() or so (especially I!)
+    char buffer[format::int_digits];
+    return string(buffer, format::decimal(buffer, value_int()) - buffer);
+  }
 
   case 'f':
   case 'd':
@@ -736,6 +821,19 @@ alignment::replace_string(iterator start, iterator limit,
   it->type_ = type;
   memcpy(it->data, value, value_length);
   it->data[value_length] = '\0';
+
+  return it;
+}
+
+alignment::iterator
+alignment::replace_(iterator start, iterator limit,
+		    const char* tag, char value) {
+  iterator it = replace_gap(start, limit, 2 + 1 + 1);
+
+  if (tag)
+    it->tag_[0] = tag[0], it->tag_[1] = tag[1];
+  it->type_ = 'A';
+  it->data[0] = value;
 
   return it;
 }

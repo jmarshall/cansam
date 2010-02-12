@@ -15,9 +15,11 @@
 
 #include "sam/types.h"
 #include "sam/header.h"
-#include "sam/collection.h"
 
 namespace sam {
+
+class bamio;
+class samio;
 
 // FIXME do something about namespaces so you don't have to say sam::PAIRED etc
 
@@ -91,7 +93,13 @@ public:
   /// Swap this alignment with another
   void swap(alignment& aln) { block* tmp = p; p = aln.p; aln.p = tmp; }
 
-  void reserve(int auxsize); // FIXME How much should @a size measure?
+#if 0
+  /// Ensure this alignment has space for a BAM-formatted record
+  /// of @a size bytes
+  // FIXME Surely this can be worded better...
+  void reserve(int size)
+    { if (p->capacity() < size)  resize_unshare_copy(size); }
+#endif
 
   /** @name Field accessors
   Two variants are provided for the @em POS and @em MPOS fields: @c %pos()
@@ -142,13 +150,16 @@ public:
       unpack_seq(dest.begin(), seq_raw_data(), length());
       return dest; }
 
-  // FIXME uh, no, needs offsetted
   std::string qual() const
-    { return std::string(p->data() + p->qual_offset(), p->c.read_length); }
+    { std::string dest(length(), 'X');
+      unpack_qual(dest.begin(), qual_raw_data(), length());
+      return dest; }
 
-  int length() const { return p->c.read_length; } ///< Read length
+  /// Read length
+  int length() const { return p->c.read_length; }
 
   /// BAM bin number (derived, if necessary, from @em POS and @em CIGAR)
+  // FIXME How does this work for unmapped?
   int bin() const
     { if (p->c.bin == unknown_bin)  p->c.bin = calc_zbin(zpos(), right_zpos());
       return p->c.bin; }
@@ -183,7 +194,7 @@ public:
   std::string& qname(std::string& dest) const
     { return dest.assign(p->data() + p->name_offset(), p->c.name_length - 1); }
 
-  ///< Reference name (or @c NULL)
+  /// Reference name (or @c NULL)
   const char* rname_c_str() const
     { return collection::find(p->h.cindex).findseq(p->c.rindex).name_c_str(); }
 
@@ -199,8 +210,12 @@ public:
   /// Sequence (packed as two bases per byte; not NUL-terminated)
   const char* seq_raw_data() const { return p->data() + p->seq_offset(); }
 
-  /// Quality string (not NUL-terminated)
-  const char* qual_data() const { return p->data() + p->qual_offset(); }
+  /// Assigns ASCII quality string to @a dest (and returns @a dest)
+  std::string& qual(std::string& dest) const
+    { unpack_qual(dest, qual_raw_data(), length()); return dest; }
+
+  /// Quality string (BLAH raw phred scores; not NUL-terminated)
+  const char* qual_raw_data() const { return p->data() + p->qual_offset(); }
 
   const char* aux_c_str(const char* tag) const;
   //@}
@@ -255,6 +270,14 @@ public:
 
     /// Number of bytes in the BAM representation of this field
     int size() const;
+
+    /// Approximate number of bytes in the BAM representation of the
+    /// SAM-formatted @a text
+    /** Returns a conservative (i.e., generous) approximation of the
+    BAM-formatted size of a (valid) SAM aux field of the given @a text
+    of length @a text_length.
+    FIXME Blah blah about returning 0 for invalid formatting.  */
+    static int size_sam(const char* text, int text_length);
 
   private:
     friend class alignment;
@@ -343,6 +366,12 @@ public:
   const_iterator find(const char* tag) const;
 
   bool empty() const { return p->auxen_offset() == p->end_offset(); }
+
+  void push_back_sam(const char* aux_text, int aux_text_length);
+  void push_back_sam(const char* aux_text)
+    { push_back_sam(aux_text, traits_type::length(aux_text)); }
+  void push_back_sam(const std::string& aux_text)
+    { push_back_sam(aux_text.c_str(), aux_text.length()); }
 
   template <typename ValueType>
   void push_back(const char* tag, ValueType value)
@@ -441,7 +470,7 @@ public:
   /// Rightmost position (0-based)
   coord_t right_zpos() const { return zpos() + cigar_span() - 1; }
 
-  // FIXME maybe should be private/friend?
+  // FIXME maybe should be private/friend?  Or nuke 'em?
   int approx_sam_record_length() const;
   void sam_record(char*, int) const;
   //@}
@@ -477,11 +506,14 @@ public:
   @param seq_length blah */
   static void pack_qual(char* dest, const char* qual, int seq_length);
 
-  // FIXME probably will end up as  std::string& dest
-  static void unpack_qual(char* dest, const char* phred, int seq_length);
+  /// Unpack raw-Phred-encoded quality string
+  static void unpack_qual(std::string& dest, const char* phred, int seq_length)
+    { dest.resize(seq_length); unpack_qual(dest.begin(), phred, seq_length); }
 
 private:
-public: // FIXME Get bamio access to all this
+  friend class bamio;
+  friend class samio;
+
   // @cond private
   struct block_header {
     uint16_t capacity;
@@ -509,9 +541,10 @@ public: // FIXME Get bamio access to all this
     struct bamcore c;
     char extra[1];
 
+    // These measure the BAM-formatted payload; the actual capacity and
+    // size of the alignment::block exceed these by sizeof(block_header).
     int capacity() const { return h.capacity; }
-    int size() const
-      { return sizeof(block_header) + sizeof(c.rest_length) + c.rest_length; }
+    int size() const { return sizeof(c.rest_length) + c.rest_length; }
 
     char* data() { return reinterpret_cast<char*>(&this->c); }
 
@@ -522,22 +555,19 @@ public: // FIXME Get bamio access to all this
     int auxen_offset() const { return qual_offset() + c.read_length; }
     int end_offset() const   { return sizeof(c.rest_length) + c.rest_length; }
 
-    static block* create(int capacity);
+    static block* create(int payload_size);
     static void destroy(block* block);
     static void copy(block* dest, const block* src);
   };
 
   block* p;
 
-public: // FIXME figure out how to get samstream_base::samio access to this
-  void assign(int nfields, const std::vector<char*>& fields /*, refthingie*/);
-private:
+  void assign(int nfields, const std::vector<char*>& fields, int cindex);
 
-  void sync() const;
-  //FIXME NUKEME void destroy();  // FIXME prob should be const (!)
+  void sync() const { bin(); }
 
-  void resize_unshare_copy(int size);
-  void resize_unshare_discard(int size);
+  void resize_unshare_copy(int payload_size);
+  void resize_unshare_discard(int payload_size);
 
   void set_qname(const char* qname, int qname_length);
 
@@ -558,9 +588,10 @@ private:
     { return replace_string(start, limit, tag, 'Z',
 			    value, traits_type::length(value)); }
 
+  iterator replace_(iterator start, iterator limit, const char* tag,char value);
   iterator replace_(iterator start, iterator limit, const char* tag, int value);
 
-  // TODO Add replace_ for char ('A'), float ('f'), double ('d'),
+  // TODO Add replace_ for float ('f'), double ('d'),
   // and const std::vector<uint8_t>& ('H') (and maybe a string adapter for 'H')
 
   iterator replace_(iterator start, iterator limit,
@@ -568,6 +599,9 @@ private:
 
   static void unpack_seq(std::string::iterator dest,
 			 const char* raw_seq, int seq_length);
+
+  static void unpack_qual(std::string::iterator dest,
+			  const char* phred, int length);
 
   static const uint16_t unknown_bin = 0xffff;
   static const int order_value[];
@@ -596,6 +630,7 @@ inline bool operator> (const alignment& a, const alignment& b) { return b < a; }
 /** @relatesalso alignment */
 inline void swap(alignment& a, alignment& b) { a.swap(b); }
 
+#if 0
 /** @brief Read an alignment from the stream
 @details Extracts a single SAM-formatted alignment record from the input
 @a stream into @a aln.  Sets @c failbit if the first line available is not
@@ -604,6 +639,7 @@ an alignment record, for example if it starts with an '@' character.
 // FIXME NUKE-ME  What on earth do we do for a sam::collection?
 // Could hook it up to one of the istream's pword()s, but that's insanely OTT.
 std::istream& operator>> (std::istream& stream, alignment& aln);
+#endif
 
 /// Print an alignment to the stream
 /** Writes an alignment record to a stream as text in SAM format, @b without
