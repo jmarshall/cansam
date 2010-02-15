@@ -38,12 +38,12 @@ string alignment::cigar() const {
     return "*";
 
   string text;
-  char buffer[format::int_digits];
-  const char* cigar_data = p->data() + p->cigar_offset();
+  char buffer[format::buffer<int>::size];
+  const char* cigar_data = p->cigar_data();
   for (int i = 0; i < cigar_length; i++, cigar_data += sizeof(uint32_t)) {
     uint32_t code = convert::uint32(cigar_data);
     text.append(buffer, format::decimal(buffer, code >> 4) - buffer);
-    text += "MIDNSHP?????????"[code & 0xf];
+    text += "MIDNSHP=X???????"[code & 0xf];
   }
 
   return text;
@@ -100,12 +100,8 @@ void alignment::pack_seq(char* dest, const char* seq, int seq_length) {
   }
 }
 
-// Unpack the BAM-encoded sequence data, which is of course not necessarily
-// NUL-terminated.  Assumes that DEST is already of sufficient length for
-// all this (c.f. unpack_seq()).
-void alignment::unpack_seq(string::iterator dest,
-			   const char* raw_seq, int seq_length) {
-  static const char decode[] =
+namespace {
+  const char decode_seq[] =
     "===A=C=M=G=R=S=V=T=W=Y=H=K=D=B=N"
     "A=AAACAMAGARASAVATAWAYAHAKADABAN"  //  1 = A
     "C=CACCCMCGCRCSCVCTCWCYCHCKCDCBCN"  //  2 = C
@@ -122,19 +118,45 @@ void alignment::unpack_seq(string::iterator dest,
     "D=DADCDMDGDRDSDVDTDWDYDHDKDDDBDN"
     "B=BABCBMBGBRBSBVBTBWBYBHBKBDBBBN"
     "N=NANCNMNGNRNSNVNTNWNYNHNKNDNBNN"; // 15 = N
+}
 
+// FIXME Use inline template to avoid writing the code twice
+
+char* alignment::unpack_seq(char* dest, const char* raw_seq, int seq_length) {
   const unsigned char* packed = reinterpret_cast<const unsigned char*>(raw_seq);
 
   int even_length = seq_length & ~1;
   for (int i = 0; i < even_length; i += 2) {
     int ndx = 2 * *packed++;
-    *dest++ = decode[ndx];
-    *dest++ = decode[ndx+1];
+    *dest++ = decode_seq[ndx];
+    *dest++ = decode_seq[ndx+1];
   }
 
   if (even_length < seq_length) {
     int ndx = 2 * *packed;
-    *dest = decode[ndx];
+    *dest++ = decode_seq[ndx];
+  }
+
+  return dest;
+}
+
+// Unpack the BAM-encoded sequence data, which is of course not necessarily
+// NUL-terminated.  Assumes that DEST is already of sufficient length for
+// all this (c.f. unpack_seq()).
+void alignment::unpack_seq(string::iterator dest,
+			   const char* raw_seq, int seq_length) {
+  const unsigned char* packed = reinterpret_cast<const unsigned char*>(raw_seq);
+
+  int even_length = seq_length & ~1;
+  for (int i = 0; i < even_length; i += 2) {
+    int ndx = 2 * *packed++;
+    *dest++ = decode_seq[ndx];
+    *dest++ = decode_seq[ndx+1];
+  }
+
+  if (even_length < seq_length) {
+    int ndx = 2 * *packed;
+    *dest = decode_seq[ndx];
   }
 }
 
@@ -146,6 +168,18 @@ void alignment::pack_qual(char* dest, const char* qual, int seq_length) {
 	  << "Invalid character ('" << q << "') in quality string");
     *dest++ = q - 33;
   }
+}
+
+char* alignment::unpack_qual(char* dest, const char* phred, int seq_length) {
+  const char* phredlim = &phred[seq_length];
+  while (phred < phredlim) {
+    char q = *phred++;
+    if (q < 0)  q = 0;
+    else if (q > 126 - 33)  q = 126 - 33;
+    *dest++ = q + 33;
+  }
+
+  return dest;
 }
 
 void alignment::unpack_qual(string::iterator dest,
@@ -177,9 +211,8 @@ bool operator< (const alignment& a, const alignment& b) {
 //=============
 
 void alignment::set_qname(const char* qname_data, int qname_length) {
-  char* qbuffer =
-    replace_gap(p->data() + p->name_offset(), p->data() + p->cigar_offset(),
-		qname_length + 1);
+  char* qbuffer = replace_gap(p->name_data(),
+		      p->name_data() + p->c.name_length, qname_length + 1);
 
   p->c.name_length = qname_length + 1;
   memcpy(qbuffer, qname_data, qname_length);
@@ -380,14 +413,24 @@ int cigar_operator_count(const char* s) {
   return n;
 }
 
-int alignment::approx_sam_record_length() const {
+int alignment::sam_length() const {
   int len = 0;
-  len += p->c.name_length;  // This includes the \0, so accounts for the tab
-  len += 4 + 1;
-  len += 5; // FIXME refname
-  len += 10 + 1;
-  len += 3 + 1;
-  len += 5; // FIXME cigar
+
+  len += p->c.name_length - 1;  // name_length includes the trailing NUL
+  len += 1 + 4;  // FIXME symbolic flags can be longer
+  len += 1 + rname().length();
+  len += 1 + format::buffer<coord_t>::size;
+  len += 1 + 3;  // Longest MAPQ is "255"
+  // TODO Look at a reasonable bound on the numbers in the CIGAR string
+  len += 1 + p->c.cigar_length * (format::buffer<int>::size + 1);
+  len += 1 + mate_rname().length();
+  len += 1 + format::buffer<coord_t>::size;
+  len += 1 + format::buffer<scoord_t>::size;
+  len += 1 + p->c.read_length;  // SEQ
+  len += 1 + p->c.read_length;  // QUAL
+
+  for (const_iterator it = begin(); it != end(); ++it)
+    len += 1 + it->sam_length();
 
   return len;
 }
@@ -406,25 +449,29 @@ char* format_hex(char* dest, IntType val) {
   return destlim;
 }
 
-void alignment::sam_record(char* dest, int /*dest_length*/) const {
-#if 0
-  if (! length_is_okay)
-    return excess_needed;
-#endif
+// As strcpy(), but returns the first unused position in DEST.
+inline char* copy(char* dest, const char* s) {
+  char c;
+  while ((c = *s++) != '\0')  *dest++ = c;
+  return dest;
+}
 
-  strcpy(dest, qname_c_str()), dest += p->c.name_length - 1;
+char* alignment::sam_record(char* dest, const std::ios& format) const {
+  std::ios::fmtflags fmtflags = format.flags();
+
+  dest = copy(dest, qname_c_str());
 
   *dest++ = '\t';
-  if (0 /*fmtflags & boolalpha*/)
+  if (fmtflags & std::ios::boolalpha)
     strcpy(dest, "FIXME"), dest += 5; // FIXME
-  else if (0 /*fmtflags & hex*/)
+  else if (fmtflags & std::ios::hex)
     dest = format_hex(dest, flags());
   else
     dest = format::decimal(dest, flags());
 
   *dest++ = '\t';
   if (rindex() < 0)  *dest++ = '*';
-  else  strcpy(dest, "REFNAME"), dest += 7; // FIXME
+  else  dest = copy(dest, rname_c_str());
 
   *dest++ = '\t';
   dest = format::decimal(dest, pos());
@@ -433,12 +480,24 @@ void alignment::sam_record(char* dest, int /*dest_length*/) const {
   dest = format::decimal(dest, mapq());
 
   *dest++ = '\t';
-  strcpy(dest, "CIGAR"), dest += 5; // FIXME
+  if (p->c.cigar_length == 0)
+    *dest++ = '*';
+  else {
+    // TODO This too probably will end up in some kind of sam::cigar class
+    const char* cigar;
+    const char* cigarlim =
+		    p->cigar_data() + sizeof(uint32_t) * p->c.cigar_length;
+    for (cigar = p->cigar_data(); cigar < cigarlim; cigar += sizeof(uint32_t)) {
+      uint32_t code = convert::uint32(cigar);
+      dest = format::decimal(dest, code >> 4);
+      *dest++ = "MIDNSHP=X???????"[code & 0xf];
+    }
+  }
 
   *dest++ = '\t';
   if (mate_rindex() < 0)  *dest++ = '*';
   else if (mate_rindex() == rindex())  *dest++ = '=';
-  else  strcpy(dest, "MATEREFNAME"), dest += 11; // FIXME
+  else  dest = copy(dest, mate_rname_c_str());
 
   *dest++ = '\t';
   // FIXME Do we need to do anything special for 0 or -1 i.e. unmapped?
@@ -447,15 +506,61 @@ void alignment::sam_record(char* dest, int /*dest_length*/) const {
   *dest++ = '\t';
   dest = format::decimal(dest, isize());
 
+  *dest++ = '\t';
+  if (length() == 0)  *dest++ = '*';
+  else  dest = unpack_seq(dest, seq_raw_data(), length());
+
+  *dest++ = '\t';
+  if (length() == 0 || qual_raw_data()[0] == '\xff')  *dest++ = '*';
+  else  dest = unpack_qual(dest, qual_raw_data(), length());
+
   for (const_iterator it = begin(); it != end(); ++it) {
     *dest++ = '\t';
     *dest++ = it->tag_[0], *dest++ = it->tag_[1];
     *dest++ = ':';
-    *dest++ = it->type_; // FIXME sanitize BAM-only types
-    *dest++ = ':';
-    // FIXME Append the aux value
-    strcpy(dest, "FIXME"), dest += 5;
+    switch (it->type_) {
+    case 'A':
+      *dest++ = 'A';
+      *dest++ = ':';
+      *dest++ = it->data[0];
+      break;
+
+    case 'c':
+    case 's':
+    case 'i':
+      *dest++ = 'i';
+      *dest++ = ':';
+      dest = format::decimal(dest, it->value_int());
+      break;
+
+    case 'C':
+    case 'S':
+    case 'I':
+      // FIXME These ones should be value_uint() or so (especially I!)
+      *dest++ = 'i';
+      *dest++ = ':';
+      dest = format::decimal(dest, it->value_int());
+      break;
+
+    case 'f':
+    case 'd':
+      throw std::logic_error("Implement sam_record for tagfield(f/d)"); // TODO
+
+    case 'Z':
+    case 'H':
+      *dest++ = it->type_;
+      *dest++ = ':';
+      dest = copy(dest, it->data);
+      break;
+
+    default:
+      throw bad_format(make_string()
+	  << "Aux field '" << it->tag_[0] << it->tag_[1]
+	  << "' has invalid type ('" << it->type_ << "')");
+    }
   }
+
+  return dest;
 }
 
 void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex) {
@@ -522,8 +627,10 @@ void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex
   p->c.mate_zpos = decimal(fields[mpos]) - 1; // a 1-based pos or 0
   p->c.isize = decimal(fields[isize]); // an insert size or 0
 
-  memcpy(p->data() + p->name_offset(), fields[qname], name_length);
-  // cigar
+  memcpy(p->name_data(), fields[qname], name_length);
+
+  // FIXME decode cigar string
+  memset(p->cigar_data(), 0, cigar_length * sizeof(uint32_t));
 
   // In BAM: int32_t read_len is given, seq is (read_len+1)/2 bytes;
   //         qual is read_len bytes (Phred qualities), maybe 0xFF x read_len.
@@ -531,11 +638,11 @@ void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex
   // In SAM: either seq is "*" so read_len is 0, or seq is read_len base chars;
   //         qual is "*" (so 0xFF x read_len) or it's P-33 x read_len qualchars.
 
-  pack_seq(p->data() + p->seq_offset(), fields[seq], seq_length);
+  pack_seq(p->seq_data(), fields[seq], seq_length);
   if (qual_length > 0)
-    pack_qual(p->data() + p->qual_offset(), fields[qual], seq_length);
+    pack_qual(p->qual_data(), fields[qual], seq_length);
   else
-    memset(p->data() + p->qual_offset(), '\xff', seq_length);
+    memset(p->qual_data(), '\xff', seq_length);
 
   for (int i = firstaux; i < nfields; i++)
     push_back_sam(fields[i], fields[i+1] - fields[i] - 1);
@@ -655,6 +762,35 @@ int alignment::tagfield::size() const {
   }
 }
 
+int alignment::tagfield::sam_length() const {
+  // Returns the number of characters in "TG:T:VALUE", i.e., 5 + VALUE_length.
+  // For integer types, this is a conservative (i.e., generous) approximation.
+  // As this is primarily used for sizing output buffers, there is no need to
+  // waste time looking at the value to determine a more exact length.
+
+  switch (type_) {
+  case 'A':  return 5 + 1;
+  case 'c':  return 5 + 4;   // "-128" and similar are the longest possible
+  case 'C':  return 5 + 3;   // "255"
+  case 's':  return 5 + 6;   // "-32768"
+  case 'S':  return 5 + 5;   // "65535"
+  case 'i':  return 5 + 11;  // "-2147483648"
+  case 'I':  return 5 + 10;  // "4294967296"
+
+  case 'f':  throw std::logic_error("Aux 'f' field not implemented");  // TODO
+  case 'd':  throw std::logic_error("Aux 'd' field not implemented");  // TODO
+
+  case 'Z':
+  case 'H':
+    return 5 + strlen(data);
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+}
+
 int alignment::tagfield::size_sam(const char* text, int text_length) {
   // Return 0 (invalid) if the text is clearly not of the form "TG:T:[VALUE]".
   if (text_length < 5)  return 0;
@@ -707,7 +843,7 @@ string alignment::tagfield::value() const {
   case 'c':
   case 's':
   case 'i': {
-    char buffer[format::int_digits];
+    char buffer[format::buffer<int>::size];
     return string(buffer, format::decimal(buffer, value_int()) - buffer);
   }
 
@@ -715,7 +851,7 @@ string alignment::tagfield::value() const {
   case 'S':
   case 'I': {
     // FIXME These ones should be value_uint() or so (especially I!)
-    char buffer[format::int_digits];
+    char buffer[format::buffer<int>::size];
     return string(buffer, format::decimal(buffer, value_int()) - buffer);
   }
 

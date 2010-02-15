@@ -101,13 +101,25 @@ public:
     { if (p->capacity() < size)  resize_unshare_copy(size); }
 #endif
 
+  /// Returns the approximate number of characters in the SAM representation
+  /// of this alignment
+  int sam_length() const;
+
+  /// Write the SAM representation of this alignment to @a dest
+  /** FIXME blah blah about @a format.
+  @param dest  Character array to be written to; must have space for at least
+  sam_length() characters.
+  @param format  Format flags controlling how the record should be formatted.
+  @return A pointer to the first unused character position in @a dest.  */
+  char* sam_record(char* dest, const std::ios& format) const;
+
   /** @name Field accessors
   Two variants are provided for the @em POS and @em MPOS fields: @c %pos()
   et al return 1-based coordinates, while @c %zpos() et al return the same
   positions in 0-based coordinates.  */
   //@{
   std::string qname() const
-    { return std::string(p->data() + p->name_offset(), p->c.name_length - 1); }
+    { return std::string(p->name_data(), p->c.name_length - 1); }
 
   int flags() const { return p->c.flags; }
 
@@ -188,11 +200,11 @@ public:
   that object's non-const member functions are subsequently called.  */
   //@{
   /// Query name
-  const char* qname_c_str() const { return p->data() + p->name_offset(); }
+  const char* qname_c_str() const { return p->name_data(); }
 
   /// Assigns query name to @a dest (and returns @a dest)
   std::string& qname(std::string& dest) const
-    { return dest.assign(p->data() + p->name_offset(), p->c.name_length - 1); }
+    { return dest.assign(p->name_data(), p->c.name_length - 1); }
 
   /// Reference name (or @c NULL)
   const char* rname_c_str() const
@@ -208,14 +220,14 @@ public:
     { unpack_seq(dest, seq_raw_data(), length()); return dest; }
 
   /// Sequence (packed as two bases per byte; not NUL-terminated)
-  const char* seq_raw_data() const { return p->data() + p->seq_offset(); }
+  const char* seq_raw_data() const { return p->seq_data(); }
 
   /// Assigns ASCII quality string to @a dest (and returns @a dest)
   std::string& qual(std::string& dest) const
     { unpack_qual(dest, qual_raw_data(), length()); return dest; }
 
   /// Quality string (BLAH raw phred scores; not NUL-terminated)
-  const char* qual_raw_data() const { return p->data() + p->qual_offset(); }
+  const char* qual_raw_data() const { return p->qual_data(); }
 
   const char* aux_c_str(const char* tag) const;
   //@}
@@ -270,6 +282,10 @@ public:
 
     /// Number of bytes in the BAM representation of this field
     int size() const;
+
+    /// Approximate number of characters in the SAM representation
+    /// of this field
+    int sam_length() const;
 
     /// Approximate number of bytes in the BAM representation of the
     /// SAM-formatted @a text
@@ -354,18 +370,16 @@ public:
   typedef iterator::difference_type difference_type;
   // @endcond
 
-  iterator begin() { return iterator(p->data() + p->auxen_offset()); }
-  const_iterator begin() const
-    { return const_iterator(p->data() + p->auxen_offset()); }
+  iterator begin() { return iterator(p->auxen_data()); }
+  const_iterator begin() const { return const_iterator(p->auxen_data()); }
 
-  iterator end() { return iterator(p->data() + p->end_offset()); }
-  const_iterator end() const
-    { return const_iterator(p->data() + p->end_offset()); }
+  iterator end() { return iterator(p->end_data()); }
+  const_iterator end() const { return const_iterator(p->end_data()); }
 
   iterator find(const char* tag);
   const_iterator find(const char* tag) const;
 
-  bool empty() const { return p->auxen_offset() == p->end_offset(); }
+  bool empty() const { return p->auxen_data() == p->end_data(); }
 
   void push_back_sam(const char* aux_text, int aux_text_length);
   void push_back_sam(const char* aux_text)
@@ -442,17 +456,22 @@ public:
 
   /// @name Derived information
   //@{
+  /// The @e strand flag, as +1 or -1
+  int strand() const { return (flags() & REVERSE_STRAND)? -1 : +1; }
+
   /// The @e strand flag, as '+' or '-'
-  /** Returns the strand information encoded in the flags field.
-  @return Either '+' or '-'.  */
-  char strand() const { return (flags() & REVERSE_STRAND)? '-' : '+'; }
+  char strand_char() const { return (flags() & REVERSE_STRAND)? '-' : '+'; }
+
+  /// The @e mate-strand flag, as +1 or -1
+  int mate_strand() const { return (flags() & MATE_REVERSE_STRAND)? -1 : +1; }
 
   /// The @e mate-strand flag, as '+' or '-'
   /** Returns the mate read's strand information encoded in the flags field.
   This is only meaningful if the alignment in fact has a mate, i.e., if it
   is paired.
   @return Either '+' or '-'.  */
-  char mate_strand() const {return (flags() & MATE_REVERSE_STRAND)? '-' : '+';}
+  char mate_strand_char() const
+    { return (flags() & MATE_REVERSE_STRAND)? '-' : '+'; }
 
   /// The @e pair-order flags, as -1 or +1 (or 0 when unset)
   /** Returns the pairing order information encoded in the flags field.
@@ -469,10 +488,6 @@ public:
   coord_t right_pos() const  { return pos() + cigar_span() - 1; }
   /// Rightmost position (0-based)
   coord_t right_zpos() const { return zpos() + cigar_span() - 1; }
-
-  // FIXME maybe should be private/friend?  Or nuke 'em?
-  int approx_sam_record_length() const;
-  void sam_record(char*, int) const;
   //@}
 
   // FIXME nuke me or otherwise hide me!
@@ -548,12 +563,12 @@ private:
 
     char* data() { return reinterpret_cast<char*>(&this->c); }
 
-    int name_offset() const  { return sizeof(bamcore); }
-    int cigar_offset() const { return name_offset() + c.name_length; }
-    int seq_offset() const   { return cigar_offset() + 4 * c.cigar_length; }
-    int qual_offset() const  { return seq_offset() + (c.read_length + 1) / 2; }
-    int auxen_offset() const { return qual_offset() + c.read_length; }
-    int end_offset() const   { return sizeof(c.rest_length) + c.rest_length; }
+    char* name_data()  { return this->extra; }
+    char* cigar_data() { return name_data() + c.name_length; }
+    char* seq_data()   { return cigar_data() + sizeof(uint32_t)*c.cigar_length;}
+    char* qual_data()  { return seq_data() + (c.read_length + 1) / 2; }
+    char* auxen_data() { return qual_data() + c.read_length; }
+    char* end_data()   { return data() + sizeof(c.rest_length) + c.rest_length;}
 
     static block* create(int payload_size);
     static void destroy(block* block);
@@ -597,9 +612,12 @@ private:
   iterator replace_(iterator start, iterator limit,
 		    const char* tag, const_iterator value);
 
+  // FIXME or are the char* ones public?
+  static char* unpack_seq(char* dest, const char* raw_seq, int seq_length);
   static void unpack_seq(std::string::iterator dest,
 			 const char* raw_seq, int seq_length);
 
+  static char* unpack_qual(char* dest, const char* phred, int length);
   static void unpack_qual(std::string::iterator dest,
 			  const char* phred, int length);
 

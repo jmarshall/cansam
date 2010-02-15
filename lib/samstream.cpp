@@ -3,7 +3,7 @@
 #include <fstream>
 #include <cctype>   // for tolower()
 
-#include <unistd.h> // FIXME for...?
+#include <unistd.h> // FIXME for...? STDIN_FILENO etc presumably
 
 // FIXME do we actually need all these, or could we just forward declare?
 #include "sam/alignment.h"
@@ -158,11 +158,23 @@ osamstream::osamstream(const std::string& filename, openmode mode)
   : samstream_base(new_and_open(filename, mode | out), true, NULL) {
   set_filename(filename);
   if (is_open())
-    io = sambamio::new_out(rdbuf(), mode);
+    io = sambamio::new_out(mode);
 }
 
 osamstream::~osamstream() {
-  // FIXME
+  // FIXME  What exactly should this condition be?
+  // Probably close() above should flush too
+  // or maybe ~samio() should do the flushing
+ 
+  if (is_open() && io)
+    io->flush(*this);
+  // FIXME catch...
+}
+
+osamstream& osamstream::operator<< (const collection& headers) {
+  io->put(*this, headers);
+  // FIXME exceptions...
+  return *this;
 }
 
 osamstream& osamstream::operator<< (const alignment& aln) {

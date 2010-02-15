@@ -62,13 +62,51 @@ TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
 test/runtests: $(TEST_OBJS) libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) -lcansam $(LDLIBS)
 
-test/runtests.o: test/runtests.cpp test/test.h
-test/alignment.o: test/alignment.cpp test/test.h sam/alignment.h
-test/header.o: test/header.cpp test/test.h sam/header.h
-test/sam.o: test/sam.cpp test/test.h sam/alignment.h sam/stream.h
+test/runtests.o: test/runtests.cpp test/test.h sam/exception.h
+test/alignment.o: test/alignment.cpp test/test.h $(sam_alignment_h)
+test/header.o: test/header.cpp test/test.h $(sam_header_h)
+test/sam.o: test/sam.cpp test/test.h $(sam_alignment_h) sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 
-.PHONY: all clean doc docclean lib tags test
+.PHONY: all clean doc docclean install lib tags test uninstall
+
+prefix      = /usr
+exec_prefix = $(prefix)
+bindir      = $(exec_prefix)/bin
+includedir  = $(prefix)/include
+libdir      = $(exec_prefix)/lib
+mandir      = $(prefix)/share/man
+man1dir     = $(mandir)/man1
+man3dir     = $(mandir)/man3
+
+INSTALL_DATA = install -p
+INSTALL_PROGRAM = install -p
+
+install: libcansam.a samcat samsort
+	mkdir $(DESTDIR)$(includedir)
+	mkdir $(DESTDIR)$(includedir)/sam
+	for sam_hdr in sam/*.h; do \
+	    $(INSTALL_DATA) $$sam_hdr $(DESTDIR)$(includedir)/$$sam_hdr; \
+	done
+	mkdir $(DESTDIR)$(libdir)
+	$(INSTALL_DATA) libcansam.a $(DESTDIR)$(libdir)/libcansam.a
+	mkdir $(DESTDIR)$(bindir)
+	$(INSTALL_PROGRAM) samcat $(DESTDIR)$(bindir)/samcat
+	$(INSTALL_PROGRAM) samsort $(DESTDIR)$(bindir)/samsort
+	mkdir $(DESTDIR)$(mandir)
+	mkdir $(DESTDIR)$(man1dir)
+	$(INSTALL_DATA) utilities/samcat.1 $(DESTDIR)$(man1dir)/samcat.1
+	$(INSTALL_DATA) utilities/samsort.1 $(DESTDIR)$(man1dir)/samsort.1
+	mkdir $(DESTDIR)$(man3dir)
+	$(INSTALL_DATA) utilities/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
+
+uninstall:
+	for sam_hdr in sam/*.h; do rm $(DESTDIR)$(includedir)/$$sam_hdr; done
+	-rmdir $(DESTDIR)$(includedir)/sam
+	rm $(DESTDIR)$(libdir)/libcansam.a
+	rm $(DESTDIR)$(bindir)/samcat $(DESTDIR)$(BINDIR)/samsort
+	cd utilities; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
+	rm $(DESTDIR)$(man3dir)/cansam.3
 
 doc:
 	doxygen doc/Doxyfile

@@ -80,15 +80,36 @@ public:
     begin = array;
   }
 
+  // Ensure the buffer has at least the specified caacity
+  void reserve(size_t sz) { if (capacity < sz)  reserve_(sz); }
+
   // Produce more available space beyond  end  by flushing, or, if the unread
   // characters are already at the start of the buffer, by enlarging it.
   // Updates begin/end and the specified pointers accordingly.
   char* flush_make_space(char* ptr, std::vector<char*>& ptrvec);
 
 private:
+  void reserve_(size_t sz);
+
   char* array;
   size_t capacity;
 };
+
+void char_buffer::reserve_(size_t sz) {
+  char* oldarray = array;
+  char* oldbegin = begin;
+
+  size_t newcapacity = sz + 32768;
+  char* newarray = new char[newcapacity];
+  memcpy(newarray, begin, end - begin);
+  array = newarray;
+  capacity = newcapacity;
+
+  begin = array;
+  end = &begin[end - oldbegin];
+
+  delete [] oldarray;
+}
 
 // Produces more space at the end of the buffer by moving the remaining
 // unread characters in [begin,end) -- not including the sentinel -- to the
@@ -245,7 +266,9 @@ public:
 
   virtual bool get(isamstream&, collection&);
   virtual bool get(isamstream&, alignment&);
+  virtual void put(osamstream&, const collection&);
   virtual void put(osamstream&, const alignment&);
+  virtual void flush(osamstream&);
 
   virtual size_t xsgetn(isamstream&, char*, size_t);
 
@@ -504,6 +527,14 @@ bool bamio::get(isamstream& stream, alignment& aln) {
   return true;
 }
 
+void bamio::flush(osamstream&) {
+  // FIXME
+}
+
+void bamio::put(osamstream&, const collection&) {
+  // FIXME
+}
+
 void bamio::put(osamstream& stream, const alignment& aln) {
   aln.sync();
 
@@ -536,23 +567,26 @@ void bamio::put(osamstream& stream, const alignment& aln) {
 
 class samio : public sambamio {
 public:
+  samio();
   samio(const char* text, std::streamsize textsize);
   virtual ~samio();
 
   virtual bool get(isamstream&, collection&);
   virtual bool get(isamstream&, alignment&);
+  virtual void put(osamstream&, const collection&);
   virtual void put(osamstream&, const alignment&);
+  virtual void flush(osamstream&);
 
   virtual size_t xsgetn(isamstream&, char*, size_t);
-
-protected:
-  samio() : buffer(32768), reflist_open(false) { }
 
 private:
   char_buffer buffer;
   std::vector<char*> fields;
   bool reflist_open;
 };
+
+samio::samio() : buffer(32768), reflist_open(false) {
+}
 
 samio::samio(const char* text, std::streamsize textsize)
   : buffer(32768), reflist_open(false) {
@@ -593,11 +627,41 @@ bool samio::get(isamstream& stream, alignment& aln) {
   return true;
 }
 
-void samio::put(osamstream& stream, const alignment& aln) {
-  aln.sync();
+void samio::flush(osamstream& stream) {
+  while (buffer.size() > 0)
+    buffer.begin += stream.rdbuf()->sputn(buffer.begin, buffer.size());
 
-  #warning samio::put(aln) unimplemented
-  stream.eof();
+  buffer.clear();
+}
+
+void samio::put(osamstream& stream, const collection& headers) {
+  for (collection::const_iterator it = headers.begin();
+       it != headers.end(); ++it) {
+    // FIXME Don't cons up a string
+    string text = (*it)->str();
+    if (text.length() + 1 > buffer.available()) {
+      flush(stream);
+      buffer.reserve(text.length() + 1);
+    }
+
+    memcpy(buffer.end, text.data(), text.length());
+    buffer.end += text.length();
+    *buffer.end++ = '\n';
+  }
+}
+
+void samio::put(osamstream& stream, const alignment& aln) {
+  // TODO  If sync() ever affects more than just bin(), uncomment this!
+  // aln.sync();
+
+  size_t approx_length = aln.sam_length() + 1;
+  if (approx_length > buffer.available()) {
+    flush(stream);
+    buffer.reserve(approx_length);
+  }
+
+  buffer.end = aln.sam_record(buffer.end, stream);
+  *buffer.end++ = '\n';
 }
 
 
@@ -642,13 +706,13 @@ sambamio* sambamio::new_in(std::streambuf* sbuf) {
 }
 
 // Construct a new concrete sambamio according to MODE.
-sambamio* sambamio::new_out(std::streambuf* /*sbuf*/, std::ios::openmode mode) {
+sambamio* sambamio::new_out(std::ios::openmode mode) {
   if (mode & std::ios::binary)
     return new bamio(NULL, 0 /*, mode & compressed*/);
   else if (mode & compressed)
     return new gzsamio(NULL, 0);
   else
-    return new samio(NULL, 0);
+    return new samio();
 }
 
 } // namespace sam

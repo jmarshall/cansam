@@ -15,8 +15,8 @@ class sambamio {
 public:
   class eof_exception { };
 
-  static sambamio* new_in(std::streambuf* sbuf);
-  static sambamio* new_out(std::streambuf* sbuf, std::ios::openmode);
+  static sambamio* new_in(std::streambuf*);
+  static sambamio* new_out(std::ios::openmode);
 
   virtual ~sambamio() { }
 
@@ -26,7 +26,9 @@ public:
   // false at EOF, or throws an exception on formatting or I/O errors.
   virtual bool get(isamstream&, alignment&) = 0;
 
+  virtual void put(osamstream&, const collection&) = 0;
   virtual void put(osamstream&, const alignment&) = 0;
+  virtual void flush(osamstream&) = 0;
 
 protected:
   sambamio() : header_cindex(0) { }

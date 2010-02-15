@@ -9,22 +9,21 @@
 using std::string;
 using namespace sam;
 
-void cat(isamstream& in, osamstream&) {
+void cat(isamstream& in, osamstream& out) {
   in.exceptions(std::ios::failbit | std::ios::badbit);
 
   collection headers;
   in >> headers;
 
-  std::cout << std::showpoint << headers;
-
-//  in.clear();
+  //std::cout << std::showpoint << headers;
+  out << headers;
 
   alignment aln;
 //  std::cout << "default ctored: "; aln.dump_on(std::cout);
   while (in >> aln) {
-    std::cout << "in loop: "; aln.dump_on(std::cout);
-    // out << aln << '\n';
-    std::cout << aln << '\n';
+    //std::cout << "in loop: "; aln.dump_on(std::cout);
+    out << aln;
+    //std::cout << aln << '\n';
   }
 }
 

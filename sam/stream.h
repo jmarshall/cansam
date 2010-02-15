@@ -114,6 +114,9 @@ public:
 
   virtual ~osamstream();
 
+  /// Write the collection of headers
+  osamstream& operator<< (const collection& headers);
+
   /// Write the alignment
   osamstream& operator<< (const alignment& aln);
 };

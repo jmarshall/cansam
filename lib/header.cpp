@@ -127,7 +127,7 @@ header::replace_string(size_t pos, size_t length,
 
 header::iterator
 header::replace_(size_t pos, size_t length, const char* tag, int value) {
-  char buffer[format::int_digits];
+  char buffer[format::buffer<int>::size];
   char* buflim = format::decimal(buffer, value);
   return replace_string(pos, length, tag, buffer, buflim - buffer);
 }
@@ -154,11 +154,11 @@ header::replace_(size_t pos, size_t length,
 string refsequence::name_length_string(const string& name, coord_t length) {
   string s;
   // FIXME Should be format::coord_digits (and similarly below)
-  s.reserve(7 + name.length() + 4 + format::int_digits);
+  s.reserve(7 + name.length() + 4 + format::buffer<int>::size);
   s.assign("@SQ\0SN:", 7);
   s += name;
   s.append("\0LN:", 4);
-  char buffer[format::int_digits];
+  char buffer[format::buffer<int>::size];
   s.append(buffer, format::decimal(buffer, length) - buffer);
 
   return s;

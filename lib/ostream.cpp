@@ -59,6 +59,11 @@ std::ostream& operator<< (std::ostream& out, header::const_iterator it) {
 }
 
 std::ostream& operator<< (std::ostream& out, const alignment& aln) {
+#if 1
+  char buffer[5000];
+  *aln.sam_record(buffer, out) = '\0';
+  out << buffer;
+#else
   std::ios_base::fmtflags flags = out.flags();
 
   out << aln.qname() << '\t' << std::showbase << aln.flags()
@@ -75,6 +80,7 @@ std::ostream& operator<< (std::ostream& out, const alignment& aln) {
     out << '\t' << *it;
 
   out.flags(flags);
+#endif
   return out;
 }
 
@@ -97,7 +103,7 @@ void alignment::dump_on(std::ostream& out, const_iterator marker) const {
   const char* limit = &s[p->capacity()];
   while (s < limit) {
     if (s == qname_c_str())  text << "]NAME:[";
-    if (s == p->data() + p->cigar_offset())  text << "]CIG:[";
+    if (s == p->cigar_data())  text << "]CIG:[";
     if (s == seq_raw_data())  text << "]SEQ:[";
     if (s == qual_raw_data())  text << "]QUAL:[";
     if (s == begin().ptr)  text << "]AUXEN:[";

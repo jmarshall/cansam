@@ -5,30 +5,28 @@
 #include <sstream>
 #include <limits>
 
-#if 0
-#include <type_traits>
-#else
-#include <boost/type_traits/is_signed.hpp>
-#include <boost/type_traits/make_unsigned.hpp>
-#endif
-
 #include "sam/types.h"
+#include "lib/bits/sign_traits.h"
 
 namespace sam {
 
 /* These functions format the given VALUE into the DEST buffer and return
 a pointer to the first unused buffer position.  The constants give the
-minimum buffer size that should be used with the corresponding functions.
-(digits10 is the "number of base 10 digits that can be represented without
-change", which is usually one less than the maximum number of base 10 digits
-that can be represented -- e.g., consider 9999 v 65535.  Thus we add 2, one
-for the excess digit and one for a sign character.)  */
+minimum buffer size that should be used with the corresponding functions.  */
+// FIXME doco
 namespace format {
 
-static const int int_digits = std::numeric_limits<int>::digits10 + 2;
+template <typename IntType>
+struct buffer {
+  /* digits10 is the "number of base 10 digits that can be represented without
+  change", which is usually one less than the maximum number of base 10 digits
+  that can be represented -- e.g., consider 9999 v 65535.  Thus we add 2, one
+  for the excess digit and one for a sign character.  */
+  static const int size = std::numeric_limits<IntType>::digits10 + 2;
+};
 
 template <typename UnsignedType>
-char* decimal_(char* dest, UnsignedType value, const boost::false_type&) {
+char* decimal_(char* dest, UnsignedType value, const traits::false_type&) {
   UnsignedType n = value;
   do { dest++; n /= 10; } while (n != 0);
 
@@ -39,15 +37,15 @@ char* decimal_(char* dest, UnsignedType value, const boost::false_type&) {
 }
 
 template <typename SignedType>
-char* decimal_(char* dest, SignedType value, const boost::true_type&) {
-  typename boost::make_unsigned<SignedType>::type uvalue = value;
+char* decimal_(char* dest, SignedType value, const traits::true_type&) {
+  typename traits::make_unsigned<SignedType>::type uvalue = value;
   if (value < 0)  *dest++ = '-', uvalue = -uvalue;
   return decimal(dest, uvalue);
 }
 
 template <typename IntType>
 char* decimal(char* dest, IntType value) {
-  return decimal_(dest, value, boost::is_signed<IntType>());
+  return decimal_(dest, value, traits::is_signed<IntType>());
 }
 
 } // namespace format
