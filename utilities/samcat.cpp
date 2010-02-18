@@ -9,14 +9,17 @@
 using std::string;
 using namespace sam;
 
-void cat(isamstream& in, osamstream& out) {
+void cat(isamstream& in, osamstream& out, bool suppress_headers) {
   in.exceptions(std::ios::failbit | std::ios::badbit);
 
   collection headers;
   in >> headers;
 
-  //std::cout << std::showpoint << headers;
-  out << headers;
+  if (! suppress_headers) {
+    // FIXME In BAM-world, this will have to be done with headers.clear() or so
+    //std::cout << std::showpoint << headers;
+    out << headers;
+  }
 
   alignment aln;
 //  std::cout << "default ctored: "; aln.dump_on(std::cout);
@@ -27,17 +30,39 @@ void cat(isamstream& in, osamstream& out) {
   }
 }
 
+void cat_to_fastq(isamstream& in, std::ostream& out) {
+  in.exceptions(std::ios::failbit | std::ios::badbit);
+
+  collection headers;
+  in >> headers;
+
+  alignment aln;
+  string seq_buffer, qual_buffer;
+  while (in >> aln) {
+    out << '@' << aln.qname_c_str();
+    if (aln.flags() & FIRST_IN_PAIR)  out << "/1";
+    else if (aln.flags() & SECOND_IN_PAIR)  out << "/2";
+    out << '\n';
+
+    // TODO Revcomp if mapped on the negative strand
+
+    out << aln.seq(seq_buffer) << "\n+\n" << aln.qual(qual_buffer) << '\n';
+  }
+}
+
 int main(int argc, char** argv) {
   const char usage[] =
-"Usage: samcat [-bv] [-o FILE] [FILE]...\n"
+"Usage: samcat [-bnv] [-o FILE] [FILE]...\n"
 "Options:\n"
 "  -b       Write output in BAM format\n"
+"  -n       Suppress '@' headers in the output\n"
 "  -o FILE  Write to FILE rather than standard output\n"
 "  -v       Display file information and statistics\n"
 "";
 
   string output_fname = "-";
   std::ios::openmode output_mode = sam_format;
+  bool suppress_headers = false;
   bool verbose = false;
 
   if (argc == 1) {
@@ -47,7 +72,7 @@ int main(int argc, char** argv) {
   else if (argc == 2) {
     string arg = argv[1];
     if (arg == "--version") {
-      std::cout << "samcat 0.1\n";
+      std::cout << "samcat 0.2\n";
       return EXIT_SUCCESS;
     }
     else if (arg == "--help") {
@@ -57,9 +82,10 @@ int main(int argc, char** argv) {
   }
 
   int c;
-  while ((c = getopt(argc, argv, ":bo:v")) >= 0)
+  while ((c = getopt(argc, argv, ":bno:v")) >= 0)
     switch (c) {
     case 'b':  output_mode = bam_format;  break;
+    case 'n':  suppress_headers = true;  break;
     case 'o':  output_fname = optarg;  break;
     case 'v':  verbose = true;  break;
     default:
@@ -71,13 +97,13 @@ int main(int argc, char** argv) {
 
   if (optind == argc) {
     isamstream in("-");
-    cat(in, out);
+    cat(in, out, suppress_headers);
   }
   else
     for (int i = optind; i < argc; i++) {
       isamstream in(argv[i]);
       if (in.is_open())
-	cat(in, out);
+	cat(in, out, suppress_headers);
       else
 	std::cerr << "error opening " << argv[i] << " or something\n";
     }

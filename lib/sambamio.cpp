@@ -281,6 +281,8 @@ private:
   void fill_cdata(isamstream&);
   size_t inflate_into_buffer(char*, size_t);
 
+  size_t deflate_into_cdata(const char*, size_t);
+
   char_buffer buffer;
   char_buffer cdata;
 
@@ -315,6 +317,11 @@ string zlib_error_message(const char* function, const z_stream& z) {
   if (z.msg)
     s += ": ", s += z.msg;
   return s;
+}
+
+// Compress the specified data into  cdata, discarding whatever may have
+// been there previously.
+size_t bamio::deflate_into_cdata(const char* data, size_t length) {
 }
 
 // Decompress the specified data into  buffer, discarding whatever may have
@@ -527,19 +534,36 @@ bool bamio::get(isamstream& stream, alignment& aln) {
   return true;
 }
 
-void bamio::flush(osamstream&) {
-  // FIXME
+void bamio::flush(osamstream& stream) {
+  buffer.begin += deflate_into_cdata(buffer.begin, min(buffer.size(), 65536));
+  buffer.flush();
+
+  while (cdata.size() > 0)
+    cdata.begin += stream.rdbuf()->sputn(cdata.begin, cdata.size());
 }
 
-void bamio::put(osamstream&, const collection&) {
-  // FIXME
+void bamio::put(osamstream& stream, const collection& headers) {
+  // FIXME Something about checking buffer.available()...
+
+  memcpy(buffer.end, "BAM\1", 4);
+  buffer.end += 4;
+
+  int header_length = 0;  // FIXME add up lengths of headers
+  convert::set_bam_int32(buffer.end, header_length);
+  buffer.end += sizeof(int32_t);
+
+  // FIXME etc
 }
 
 void bamio::put(osamstream& stream, const alignment& aln) {
   aln.sync();
 
-  size_t length = min(aln.p->size(), buffer.available());
+  int length = min(aln.p->size(), buffer.available());
   memcpy(buffer.end, aln.p->data(), length);
+
+  // Because  buffer  is flushed every 64K and has a capacity of at least
+  // 64K + sizeof(bamcore), it is guaranteed that all of this bamcore data
+  // that needs to be converted is indeed in this first memcopied block.
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, rest_length));
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, rindex));
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, zpos));
@@ -552,13 +576,14 @@ void bamio::put(osamstream& stream, const alignment& aln) {
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, isize));
   buffer.end += length;
 
-  // FIXME emit the rest
+  if (buffer.size() >= 65536) {
+    flush(stream);
+    if (aln.p->size() > length) {
 
-#if 0
-  commit(stream);
-#endif
-  #warning bamio::put(aln) unimplemented
-  stream.eof();
+    }
+  }
+
+  #warning bamio::put(aln) unfinished
 }
 
 

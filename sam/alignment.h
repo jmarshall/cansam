@@ -419,7 +419,7 @@ public:
   void set_pos(coord_t pos);
   void set_zpos(coord_t zpos);
   void set_mapq(int mapq);
-  void set_cigar(const std::string& cigar);
+  void set_cigar(const std::string& cigar) { set_cigar(cigar.c_str()); }
   void set_mate_rindex(int mate_rindex);
   void set_mate_rname(const std::string& mate_rname);
   void set_mate_pos(coord_t pos);
@@ -448,6 +448,8 @@ public:
   //@{
   void set_qname(const char* qname)
     { set_qname(qname, traits_type::length(qname)); }
+
+  void set_cigar(const char* cigar);
 
   // FIXME put length first?
   void set_raw_seq(const char* seq, int length);
@@ -562,13 +564,26 @@ private:
     int size() const { return sizeof(c.rest_length) + c.rest_length; }
 
     char* data() { return reinterpret_cast<char*>(&this->c); }
+    char* end_data() { return data() + sizeof(c.rest_length) + c.rest_length; }
 
+#if 0
+    // FIXME NUKE-ME foo_length() or foo_end() stuff is prob a waste of time
+    char* name_data()  { return this->extra; }
+    int name_length()  { return c.name_length; }
+    char* cigar_data() { return name_data() + name_length(); }
+    int cigar_length() { return sizeof(uint32_t) * c.cigar_length; }
+    char* seq_data()   { return cigar_data() + cigar_length(); }
+    int seq_length()   { return (c.read_length + 1) / 2; }
+    char* qual_data()  { return seq_data() + seq_length(); }
+    int qual_length()  { return c.read_length; }
+    char* auxen_data() { return qual_data() + qual_length(); }
+#else
     char* name_data()  { return this->extra; }
     char* cigar_data() { return name_data() + c.name_length; }
     char* seq_data()   { return cigar_data() + sizeof(uint32_t)*c.cigar_length;}
     char* qual_data()  { return seq_data() + (c.read_length + 1) / 2; }
     char* auxen_data() { return qual_data() + c.read_length; }
-    char* end_data()   { return data() + sizeof(c.rest_length) + c.rest_length;}
+#endif
 
     static block* create(int payload_size);
     static void destroy(block* block);

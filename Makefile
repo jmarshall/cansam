@@ -93,6 +93,7 @@ install: libcansam.a samcat samsort
 	mkdir $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) samcat $(DESTDIR)$(bindir)/samcat
 	$(INSTALL_PROGRAM) samsort $(DESTDIR)$(bindir)/samsort
+	# FIXME mkdir $(DESTDIR)$(prefix)/share
 	mkdir $(DESTDIR)$(mandir)
 	mkdir $(DESTDIR)$(man1dir)
 	$(INSTALL_DATA) utilities/samcat.1 $(DESTDIR)$(man1dir)/samcat.1

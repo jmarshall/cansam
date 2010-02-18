@@ -193,6 +193,57 @@ void alignment::unpack_qual(string::iterator dest,
   }
 }
 
+// FIXME Hmmm... static method of cigar class?
+int cigar_operator_count(const char* s) {
+  int n = 0;
+
+  if (s[0] == '*' && s[1] == '\0') {
+    // An unspecified cigar string, written as "*", is represented as
+    // empty in BAM, so leave  n  as 0.
+  }
+  else {
+    while (*s)
+      if (! isdigit(*s++))  n++;
+  }
+
+  return n;
+}
+
+// FIXME Either should be static alignment::pack_cigar(), or hello cigar class
+// FIXME Think about how much this can write and whether it throws on all cigar
+// syntax errors; and whether cigar_operator_count() is named right and is
+// always a bound on how much this can write.
+void pack_cigar(char* dest, const char* cigar) {
+  static const string cigar_operators = "MIDNSHP=X";
+
+  const char *s = cigar;
+  while (*s) {
+    const char* sdigit = s;
+    int len = 0;
+    while (isdigit(*s))
+      len = 10 * len + *s++ - '0';
+
+    if (s == sdigit)
+      throw bad_format(make_string()
+	  << "Missing digits in CIGAR string ('" << cigar << "')");
+
+    char op_char = *s++;
+    size_t op = cigar_operators.find(op_char);
+    if (op == string::npos) {
+      if (op_char == '\0')
+	throw bad_format(make_string()
+	    << "Truncated CIGAR string ('" << cigar << "')");
+      else
+	throw bad_format(make_string()
+	    << "Invalid operator ('" << op_char << "') in CIGAR string ('"
+	    << cigar << "')");
+    }
+
+    convert::set_bam_uint32(dest, (len << 4) | op);
+    dest += sizeof(uint32_t);
+  }
+}
+
 bool operator< (const alignment& a, const alignment& b) {
   // Treating these as unsigned means -1 (unmapped) sorts last.
   unsigned a_rindex = unsigned(a.rindex());
@@ -244,7 +295,17 @@ void alignment::set_mapq(int mapq) {
   p->c.mapq = mapq;
 }
 
-// void alignment::set_cigar(const std::string& cigar)
+void alignment::set_cigar(const char* cigar) {
+  int new_cigar_length = cigar_operator_count(cigar);
+  char* cbuffer = replace_gap(p->cigar_data(),
+		      p->cigar_data() + sizeof(uint32_t) * p->c.cigar_length,
+		      sizeof(uint32_t) * new_cigar_length);
+
+  p->c.cigar_length = new_cigar_length;
+  if (! (cigar[0] == '*' && cigar[1] == '\0'))
+    pack_cigar(cbuffer, cigar);
+}
+
 // void alignment::set_mate_rindex(int mate_rindex)
 // void alignment::set_mate_rname(const std::string& mate_rname)
 
@@ -396,21 +457,6 @@ int to_flags(const char* s) {
   }
 
   return val;
-}
-
-int cigar_operator_count(const char* s) {
-  int n = 0;
-
-  if (s[0] == '*' && s[1] == '\0') {
-    // An unspecified cigar string, written as "*", is represented as
-    // empty in BAM, so leave  n  as 0.
-  }
-  else {
-    while (*s)
-      if (!isdigit(*s++))  n++;
-  }
-
-  return n;
 }
 
 int alignment::sam_length() const {
@@ -629,8 +675,8 @@ void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex
 
   memcpy(p->name_data(), fields[qname], name_length);
 
-  // FIXME decode cigar string
-  memset(p->cigar_data(), 0, cigar_length * sizeof(uint32_t));
+  if (! (fields[cigar][0] == '*' || fields[cigar][1] == '\0'))
+    pack_cigar(p->cigar_data(), fields[cigar]);
 
   // In BAM: int32_t read_len is given, seq is (read_len+1)/2 bytes;
   //         qual is read_len bytes (Phred qualities), maybe 0xFF x read_len.
