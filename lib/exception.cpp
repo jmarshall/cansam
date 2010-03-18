@@ -1,14 +1,32 @@
 #include "sam/exception.h"
 
+#include <cstring>
+
 namespace sam {
 
-const char* system_error::what() const throw() {
-  return "FIXME system_error";
+const char* bad_format::what() const throw() {
+  // FIXME
+  what_text_ = sam::exception::what();
+  what_text_ += " (bad_format)";
+  return what_text_.c_str();
 }
 
-const char* bad_format::what() const throw() {
-  return std::ios_base::failure::what();
-  return "FIXME bad_format";
+// Returns "message [[for ] "filename"]: strerror
+const char* system_error::what() const throw() {
+  what_text_ = sam::exception::what();
+
+  if (! filename().empty()) {
+    if (! (what_text_.empty() || what_text_[what_text_.length() - 1] == ' '))
+      what_text_ += " for ";
+    what_text_ += '"';
+    what_text_ += filename();
+    what_text_ += '"';
+  }
+
+  what_text_ += ": ";
+  what_text_ += strerror(errnum());
+
+  return what_text_.c_str();
 }
 
 } // namespace sam

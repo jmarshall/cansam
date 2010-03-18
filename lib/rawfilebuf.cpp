@@ -1,5 +1,6 @@
 #include "sam/streambuf.h"
 
+#include <ios>
 #include <stdexcept>
 
 #include <sys/ioctl.h>

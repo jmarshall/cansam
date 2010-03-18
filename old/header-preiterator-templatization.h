@@ -362,41 +362,26 @@ public:
   //@{
 
   // @cond infrastructure
-  template <bool condition, typename TrueType, typename FalseType>
-  struct if_c { typedef TrueType type; };
+#if 1
+  //-------------- once more into the breach...
 
-  template <typename TrueType, typename FalseType>
-  struct if_c<false, TrueType, FalseType> { typedef FalseType type; };
-
-  template <typename ValueType, typename ContainerType, bool is_const = false>
-  class ptr_container_iterator {
+  // FIXME should be random_access_iterator_tag
+  template <typename ValueType, typename UnderlyingIterator>
+  class ptr_container_iterator :
+    public std::iterator<std::bidirectional_iterator_tag, ValueType,
+			 ptrdiff_t, ValueType*, ValueType&> {
   public:
-    // FIXME should be random_access_iterator_tag
-    typedef std::bidirectional_iterator_tag iterator_category;
-    typedef ValueType value_type;
-    typedef ptrdiff_t difference_type;
-    typedef typename if_c<is_const, const ValueType*, ValueType*>::type pointer;
-    typedef typename if_c<is_const, const ValueType&, ValueType&>::type
-      reference;
-
-    // This is either a copy constructor (for a mutable iterator, when is_const
-    // is false) or a constructor (for a const_iterator, when is_const is true)
-    // converting from the corresponding iterator.  In the latter case, the
-    // compiler will generate a const_iterator copy constructor itself.
-    ptr_container_iterator(const ptr_container_iterator<ValueType,
-				   ContainerType, false>& it) : pit(it.pit) { }
-
     ptr_container_iterator() { }
+    ptr_container_iterator(const ptr_container_iterator& it) : pit(it.pit) { }
     ~ptr_container_iterator() { }
     ptr_container_iterator& operator= (ptr_container_iterator it)
       { pit = it.pit; return *this; }
 
-    // FIXME something about friend functions for these...
     bool operator== (ptr_container_iterator it) const { return pit == it.pit; }
     bool operator!= (ptr_container_iterator it) const { return pit != it.pit; }
 
-    pointer operator-> () const { return *pit; }
-    reference operator* () const { return **pit; }
+    header* operator-> () const { return *pit; }
+    header& operator* () const { return **pit; }
 
     ptr_container_iterator& operator++ () { ++pit; return *this; }
     ptr_container_iterator operator++ (int)
@@ -407,33 +392,102 @@ public:
       { ptr_container_iterator orig = *this; --pit; return orig; }
 
   private:
-    typedef typename
-      if_c<is_const, typename ContainerType::const_iterator,
-		     typename ContainerType::iterator>::type underlying_type;
-
     friend class collection;
-    explicit ptr_container_iterator(const underlying_type& p) : pit(p) { }
+    explicit ptr_container_iterator(const UnderlyingIterator& p) : pit(p) { }
 
-    underlying_type pit;
+    UnderlyingIterator pit;
   };
 
-  typedef ptr_container_iterator<header, std::vector<header*> > iterator;
-  typedef ptr_container_iterator<header, std::vector<header*>, true>
-    const_iterator;
-  typedef iterator::reference reference;
-  typedef const_iterator::reference const_reference;
-  typedef const_iterator::difference_type difference_type;
+  template <typename ValueType, typename UnderlyingIterator,
+	    typename PtrContainerIterator>
+  class ptr_container_const_iterator :
+    public std::iterator<std::bidirectional_iterator_tag, ValueType,
+			 ptrdiff_t, const ValueType*, const ValueType&> {
+  public:
+    ptr_container_const_iterator() { }
+    ptr_container_const_iterator(const ptr_container_const_iterator& it)
+      : pit(it.pit) { }
+    ptr_container_const_iterator(PtrContainerIterator it) : pit(it.pit) { } // *** THE DIFFERENCE!!
+    ~ptr_container_const_iterator() { }
+    ptr_container_const_iterator& operator= (ptr_container_const_iterator it)
+      { pit = it.pit; return *this; }
+ 
+    bool operator== (ptr_container_const_iterator it) const { return pit == it.pit; }
+    bool operator!= (ptr_container_const_iterator it) const { return pit != it.pit; }
 
-  typedef ptr_container_iterator<refsequence, std::vector<refsequence*> >
-    ref_iterator;
-  typedef ptr_container_iterator<refsequence, std::vector<refsequence*>, true>
-    const_ref_iterator;
+    const header* operator-> () const { return *pit; }
+    const header& operator* () const { return **pit; }
+
+    ptr_container_const_iterator& operator++ () { ++pit; return *this; }
+    ptr_container_const_iterator operator++ (int)
+      { ptr_container_const_iterator orig = *this; ++pit; return orig; }
+
+    ptr_container_const_iterator& operator-- () { --pit; return *this; }
+    ptr_container_const_iterator operator-- (int)
+      { ptr_container_const_iterator orig = *this; --pit; return orig; }
+
+  private:
+    friend class collection;
+    explicit ptr_container_const_iterator(const UnderlyingIterator& p)
+      : pit(p) { }
+
+    UnderlyingIterator pit;
+  };
+
+  typedef ptr_container_iterator<header, std::vector<header*>::iterator>
+    iterator;
+  //typedef ptr_container_const_iterator<header, std::vector<header*>::iterator, void>
+    //iterator2;
+  typedef ptr_container_const_iterator<header,
+    std::vector<header*>::const_iterator, iterator> const_iterator;
+  // FIXME reference, const_reference, difference_type
+
+  typedef ptr_container_iterator<refsequence,
+    std::vector<refsequence*>::iterator> ref_iterator;
+  typedef ptr_container_const_iterator<refsequence,
+    std::vector<refsequence*>::const_iterator, ref_iterator> const_ref_iterator;
+
+  //--------------
+#else
+  class const_iterator :
+    public std::iterator<std::bidirectional_iterator_tag, header,
+			 ptrdiff_t, const header*, const header&> {
+  public:
+    const_iterator() { }
+    const_iterator(const const_iterator& it) : pit(it.pit) { }
+    ~const_iterator() { }
+    const_iterator& operator= (const_iterator it) {pit = it.pit; return *this;}
+
+    bool operator== (const_iterator it) const { return pit == it.pit; }
+    bool operator!= (const_iterator it) const { return pit != it.pit; }
+
+    const header* operator-> () const { return *pit; }
+    const header& operator* () const { return **pit; }
+
+    const_iterator& operator++ () { ++pit; return *this; }
+    const_iterator operator++ (int)
+      { const_iterator orig = *this; ++pit; return orig; }
+
+    const_iterator& operator-- () { --pit; return *this; }
+    const_iterator operator-- (int)
+      { const_iterator orig = *this; --pit; return orig; }
+
+  private:
+    friend class collection;
+    explicit const_iterator(const std::vector<header*>::const_iterator& p)
+      : pit(p) { }
+
+    std::vector<header*>::const_iterator pit;
+  };
+#endif
   // @endcond
 
-  iterator begin() { return iterator(headers.begin()); }
+  //iterator begin() { return headers.begin(); }
+  //const_iterator begin() const { return headers.begin(); }
   const_iterator begin() const { return const_iterator(headers.begin()); }
 
-  iterator end() { return iterator(headers.end()); }
+  //iterator end() { return headers.end(); }
+  //const_iterator end() const { return headers.end(); }
   const_iterator end() const { return const_iterator(headers.end()); }
 
   void push_back(const std::string& header_line);
@@ -445,14 +499,6 @@ public:
   refsequence& findseq(const std::string& name);
   refsequence& findseq(const char* name);
   refsequence& findseq(int index);
-
-  ref_iterator ref_begin() { return ref_iterator(refseqs.begin()); }
-  const_ref_iterator ref_begin() const
-    { return const_ref_iterator(refseqs.begin()); }
-
-  ref_iterator ref_end() { return ref_iterator(refseqs.end()); }
-  const_ref_iterator ref_end() const
-    { return const_ref_iterator(refseqs.end()); }
 
   // FIXME prob not public
   static collection& find(unsigned cindex) { return *collections[cindex]; }

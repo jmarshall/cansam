@@ -6,28 +6,75 @@
 
 using std::string;
 
+namespace {
+
+/* The get_buffer() function uses a std::ios_base iword/pword pair to attach
+a buffer to each stream used, for temporary use by the inserters below.
+Possible states for this pair, and their implications for get_buffer(), are:
+
+  0, NULL  Initial values; need to allocate buffer and register callback
+ -1, NULL  Values after copyfmt(); need to allocate buffer
++ve, ptr   Normal state; may need to reallocate buffer.  */
+
+void callback(std::ios_base::event event, std::ios_base& stream, int index) {
+  switch (event) {
+  case std::ios_base::erase_event:
+    delete [] static_cast<char*>(stream.pword(index));
+    break;
+
+  case std::ios_base::copyfmt_event:
+    // We can't share the source stream's buffer and would rather not allocate
+    // one here (because it is tedious to report failure from a callback), so
+    // instead we leave a state that ensures get_buffer() needs to allocate.
+    stream.iword(index) = -1;
+    stream.pword(index) = NULL;
+    break;
+
+  case std::ios_base::imbue_event:
+    break;
+  }
+}
+
+// Returns a buffer of the specified capacity local to the stream.
+char* get_buffer(std::ios_base& stream, int capacity) {
+  static const int index = std::ios_base::xalloc();
+
+  int oldcapacity = stream.iword(index);
+  if (capacity > oldcapacity) {
+    capacity += 200;  // In case subsequent needs are only a little larger
+    char* newbuffer = new char[capacity];
+
+    void*& ptr = stream.pword(index);
+    char* oldbuffer = static_cast<char*>(ptr);
+    ptr = newbuffer;
+    stream.iword(index) = capacity;
+    delete [] oldbuffer;
+
+    if (oldcapacity == 0)
+      stream.register_callback(callback, index);
+  }
+
+  return static_cast<char*>(stream.pword(index));
+}
+
+} // anonymous namespace
+
 namespace sam {
 
 std::ostream& operator<< (std::ostream& out, const header& header) {
 #if 1
-  return out << header.str();
+  char* buffer = get_buffer(out, header.sam_length() + 1);
+  *format_sam(buffer, header) = '\0';
+  return out << buffer;
 #else
-  out << '@' << header.type();
-  for (header::const_iterator it = header.begin(); it != header.end(); ++it) {
-    out << '\t';
-    if (it->tag()[0])
-      out << it->tag() << ':';
-    out << it->value_str();
-  }
-
-  return out;
+  return out << header.str();
 #endif
 }
 
 std::ostream& operator<< (std::ostream& out, const collection& headers) {
   for (collection::const_iterator it = headers.begin();
        it != headers.end(); ++it)
-    out << **it << '\n';
+    out << *it << '\n';
 
   if (out.flags() & std::ios::showpoint) {
     int i = 0;
@@ -59,37 +106,23 @@ std::ostream& operator<< (std::ostream& out, header::const_iterator it) {
 }
 
 std::ostream& operator<< (std::ostream& out, const alignment& aln) {
-#if 1
-  char buffer[5000];
-  *aln.sam_record(buffer, out) = '\0';
-  out << buffer;
-#else
-  std::ios_base::fmtflags flags = out.flags();
-
-  out << aln.qname() << '\t' << std::showbase << aln.flags()
-      << '\t' << aln.rname() << '\t' << std::dec << aln.pos()
-      << '\t' << aln.mapq() << '\t' << aln.cigar();
-
-  if (aln.mate_rindex() == aln.rindex() && aln.rindex() >= 0)  out << "\t=";
-  else  out << '\t' << aln.mate_rname();
-
-  out << '\t' << aln.mate_pos() << '\t' << aln.isize() << '\t' << aln.seq()
-      << '\t' << aln.qual();
-
-  for (alignment::const_iterator it = aln.begin(); it != aln.end(); ++it)
-    out << '\t' << *it;
-
-  out.flags(flags);
-#endif
-  return out;
+  char* buffer = get_buffer(out, aln.sam_length() + 1);
+  *format_sam(buffer, aln, out) = '\0';
+  return out << buffer;
 }
 
 std::ostream& operator<< (std::ostream& out, const alignment::tagfield& aux) {
+#if 1
+  char* buffer = get_buffer(out, aux.sam_length() + 1);
+  *format_sam(buffer, aux) = '\0';
+  return out << buffer;
+#else
   static string bam_only = "cCsSI";
 
   char type = aux.type();
   if (bam_only.find(type) != string::npos)  type = 'i';
   return out << aux.tag() << ':' << type << ':' << aux.value();
+#endif
 }
 
 std::ostream& operator<< (std::ostream& out, alignment::const_iterator it) {

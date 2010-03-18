@@ -53,7 +53,7 @@ int cmp_location(const sam::alignment& a, const sam::alignment& b) {
   return cmp_qname(a, b);
 }
 
-static const alignment_comparator 
+static const alignment_comparator
   rname_pos("location","Order by chromosome then position (and then read name)",
 	    lt_location),
   qname("qname", "Order by read (query) name then first/second ordering flags",

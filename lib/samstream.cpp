@@ -129,7 +129,7 @@ isamstream& isamstream::operator>> (alignment& aln) {
     // Propagate it as an externally-known exception type.
     throw std::ios::failure("eof");
   }
-  catch (sam::failure& e) {
+  catch (sam::bad_format& e) {
     // If an exception is to be thrown, annotate and rethrow the original
     // exception (rather than the generic one thrown by plain setstate()).
     if (setstate_wouldthrow(failbit)) {
@@ -165,7 +165,7 @@ osamstream::~osamstream() {
   // FIXME  What exactly should this condition be?
   // Probably close() above should flush too
   // or maybe ~samio() should do the flushing
- 
+
   if (is_open() && io)
     io->flush(*this);
   // FIXME catch...

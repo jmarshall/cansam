@@ -43,6 +43,18 @@ string header::str() const {
   return s;
 }
 
+char* format_sam(char* dest, const header& header) {
+  size_t length = header.str_.length();
+  memcpy(dest, header.cstr_, length);
+
+  char* s = dest;
+  char* slim = dest + length;
+  while ((s = static_cast<char*>(memchr(s, '\0', slim - s))) != NULL)
+    *s = '\t';
+
+  return slim;
+}
+
 string header::tagfield::tag() const {
   if (! (tag_[0] && tag_[1] && colon_ == ':'))
     throw bad_format("Malformatted header field");
@@ -59,9 +71,26 @@ string header::tagfield::value_str() const {
 }
 
 template<> int header::tagfield::value<int>() const {
+  if (! (tag_[0] && tag_[1] && colon_ == ':'))
+    throw bad_format("Malformatted header field");
+
+  int x;
+  if (*parse::decimal(data_, x) != '\0')
+    throw bad_format(make_string()
+	<< "Malformatted numeric header field ('" << data_ << "')");
+  return x;
 }
 
 template<> coord_t header::tagfield::value<coord_t>() const {
+  // FIXME template-ify me
+  if (! (tag_[0] && tag_[1] && colon_ == ':'))
+    throw bad_format("Malformatted header field");
+
+  coord_t x;
+  if (*parse::decimal(data_, x) != '\0')
+    throw bad_format(make_string()
+	<< "Malformatted numeric header field ('" << data_ << "')");
+  return x;
 }
 
 size_t header::find_or_eos(const char* tag) const {

@@ -33,7 +33,10 @@ These BGZF utilities provide what we need for identifying GZIP and BGZF headers
 and extracting the interesting field from the "BC" subfield.  */
 
 // Size, in bytes, of a BGZF block header
-enum { hsize = 18 };
+enum { hsize = 18, tsize = 8, full_block_size = 65536,
+       payload_max_size = full_block_size - hsize - tsize };
+
+enum { uncompressed_max_size = 65536 };
 
 // Returns whether the specified memory block starts with a GZIP member header
 inline bool is_gzip_header(const char* s, int length) {
@@ -47,8 +50,25 @@ inline bool is_bgzf_header(const char* s, int length) {
 }
 
 // For a valid BGZF header, returns the block_size field
-inline int block_size(const char* text) {
-  return convert::uint16(&text[16]) + 1;
+inline int block_size(const char* s) {
+  return convert::uint16(&s[16]) + 1;
+}
+
+// Write a BGZF block header, and return the number of bytes written
+inline int write_bgzf_header(char* s, int block_size) {
+  static const char boilerplate[] =
+    { '\x1f', '\x8b', 8, '\x04', 0,0,0,0, 0, '\xff', 6,0, '\x42','\x43', 2,0 };
+
+  memcpy(s, boilerplate, sizeof boilerplate);
+  convert::set_bam_uint16(&s[16], block_size - 1);
+  return hsize;
+}
+
+// Write a BGZF block trailer, and return the number of bytes written
+inline int write_bgzf_trailer(char* s, uint32_t crc, int uncompressed_size) {
+  convert::set_bam_uint32(s, crc);
+  convert::set_bam_uint32(&s[4], uncompressed_size);
+  return tsize;
 }
 
 } // namespace BGZF
@@ -173,7 +193,7 @@ int sambamio::peek(char_buffer& b, isamstream& stream) {
     b.end += xsgetn(stream, b.end, b.available() - 1);
     *b.end = '\n';
   }
-  
+
   return (b.begin < b.end)? *b.begin : EOF;
 }
 
@@ -270,6 +290,7 @@ public:
   virtual void put(osamstream&, const alignment&);
   virtual void flush(osamstream&);
 
+protected:
   virtual size_t xsgetn(isamstream&, char*, size_t);
 
 private:
@@ -281,21 +302,66 @@ private:
   void fill_cdata(isamstream&);
   size_t inflate_into_buffer(char*, size_t);
 
-  size_t deflate_into_cdata(const char*, size_t);
+  size_t deflate_onto_cdata(osamstream&, char*, size_t);
+
+  static string zlib_message(const char* function, const z_stream& z);
 
   char_buffer buffer;
   char_buffer cdata;
 
-  size_t header_text_length;
+  int compression_level;      // Used in deflate_onto_cdata()
+  size_t header_text_length;  // Used in xsgetn()
+
+  z_stream zinflate, zdeflate;
+  bool zinflate_active, zdeflate_active;
+
+  typedef unsigned char uchar;  // For casting to the pointers exposed by zlib
+
+  // Hmmm...
+  void flush_buffer(osamstream&);
 };
 
+// Called when blah blah blah
+void bamio::flush_buffer(osamstream& stream) {
+  buffer.begin += deflate_onto_cdata(stream, buffer.begin, min(buffer.size(), BGZF::uncompressed_max_size));
+  buffer.flush();
+}
+
 bamio::bamio(const char* text, std::streamsize textsize)
-  : buffer(65536), cdata(65536) {
+  : buffer(65536), cdata(65536),
+    zinflate_active(false), zdeflate_active(false) {
   memcpy(cdata.end, text, textsize);
   cdata.end += textsize;
 }
 
+string bamio::zlib_message(const char* function, const z_stream& z) {
+  make_string s;
+  s << "zlib::" << function << "() failed";
+  if (z.msg)  s << ": " << z.msg;
+  return s;
+}
+
 bamio::~bamio() {
+  // In general, destructors should not throw exceptions.  Thus Z_DATA_ERROR
+  // is ignored below, as in this case the problem will already have been
+  // reported by an earlier zlib function and caused an exception to be
+  // thrown, so the present code will likely have been reached during the
+  // resulting stack unwinding -- hence must not itself throw.
+  //
+  // However Z_STREAM_ERRORs reported by these functions represent bugs in
+  // the calling program; since this Can't Happen, we'd like to hear about
+  // it, either by exception or via terminate().
+
+  if (zinflate_active) {
+    if (inflateEnd(&zinflate) != Z_OK)
+      throw std::logic_error(zlib_message("inflateEnd", zinflate));
+  }
+
+  if (zdeflate_active) {
+    int status = deflateEnd(&zdeflate);
+    if (status != Z_OK && status != Z_DATA_ERROR)
+      throw std::logic_error(zlib_message("deflateEnd", zdeflate));
+  }
 }
 
 // Fill  cdata  by reading from the streambuf.  Reads as much as will fit into
@@ -307,50 +373,127 @@ void bamio::fill_cdata(isamstream& stream) {
   cdata.end += rdbuf_sgetn(stream, cdata.end, cdata.available());
 }
 
-// FIXME Maybe don't have underflow() skip the header so we can do
-// inflateInit() normal not raw mode and get CRC checking
+// Compress the specified data into  cdata, appending to whatever is already
+// in  cdata  and writing that to the stream if necessary to make space.
+// Returns the number of input bytes actually compressed into the output block.
+size_t
+bamio::deflate_onto_cdata(osamstream& stream, char* data, size_t length) {
+  while (true) {
+    zdeflate.next_in = reinterpret_cast<uchar*>(data);
+    zdeflate.avail_in = length;
 
-string zlib_error_message(const char* function, const z_stream& z) {
-  string s = "zlib::";
-  s += function;
-  s += "() failed";
-  if (z.msg)
-    s += ": ", s += z.msg;
-  return s;
-}
+    if (zdeflate_active) {
+      if (deflateReset(&zdeflate) != Z_OK)
+	throw std::logic_error(zlib_message("deflateReset", zdeflate));
+    }
+    else {
+      zdeflate.zalloc = Z_NULL;
+      zdeflate.zfree  = Z_NULL;
+      if (deflateInit2(&zdeflate, compression_level, Z_DEFLATED,
+		       -15, MAX_MEM_LEVEL, Z_DEFAULT_STRATEGY) != Z_OK)
+	throw std::logic_error(zlib_message("deflateInit2", zdeflate));
+      zdeflate_active = true;
+    }
 
-// Compress the specified data into  cdata, discarding whatever may have
-// been there previously.
-size_t bamio::deflate_into_cdata(const char* data, size_t length) {
+    // At this point, and in general, the invariant is that  cdata.[begin,end)
+    // contains buffered previously-deflated blocks.  We compress the new block
+    // into the available space after  cdata.end.
+
+    if (cdata.available() < 10 * 1024) {
+      // Ensure that there is space available for the header
+      // and a reasonable stab at compression.
+      while (cdata.available() < 10 * 1024)
+	cdata.begin += stream.rdbuf()->sputn(cdata.begin, cdata.size());
+      cdata.flush();
+    }
+
+    zdeflate.next_out = reinterpret_cast<uchar*>(cdata.end + BGZF::hsize);
+    zdeflate.avail_out = min(cdata.available() - BGZF::hsize - BGZF::tsize,
+			     BGZF::payload_max_size);
+
+    int status = deflate(&zdeflate, Z_FINISH);
+    if (status == Z_OK) {
+      // There was not enough output space, either because there really isn't
+      // much space available in  cdata  or (conceivably) because the data
+      // cannot be compressed within the block payload size.  We flush previous
+      // blocks from  cdata  and continue deflate()ing -- the capacity of  cdata
+      // exceeds the BGZF block size, so after flushing these two cases can be
+      // distinguished.
+
+      while (cdata.size() > 0)
+	cdata.begin += stream.rdbuf()->sputn(cdata.begin, cdata.size());
+
+      // Temporarily extend  cdata.[begin,end)  to include the partially-
+      // written block, so that it will be maintained across the flush().
+      cdata.end = reinterpret_cast<char*>(zdeflate.next_out);
+      cdata.flush();
+
+      zdeflate.next_out = reinterpret_cast<uchar*>(cdata.end);
+      zdeflate.avail_out = BGZF::payload_max_size - zdeflate.total_out;
+
+      // Re-establish the general  cdata.[begin,end)  invariant.
+      cdata.end = cdata.begin;
+
+      if (zdeflate.avail_out > 0)
+	status = deflate(&zdeflate, Z_FINISH);
+    }
+
+    // Normally deflation was successfully completed, and we break out of
+    // this loop the first time through...
+    if (status == Z_STREAM_END)
+      break;
+    else if (status != Z_OK)
+      throw sam::exception(zlib_message("deflate", zdeflate));
+
+    // ...otherwise this is the unusual case of incompressible data that
+    // cannot be made to fit within the block payload size.  Try again, but
+    // only attempt to compress approximately the amount of data known to fit.
+    if (zdeflate.total_in >= 1024)
+      length = zdeflate.total_in - 128;
+    else
+      throw std::logic_error("implausibly incompressible data");
+  }
+
+  uint32_t crc =
+      crc32(crc32(0, NULL, 0), reinterpret_cast<uchar*>(data), length);
+
+  // Fill in the BGZF header and trailer, and extend  cdata.[begin,end)
+  // to encompass the newly buffered block.
+  cdata.end += BGZF::write_bgzf_header(cdata.end,
+			BGZF::hsize + zdeflate.total_out + BGZF::tsize);
+  cdata.end += zdeflate.total_out;
+  cdata.end += BGZF::write_bgzf_trailer(cdata.end, crc, length);
+  return length;
 }
 
 // Decompress the specified data into  buffer, discarding whatever may have
 // been there previously.
+// FIXME Maybe don't have underflow() skip the header so we can do
+// inflateInit() normal not raw mode and get CRC checking
 size_t bamio::inflate_into_buffer(char* data, size_t length) {
-  z_stream z;
-  z.zalloc = Z_NULL;
-  z.zfree  = Z_NULL;
+  zinflate.next_in  = reinterpret_cast<uchar*>(data);
+  zinflate.avail_in = length;
 
-  z.next_in  = reinterpret_cast<unsigned char*>(data);
-  z.avail_in = length;
-  if (inflateInit2(&z, -15) != Z_OK)
-    throw bad_format(zlib_error_message("inflateInit2", z));
-
-  buffer.clear();
-  z.next_out  = reinterpret_cast<unsigned char*>(buffer.end);
-  z.avail_out = buffer.available();
-  if (inflate(&z, Z_FINISH) != Z_STREAM_END) {
-    string message = zlib_error_message("inflate", z);
-    (void) inflateEnd(&z);
-    throw bad_format(message);
+  if (zinflate_active) {
+    if (inflateReset(&zinflate) != Z_OK)
+      throw std::logic_error(zlib_message("inflateReset", zinflate));
+  }
+  else {
+    zinflate.zalloc = Z_NULL;
+    zinflate.zfree  = Z_NULL;
+    if (inflateInit2(&zinflate, -15) != Z_OK)
+      throw std::logic_error(zlib_message("inflateInit2", zinflate));
+    zinflate_active = true;
   }
 
-  buffer.end += z.total_out;
+  buffer.clear();
+  zinflate.next_out  = reinterpret_cast<uchar*>(buffer.end);
+  zinflate.avail_out = buffer.available();
+  if (inflate(&zinflate, Z_FINISH) != Z_STREAM_END)
+    throw bad_format(zlib_message("inflate", zinflate));
 
-  if (inflateEnd(&z) != Z_OK)
-    throw bad_format(zlib_error_message("inflateEnd", z));
-
-  return z.total_in;
+  buffer.end += zinflate.total_out;
+  return zinflate.total_in;
 }
 
 // Decompress one BGZF block into  buffer,  which is assumed to be previously
@@ -374,15 +517,9 @@ bool bamio::underflow(isamstream& stream) {
 	    << " bytes after header; got " << cdata.size() << ")");
     }
 
-#if 1
     cdata.begin += inflate_into_buffer(cdata.begin, blockonly_length);
     cdata.begin += 8; // FIXME skip the GZIP member footer... should check it
-#else
-    size_t n;
-    cdata.begin += n = inflate_into_buffer(cdata.begin, blockonly_length);
-    //std::clog << "inflated: blockonly_length:" << blockonly_length << "; returned:" << n << "\n";
-    cdata.begin += 8; // FIXME skip the GZIP member footer... should check it
-#endif
+
     return true;
   }
   else
@@ -472,6 +609,7 @@ bool bamio::get(isamstream& stream, collection& headers) {
     int nfields = getline(header_text_buffer, stream, fields);
     headers.push_back(string(fields[0], fields[nfields] - fields[0] - 1),
 		      add_header | add_refname);
+std::clog << *(headers.headers.back()) << '\n';
   }
 
   if (headers.refnames.empty()) {
@@ -481,14 +619,16 @@ bool bamio::get(isamstream& stream, collection& headers) {
     int ref_count = read_int32(stream);
 #endif
 
-    std::clog << "no @SQ headers\n";
+    throw std::logic_error("No @SQ headers case not implemented");
   }
   else {
     string name;
     coord_t length;
     int ref_count = read_int32(stream);
+std::clog << "# " << ref_count << " binary entries\n";
     for (int index = 0; index < ref_count; index++) {
       read_refinfo(stream, name, length);
+std::clog << "@SQ\tSN:" << name << "\tLN:" << length << '\n';
       // FIXME more checking...
       refsequence* rhdr = headers.refnames[name];
       //rhdr->index_ = index;
@@ -535,24 +675,70 @@ bool bamio::get(isamstream& stream, alignment& aln) {
 }
 
 void bamio::flush(osamstream& stream) {
-  buffer.begin += deflate_into_cdata(buffer.begin, min(buffer.size(), 65536));
-  buffer.flush();
+#if ONE_OF_THESE
+  while (buffer.size() > 0)
+    flush_buffer(stream);
+#else
+  while (buffer.size() > 0)
+    buffer.begin += deflate_onto_cdata(stream, buffer.begin,
+			  min(buffer.size(), BGZF::uncompressed_max_size));
+  buffer.clear();
+#endif
 
   while (cdata.size() > 0)
     cdata.begin += stream.rdbuf()->sputn(cdata.begin, cdata.size());
+  cdata.clear();
 }
 
-void bamio::put(osamstream& stream, const collection& headers) {
-  // FIXME Something about checking buffer.available()...
+void bamio::put(osamstream& stream, const collection& coln) {
+  int header_length = 0;
+  for (collection::const_iterator it = coln.begin(); it != coln.end(); ++it)
+    header_length += it->sam_length() + 1;
 
   memcpy(buffer.end, "BAM\1", 4);
   buffer.end += 4;
-
-  int header_length = 0;  // FIXME add up lengths of headers
   convert::set_bam_int32(buffer.end, header_length);
   buffer.end += sizeof(int32_t);
 
-  // FIXME etc
+  for (collection::const_iterator it = coln.begin(); it != coln.end(); ++it)
+    if (buffer.available() >= size_t(it->sam_length() + 1)) {
+      buffer.end = format_sam(buffer.end, *it);
+      *buffer.end++ = '\n';
+    }
+    else {
+      // FIXME bamio::put(headers) buffering
+      throw std::logic_error("bamio::put(headers) buffering not implemented");
+    }
+
+  if (buffer.size() >= BGZF::uncompressed_max_size)
+    flush_buffer(stream);
+
+  // FIXME  Better access to coln's refs guts
+  convert::set_bam_int32(buffer.end, coln.refseqs.size());
+  buffer.end += sizeof(int32_t);
+
+  for (std::vector<refsequence*>::const_iterator it = coln.refseqs.begin();
+       it != coln.refseqs.end(); ++it) {
+    const string& name = (*it)->name();
+    int namelen = name.length();
+
+    if (buffer.available() >= sizeof(int32_t) + namelen+1 + sizeof(int32_t)) {
+      convert::set_bam_int32(buffer.end, namelen+1);
+      buffer.end += sizeof(int32_t);
+      memcpy(buffer.end, name.data(), namelen);
+      buffer.end += namelen;
+      *buffer.end++ = '\0';
+      convert::set_bam_int32(buffer.end, (*it)->length());
+      buffer.end += sizeof(int32_t);
+    }
+    else {
+      // FIXME bamio::put(headers) buffering
+      throw std::logic_error("bamio::put(headers) buffering not implemented");
+    }
+  }
+
+  if (buffer.size() >= BGZF::uncompressed_max_size)
+    flush_buffer(stream);
 }
 
 void bamio::put(osamstream& stream, const alignment& aln) {
@@ -561,8 +747,8 @@ void bamio::put(osamstream& stream, const alignment& aln) {
   int length = min(aln.p->size(), buffer.available());
   memcpy(buffer.end, aln.p->data(), length);
 
-  // Because  buffer  is flushed every 64K and has a capacity of at least
-  // 64K + sizeof(bamcore), it is guaranteed that all of this bamcore data
+  // Because  buffer  has a capacity that exceeds the BGZF uncompressed block
+  // size by at least sizeof(bamcore), it is guaranteed that all of this data
   // that needs to be converted is indeed in this first memcopied block.
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, rest_length));
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, rindex));
@@ -576,14 +762,25 @@ void bamio::put(osamstream& stream, const alignment& aln) {
   convert::set_bam32(buffer.end + offsetof(alignment::bamcore, isize));
   buffer.end += length;
 
-  if (buffer.size() >= 65536) {
-    flush(stream);
-    if (aln.p->size() > length) {
+  // Ensure that the whole alignment record has been copied -- if it has
+  // not, it must be because the buffer has been filled.
+  int copied = length;
+  while (buffer.size() >= BGZF::uncompressed_max_size) {
+#if ONE_OF_THESE
+    flush_buffer(stream);
+#else
+    buffer.begin += deflate_onto_cdata(stream, buffer.begin,
+				       BGZF::uncompressed_max_size);
+    buffer.flush();
+#endif
 
+    if (copied < aln.p->size()) {
+      length = min(aln.p->size() - copied, buffer.available());
+      memcpy(buffer.end, aln.p->data() + copied, length);
+      buffer.end += length;
+      copied += length;
     }
   }
-
-  #warning bamio::put(aln) unfinished
 }
 
 
@@ -602,6 +799,7 @@ public:
   virtual void put(osamstream&, const alignment&);
   virtual void flush(osamstream&);
 
+protected:
   virtual size_t xsgetn(isamstream&, char*, size_t);
 
 private:
@@ -663,7 +861,7 @@ void samio::put(osamstream& stream, const collection& headers) {
   for (collection::const_iterator it = headers.begin();
        it != headers.end(); ++it) {
     // FIXME Don't cons up a string
-    string text = (*it)->str();
+    string text = it->str();
     if (text.length() + 1 > buffer.available()) {
       flush(stream);
       buffer.reserve(text.length() + 1);
@@ -685,7 +883,7 @@ void samio::put(osamstream& stream, const alignment& aln) {
     buffer.reserve(approx_length);
   }
 
-  buffer.end = aln.sam_record(buffer.end, stream);
+  buffer.end = format_sam(buffer.end, aln, stream);
   *buffer.end++ = '\n';
 }
 
@@ -698,6 +896,7 @@ public:
   gzsamio(const char* text, std::streamsize textsize);
   virtual ~gzsamio();
 
+protected:
   virtual size_t xsgetn(isamstream&, char*, size_t);
 };
 
@@ -720,7 +919,8 @@ size_t gzsamio::xsgetn(isamstream&, char*, size_t) {
 sambamio* sambamio::new_in(std::streambuf* sbuf) {
   char buffer[BGZF::hsize];
   std::streamsize n = sbuf->sgetn(buffer, sizeof buffer);
-  // FIXME eofbit?
+  // FIXME eofbit, fixed as below:
+  // std::streamsize n = rdbuf_sgetn(stream, buffer, sizeof buffer);
 
   if (BGZF::is_bgzf_header(buffer, n))
     return new bamio(buffer, n);

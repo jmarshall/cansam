@@ -432,31 +432,33 @@ alignment& alignment::assign(const string& /*line*/) {
 #endif
 
 // FIXME This is pretty crap, and ought to be in utilities.h
-int decimal(const char* s) {
-  // FIXME strtol() accepts leading whitespace, which we don't really want.
-  char* slim;
-  int x = strtol(s, &slim, 10);
-  if (*slim != '\0')
-    throw bad_format("Trailing gunge in decimal field");
+int decimal(const char* s, const char* field_name) {
+  int x;
+  if (*parse::decimal(s, x) != '\0')
+    throw bad_format(make_string()
+	<< "Trailing gunge in decimal " << field_name
+	<< " field ('" << s << "')");
   return x;
 }
 
 // FIXME Where do these functions go?
-int to_flags(const char* s) {
-  int val;
+static uint16_t to_flags(const char* s) {
+  uint16_t value;
 
   if (isdigit(s[0])) {
     char* slim;
-    val = strtol(s, &slim, 0);
+    value = strtol(s, &slim, 0);
     if (*slim != '\0')
-      throw bad_format("Trailing gunge in flags field");
+      throw bad_format(make_string()
+	  << "Flag value ('" << s << "') is non-numeric");
   }
   else {
-    // FIXME One day there'll be a defined text representation
-    val = 0;
+    // TODO One day there'll be a defined text representation
+    throw bad_format(make_string()
+	<< "Unknown flag representation ('" << s << "')");
   }
 
-  return val;
+  return value;
 }
 
 int alignment::sam_length() const {
@@ -502,38 +504,39 @@ inline char* copy(char* dest, const char* s) {
   return dest;
 }
 
-char* alignment::sam_record(char* dest, const std::ios& format) const {
+char* format_sam(char* dest, const alignment& aln, const std::ios& format) {
   std::ios::fmtflags fmtflags = format.flags();
 
-  dest = copy(dest, qname_c_str());
+  dest = copy(dest, aln.qname_c_str());
 
   *dest++ = '\t';
   if (fmtflags & std::ios::boolalpha)
     strcpy(dest, "FIXME"), dest += 5; // FIXME
   else if (fmtflags & std::ios::hex)
-    dest = format_hex(dest, flags());
+    dest = format_hex(dest, aln.flags());
   else
-    dest = format::decimal(dest, flags());
+    dest = format::decimal(dest, aln.flags());
 
   *dest++ = '\t';
-  if (rindex() < 0)  *dest++ = '*';
-  else  dest = copy(dest, rname_c_str());
+  if (aln.rindex() < 0)  *dest++ = '*';
+  else  dest = copy(dest, aln.rname_c_str());
 
   *dest++ = '\t';
-  dest = format::decimal(dest, pos());
+  dest = format::decimal(dest, aln.pos());
 
   *dest++ = '\t';
-  dest = format::decimal(dest, mapq());
+  dest = format::decimal(dest, aln.mapq());
 
   *dest++ = '\t';
-  if (p->c.cigar_length == 0)
+  if (aln.p->c.cigar_length == 0)
     *dest++ = '*';
   else {
     // TODO This too probably will end up in some kind of sam::cigar class
     const char* cigar;
-    const char* cigarlim =
-		    p->cigar_data() + sizeof(uint32_t) * p->c.cigar_length;
-    for (cigar = p->cigar_data(); cigar < cigarlim; cigar += sizeof(uint32_t)) {
+    const char* cigarlim = aln.p->cigar_data() +
+			      sizeof(uint32_t) * aln.p->c.cigar_length;
+    for (cigar = aln.p->cigar_data(); cigar < cigarlim;
+	 cigar += sizeof(uint32_t)) {
       uint32_t code = convert::uint32(cigar);
       dest = format::decimal(dest, code >> 4);
       *dest++ = "MIDNSHP=X???????"[code & 0xf];
@@ -541,69 +544,75 @@ char* alignment::sam_record(char* dest, const std::ios& format) const {
   }
 
   *dest++ = '\t';
-  if (mate_rindex() < 0)  *dest++ = '*';
-  else if (mate_rindex() == rindex())  *dest++ = '=';
-  else  dest = copy(dest, mate_rname_c_str());
+  if (aln.mate_rindex() < 0)  *dest++ = '*';
+  else if (aln.mate_rindex() == aln.rindex())  *dest++ = '=';
+  else  dest = copy(dest, aln.mate_rname_c_str());
 
   *dest++ = '\t';
   // FIXME Do we need to do anything special for 0 or -1 i.e. unmapped?
-  dest = format::decimal(dest, mate_pos());
+  dest = format::decimal(dest, aln.mate_pos());
 
   *dest++ = '\t';
-  dest = format::decimal(dest, isize());
+  dest = format::decimal(dest, aln.isize());
 
   *dest++ = '\t';
-  if (length() == 0)  *dest++ = '*';
-  else  dest = unpack_seq(dest, seq_raw_data(), length());
+  if (aln.length() == 0)  *dest++ = '*';
+  else  dest = alignment::unpack_seq(dest, aln.seq_raw_data(), aln.length());
 
   *dest++ = '\t';
-  if (length() == 0 || qual_raw_data()[0] == '\xff')  *dest++ = '*';
-  else  dest = unpack_qual(dest, qual_raw_data(), length());
+  if (aln.length() == 0 || aln.qual_raw_data()[0] == '\xff')  *dest++ = '*';
+  else  dest = alignment::unpack_qual(dest, aln.qual_raw_data(), aln.length());
 
-  for (const_iterator it = begin(); it != end(); ++it) {
+  for (alignment::const_iterator it = aln.begin(); it != aln.end(); ++it) {
     *dest++ = '\t';
-    *dest++ = it->tag_[0], *dest++ = it->tag_[1];
+    dest = format_sam(dest, *it);
+  }
+
+  return dest;
+}
+
+char* format_sam(char* dest, const alignment::tagfield& aux) {
+  *dest++ = aux.tag_[0], *dest++ = aux.tag_[1];
+  *dest++ = ':';
+  switch (aux.type_) {
+  case 'A':
+    *dest++ = 'A';
     *dest++ = ':';
-    switch (it->type_) {
-    case 'A':
-      *dest++ = 'A';
-      *dest++ = ':';
-      *dest++ = it->data[0];
-      break;
+    *dest++ = aux.data[0];
+    break;
 
-    case 'c':
-    case 's':
-    case 'i':
-      *dest++ = 'i';
-      *dest++ = ':';
-      dest = format::decimal(dest, it->value_int());
-      break;
+  case 'c':
+  case 's':
+  case 'i':
+    *dest++ = 'i';
+    *dest++ = ':';
+    dest = format::decimal(dest, aux.value_int());
+    break;
 
-    case 'C':
-    case 'S':
-    case 'I':
-      // FIXME These ones should be value_uint() or so (especially I!)
-      *dest++ = 'i';
-      *dest++ = ':';
-      dest = format::decimal(dest, it->value_int());
-      break;
+  case 'C':
+  case 'S':
+  case 'I':
+    // FIXME These ones should be value_uint() or so (especially I!)
+    *dest++ = 'i';
+    *dest++ = ':';
+    dest = format::decimal(dest, aux.value_int());
+    break;
 
-    case 'f':
-    case 'd':
-      throw std::logic_error("Implement sam_record for tagfield(f/d)"); // TODO
+  case 'f':
+  case 'd':
+    throw std::logic_error("Implement formatsam() for tagfield(f/d)"); // TODO
 
-    case 'Z':
-    case 'H':
-      *dest++ = it->type_;
-      *dest++ = ':';
-      dest = copy(dest, it->data);
-      break;
+  case 'Z':
+  case 'H':
+    *dest++ = aux.type_;
+    *dest++ = ':';
+    dest = copy(dest, aux.data);
+    break;
 
-    default:
-      throw bad_format(make_string()
-	  << "Aux field '" << it->tag_[0] << it->tag_[1]
-	  << "' has invalid type ('" << it->type_ << "')");
-    }
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << aux.tag_[0] << aux.tag_[1]
+	<< "' has invalid type ('" << aux.type_ << "')");
   }
 
   return dest;
@@ -656,9 +665,9 @@ void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex
   p->c.rest_length = size - sizeof(p->c.rest_length);
 
   p->c.rindex = collection.findseq(fields[rname]).index(); // a name or "*"
-  p->c.zpos = decimal(fields[pos]) - 1; // a 1-based pos or 0
+  p->c.zpos = decimal(fields[pos], "POS") - 1; // a 1-based pos or 0
   p->c.name_length = name_length;
-  p->c.mapq = decimal(fields[mapq]); // 0..255
+  p->c.mapq = decimal(fields[mapq], "MAPQ"); // 0..255
   p->c.bin = -1;
   p->c.cigar_length = cigar_length;
   p->c.flags = to_flags(fields[flag]);
@@ -670,8 +679,8 @@ void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex
   else
     p->c.mate_rindex = collection.findseq(fields[mrname]).index();
 
-  p->c.mate_zpos = decimal(fields[mpos]) - 1; // a 1-based pos or 0
-  p->c.isize = decimal(fields[isize]); // an insert size or 0
+  p->c.mate_zpos = decimal(fields[mpos], "MPOS") - 1; // a 1-based pos or 0
+  p->c.isize = decimal(fields[isize], "ISIZE"); // an insert size or 0
 
   memcpy(p->name_data(), fields[qname], name_length);
 
@@ -712,8 +721,14 @@ void alignment::push_back_sam(const char* aux, int length) {
     push_back(tag, value[0]);
     break;
 
-  case 'i':
-    push_back(tag, decimal(value));
+  case 'i': {
+    // TODO  Conceivably take heroic steps to represent unsigned [2^31, 2^32)
+    int ivalue;
+    if (*parse::decimal(value, ivalue) != '\0')
+      throw bad_format(make_string()
+	  << "Numeric aux field has non-numeric value '" << value << "')");
+    push_back(tag, ivalue);
+    }
     break;
 
   case 'f':
@@ -735,13 +750,6 @@ void alignment::push_back_sam(const char* aux, int length) {
 	<< aux[3] << "') for SAM format");
   }
 }
-
-#if 0
-int alignment::to_flags(const string& str) {
-  const char* s = str.data();
-  return to_flags(s, s + str.length());
-}
-#endif
 
 // FIXME Someone set up us the templatey love!
 
@@ -891,7 +899,7 @@ string alignment::tagfield::value() const {
   case 'i': {
     char buffer[format::buffer<int>::size];
     return string(buffer, format::decimal(buffer, value_int()) - buffer);
-  }
+    }
 
   case 'C':
   case 'S':
@@ -899,7 +907,7 @@ string alignment::tagfield::value() const {
     // FIXME These ones should be value_uint() or so (especially I!)
     char buffer[format::buffer<int>::size];
     return string(buffer, format::decimal(buffer, value_int()) - buffer);
-  }
+    }
 
   case 'f':
   case 'd':

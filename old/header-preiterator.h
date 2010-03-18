@@ -236,9 +236,7 @@ protected:
   virtual void sync() { cstr_ = str_.c_str(); }
 
 private:
-  // @cond private
   friend char* format_sam(char* dest, const header& header);
-  // @endcond
 
   size_t find_or_eos(const char* tag) const;
   const_iterator find_or_throw(const char* tag) const;
@@ -362,79 +360,18 @@ public:
   //@{
 
   // @cond infrastructure
-  template <bool condition, typename TrueType, typename FalseType>
-  struct if_c { typedef TrueType type; };
-
-  template <typename TrueType, typename FalseType>
-  struct if_c<false, TrueType, FalseType> { typedef FalseType type; };
-
-  template <typename ValueType, typename ContainerType, bool is_const = false>
-  class ptr_container_iterator {
-  public:
-    // FIXME should be random_access_iterator_tag
-    typedef std::bidirectional_iterator_tag iterator_category;
-    typedef ValueType value_type;
-    typedef ptrdiff_t difference_type;
-    typedef typename if_c<is_const, const ValueType*, ValueType*>::type pointer;
-    typedef typename if_c<is_const, const ValueType&, ValueType&>::type
-      reference;
-
-    // This is either a copy constructor (for a mutable iterator, when is_const
-    // is false) or a constructor (for a const_iterator, when is_const is true)
-    // converting from the corresponding iterator.  In the latter case, the
-    // compiler will generate a const_iterator copy constructor itself.
-    ptr_container_iterator(const ptr_container_iterator<ValueType,
-				   ContainerType, false>& it) : pit(it.pit) { }
-
-    ptr_container_iterator() { }
-    ~ptr_container_iterator() { }
-    ptr_container_iterator& operator= (ptr_container_iterator it)
-      { pit = it.pit; return *this; }
-
-    // FIXME something about friend functions for these...
-    bool operator== (ptr_container_iterator it) const { return pit == it.pit; }
-    bool operator!= (ptr_container_iterator it) const { return pit != it.pit; }
-
-    pointer operator-> () const { return *pit; }
-    reference operator* () const { return **pit; }
-
-    ptr_container_iterator& operator++ () { ++pit; return *this; }
-    ptr_container_iterator operator++ (int)
-      { ptr_container_iterator orig = *this; ++pit; return orig; }
-
-    ptr_container_iterator& operator-- () { --pit; return *this; }
-    ptr_container_iterator operator-- (int)
-      { ptr_container_iterator orig = *this; --pit; return orig; }
-
-  private:
-    typedef typename
-      if_c<is_const, typename ContainerType::const_iterator,
-		     typename ContainerType::iterator>::type underlying_type;
-
-    friend class collection;
-    explicit ptr_container_iterator(const underlying_type& p) : pit(p) { }
-
-    underlying_type pit;
-  };
-
-  typedef ptr_container_iterator<header, std::vector<header*> > iterator;
-  typedef ptr_container_iterator<header, std::vector<header*>, true>
-    const_iterator;
-  typedef iterator::reference reference;
-  typedef const_iterator::reference const_reference;
-  typedef const_iterator::difference_type difference_type;
-
-  typedef ptr_container_iterator<refsequence, std::vector<refsequence*> >
-    ref_iterator;
-  typedef ptr_container_iterator<refsequence, std::vector<refsequence*>, true>
-    const_ref_iterator;
+  typedef header_array::iterator iterator;  // FIXME or something...
+  typedef header_array::const_iterator const_iterator;
+  typedef header_array::reference reference;
+  typedef header_array::const_reference const_reference;
+  typedef header_array::difference_type difference_type;
   // @endcond
 
-  iterator begin() { return iterator(headers.begin()); }
-  const_iterator begin() const { return const_iterator(headers.begin()); }
+  iterator begin() { return headers.begin(); }
+  const_iterator begin() const { return headers.begin(); }
 
-  iterator end() { return iterator(headers.end()); }
-  const_iterator end() const { return const_iterator(headers.end()); }
+  iterator end() { return headers.end(); }
+  const_iterator end() const { return headers.end(); }
 
   void push_back(const std::string& header_line);
 
@@ -445,14 +382,6 @@ public:
   refsequence& findseq(const std::string& name);
   refsequence& findseq(const char* name);
   refsequence& findseq(int index);
-
-  ref_iterator ref_begin() { return ref_iterator(refseqs.begin()); }
-  const_ref_iterator ref_begin() const
-    { return const_ref_iterator(refseqs.begin()); }
-
-  ref_iterator ref_end() { return ref_iterator(refseqs.end()); }
-  const_ref_iterator ref_end() const
-    { return const_ref_iterator(refseqs.end()); }
 
   // FIXME prob not public
   static collection& find(unsigned cindex) { return *collections[cindex]; }

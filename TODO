@@ -22,6 +22,8 @@
   - Utility function for (sensible!) parsing of "chr2:100,000-200,000"
   - Some form of iterator equivalent to bam_fetch()
 
+* Randomly select a subset of reads (samtools-help, "Subsetting BAM, at random")
+
 * C++ infrastructure
   - Make it work with -fno-implicit-templates
 

@@ -50,6 +50,33 @@ char* decimal(char* dest, IntType value) {
 
 } // namespace format
 
+namespace parse {
+
+template <typename UnsignedType>
+const char*
+decimal_(const char* s, UnsignedType& value, const traits::false_type&) {
+  value = 0;
+  if (*s == '+')  s++;
+  while (*s >= '0' && *s <= '9')  value = 10 * value + *s++ - '0';
+  return s;
+}
+
+template <typename SignedType>
+const char*
+decimal_(const char* s, SignedType& value, const traits::true_type&) {
+  typename traits::make_unsigned<SignedType>::type uvalue;
+  if (*s == '-')  s = decimal(s+1, uvalue), value = -uvalue;
+  else  s = decimal(s, uvalue), value = uvalue;
+  return s;
+}
+
+template <typename IntType>
+const char* decimal(const char* s, IntType& value) {
+  return decimal_(s, value, traits::is_signed<IntType>());
+}
+
+} // namespace parse
+
 // Removes a trailing line terminator, whether it be LF, CR, or CR-LF.
 // (Usually CR would be because there was a CR-LF terminator and the LF has
 // already been elided.)

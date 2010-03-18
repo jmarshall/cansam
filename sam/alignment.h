@@ -105,14 +105,6 @@ public:
   /// of this alignment
   int sam_length() const;
 
-  /// Write the SAM representation of this alignment to @a dest
-  /** FIXME blah blah about @a format.
-  @param dest  Character array to be written to; must have space for at least
-  sam_length() characters.
-  @param format  Format flags controlling how the record should be formatted.
-  @return A pointer to the first unused character position in @a dest.  */
-  char* sam_record(char* dest, const std::ios& format) const;
-
   /** @name Field accessors
   Two variants are provided for the @em POS and @em MPOS fields: @c %pos()
   et al return 1-based coordinates, while @c %zpos() et al return the same
@@ -297,6 +289,7 @@ public:
 
   private:
     friend class alignment;
+    friend char* format_sam(char* dest, const tagfield& aux);
 
     char tag_[2];
     char type_;
@@ -528,10 +521,12 @@ public:
     { dest.resize(seq_length); unpack_qual(dest.begin(), phred, seq_length); }
 
 private:
+  // @cond private
   friend class bamio;
   friend class samio;
+  // FIXME Only friend because of cigar stuff and its unpack_seq/_qual usage
+  friend char* format_sam(char*, const alignment&, const std::ios&);
 
-  // @cond private
   struct block_header {
     uint16_t capacity;
     uint16_t cindex;
@@ -680,10 +675,23 @@ a trailing newline character.
 @relatesalso alignment */
 std::ostream& operator<< (std::ostream& stream, const alignment& aln);
 
+/// Write an alignment to @a dest in SAM format
+/** @param dest  Character array to be written to; must have space for at least
+alignment::sam_length() characters.
+@param aln  The alignment record to be formatted.
+@param format  Format flags controlling how the record should be formatted.
+@return  A pointer to the first unused character position in @a dest.
+@relatesalso alignment */
+char* format_sam(char* dest, const alignment& aln, const std::ios& format);
+
 /// Print an auxiliary field to the stream
 /** Writes an auxiliary field to a stream as text in SAM format.
 @relatesalso alignment::tagfield */
 std::ostream& operator<< (std::ostream& stream, const alignment::tagfield& aux);
+
+/// Write an auxiliary field to @a dest in SAM format
+/** @relatesalso alignment::tagfield */
+char* format_sam(char* dest, const alignment::tagfield& aux);
 
 /// Print an iterator or const_iterator to the stream
 std::ostream& operator<< (std::ostream& stream, alignment::const_iterator it);

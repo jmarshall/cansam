@@ -4,6 +4,8 @@
 
 #include <iostream> // FIXME NUKE-ME
 
+#include "lib/utilities.h"
+
 using std::string;
 
 namespace sam {
@@ -39,12 +41,23 @@ void collection::clear() {
 static refsequence unmapped_refseq("*", 0, -1);
 
 refsequence& collection::findseq(int index) {
-  if (index >= 0 && size_t(index) < refseqs.size())
+  if (index >= 0 && index < int(refseqs.size()))
     return *refseqs[index];
   else if (index == -1)
     return unmapped_refseq;
   else
-    throw bad_format("Reference sequence index out of range"); // FIXME
+    throw sam::exception("Reference sequence index out of range"); // FIXME
+}
+
+refsequence& collection::findseq(const string& name) {
+  refname_map::iterator it = refnames.find(name);
+  if (it != refnames.end())
+    return *(it->second);
+  else if (name == "*")  // FIXME Is "*" going to be in refnames, or not?
+    return unmapped_refseq;
+  else
+    throw sam::exception(make_string()
+	<< "No such reference sequence ('" << name << "')");
 }
 
 refsequence& collection::findseq(const char* name) {

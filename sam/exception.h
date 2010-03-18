@@ -7,19 +7,19 @@ Blah blah.  */
 #define CANSAM_EXCEPTION_H
 
 #include <string>
-#include <ios> // FIXME For ios_base::failure but maybe we don't want to be one?
+#include <stdexcept>
 
 namespace sam {
 
 /** @class sam::exception sam/exception.h
     @brief Base class for Cansam exceptions */
-class exception : public std::ios_base::failure {
+class exception : public std::runtime_error {
 public:
   /// Construct an exception with the given @a message
-  explicit exception(const std::string& message) : failure(message) { }
-  virtual ~exception() throw() { }
+  explicit exception(const std::string& message)
+    : std::runtime_error(message) { }
 
-  //using failure::what;
+  virtual ~exception() throw() { }
 
   /// The filename associated with this problem, or empty if none or unknown
   std::string filename() const { return filename_; }
@@ -27,42 +27,8 @@ public:
   /// Set an associated filename
   void set_filename(const std::string& filename) { filename_ = filename; }
 
-protected:
-  /// A buffer for use by what()
-  std::string message;
-
 private:
   std::string filename_;
-};
-
-/** @class sam::failure sam/exception.h
-    @brief Exception representing formatting errors, etc */
-class failure : public exception {
-public:
-  /// Construct a failure exception with the given @a message
-  explicit failure(const std::string& message) : exception(message) { }
-  virtual ~failure() throw() { }
-  //using exception::what;
-};
-
-/** @class sam::system_error sam/exception.h
-    @brief Exception raised from system call failures */
-class system_error : public exception {
-public:
-  /// Construct an exception with the given @a message and @a errno value
-  explicit system_error(const std::string& message, int errnum)
-    : exception(message), errnum_(errnum) { }
-
-  virtual ~system_error() throw() { }
-
-  /// Returns a message, including filename and @a errno, if available
-  virtual const char* what() const throw();
-
-  /// The @c errno error code underlying this exception
-  int errnum() const { return errnum_; }
-
-private:
-  int errnum_;
 };
 
 /** @class sam::bad_format sam/exception.h
@@ -90,6 +56,39 @@ public:
 
 private:
   int recnum_;
+  mutable std::string what_text_;
+};
+
+/** @class sam::system_error sam/exception.h
+    @brief Exception raised from system call failures
+
+The message returned by what() is in the format
+@verbatim
+message [[for] "filename"]: system error text
+@endverbatim
+where @a message is as passed to the constructor, the filename portion appears
+if there is an associated filename (with "for" unless @a message ends with a
+space), and the system error text is as returned by @c strerror(3).
+
+@note Because the standard library's @c errno is a macro, this class's member
+function can't be named @c errno().  */
+class system_error : public exception {
+public:
+  /// Construct an exception with the given @a message and @a errno value
+  explicit system_error(const std::string& message, int errnum)
+    : exception(message), errnum_(errnum) { }
+
+  virtual ~system_error() throw() { }
+
+  /// Returns a message, including filename (if available) and @a errno
+  virtual const char* what() const throw();
+
+  /// The @c errno error code underlying this exception
+  int errnum() const { return errnum_; }
+
+private:
+  int errnum_;
+  mutable std::string what_text_;
 };
 
 } // namespace sam

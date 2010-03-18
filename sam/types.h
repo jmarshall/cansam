@@ -14,6 +14,25 @@ typedef long coord_t;
 /// between coordinates
 typedef long scoord_t;
 
+#if 0
+// @cond infrastructure
+template <typename ValueType>
+class indirect_iterator {
+public:
+  indirect_iterator& operator++ () { ++pit; return *this; }
+  indirect_iterator operator++ (int)
+    { indirect_iterator orig = *this; ++pit; return orig; }
+
+  indirect_iterator& operator-- () { --pit; return *this; }
+  indirect_iterator operator-- (int)
+    { indirect_iterator orig = *this; --pit; return orig; }
+
+private:
+  UnderlyingIterator pit;
+};
+// @endcond
+#endif
+
 } // namespace sam
 
 #endif
