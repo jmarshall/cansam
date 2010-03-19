@@ -168,18 +168,22 @@ public:
     { if (p->c.bin == unknown_bin)  p->c.bin = calc_zbin(zpos(), right_zpos());
       return p->c.bin; }
 
-  /// Value of the auxiliary field with the given @a tag
-  std::string aux(const char* tag) const;
-  std::string aux(const char* tag, const std::string& default_value) const;
+  /** Returns the value of the auxiliary field with the given @a tag,
+  or throws a sam::exception if the field cannot be expressed as
+  a @a ValueType or if there is no such field.
+  @note In most cases, it will be necessary to use explicit syntax such
+  as <tt>aux<int>("NM")</tt> to specify which type is desired.  */
+  template <typename ValueType>
+  ValueType aux(const char* tag) const
+    { return find_or_throw(tag)->template value<ValueType>(); }
 
-  int aux_int(const char* tag) const;
-  int aux_int(const char* tag, int default_value) const;
-
-  float aux_float(const char* tag) const;
-  float aux_float(const char* tag, float default_value) const;
-
-  double aux_double(const char* tag) const;
-  double aux_double(const char* tag, double default_value) const;
+  /** Returns the value of the auxiliary field with the given @a tag,
+  or @a default_value if there is no such field; or throws a sam::exception
+  if the field is present but cannot be expressed as a @a ValueType.  */
+  template <typename ValueType>
+  ValueType aux(const char* tag, ValueType default_value) const
+    { const_iterator it = find(tag);
+      return (it != end())? it->template value<ValueType>() : default_value; }
   //@}
 
   /** @name Additional field accessors
@@ -222,6 +226,19 @@ public:
   const char* qual_raw_data() const { return p->qual_data(); }
 
   const char* aux_c_str(const char* tag) const;
+
+  std::string& aux(std::string& dest, const char* tag) const
+    { return find_or_throw(tag)->value(dest); }
+
+  std::string& aux(std::string& dest,
+		   const char* tag, const char* default_value) const
+    { const_iterator it = find(tag);
+      return (it != end())? it->value(dest) : dest.assign(default_value); }
+
+  std::string& aux(std::string& dest,
+		   const char* tag, const std::string& default_value) const
+    { const_iterator it = find(tag);
+      return (it != end())? it->value(dest) : dest.assign(default_value); }
   //@}
 
   /** @name Container functionality
@@ -267,6 +284,10 @@ public:
     int value_int() const;
 
     // TODO  Implement value_coord(), value_float(), value_double()
+    // TODO  Actually, set up some templatey stuffs
+
+    /// Assigns SAM-style field value to @a dest (and returns @a dest)
+    std::string& value(std::string& dest) const;
 
     /// Returns whether the field's tag is the same as the given @a key_tag
     bool tag_equals(const char* key_tag) const
@@ -288,12 +309,14 @@ public:
     static int size_sam(const char* text, int text_length);
 
   private:
+    // @cond private
     friend class alignment;
     friend char* format_sam(char* dest, const tagfield& aux);
 
     char tag_[2];
     char type_;
     char data[1];
+    // @endcond
   };
 
   // @cond infrastructure
@@ -596,6 +619,8 @@ private:
 
   void set_qname(const char* qname, int qname_length);
 
+  const_iterator find_or_throw(const char* tag) const;
+
   char* replace_gap(char* start, char* limit, int gap_length);
   iterator replace_gap(iterator start, iterator limit, int gap_length)
     { return iterator(replace_gap(start.ptr, limit.ptr, gap_length)); }
@@ -690,7 +715,8 @@ char* format_sam(char* dest, const alignment& aln, const std::ios& format);
 std::ostream& operator<< (std::ostream& stream, const alignment::tagfield& aux);
 
 /// Write an auxiliary field to @a dest in SAM format
-/** @relatesalso alignment::tagfield */
+/** @return  A pointer to the first unused character position in @a dest.
+@relatesalso alignment::tagfield */
 char* format_sam(char* dest, const alignment::tagfield& aux);
 
 /// Print an iterator or const_iterator to the stream

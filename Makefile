@@ -2,7 +2,7 @@ CXXFLAGS = -Wall -Wextra -O2 -g -I.
 LDFLAGS  = -L.
 LDLIBS   = -lz
 
-OUTPUTS = libcansam.a samcat samsort test/runtests
+OUTPUTS = libcansam.a samcat samcount samsort test/runtests
 all: $(OUTPUTS)
 
 lib: libcansam.a
@@ -36,10 +36,14 @@ lib/samstream.o: lib/samstream.cpp sam/stream.h $(sam_alignment_h) \
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
 
 
-MISC_OBJS = utilities/samcat.o utilities/samsort.o examples/simplecat.o
+MISC_OBJS = utilities/samcat.o utilities/samcount.o utilities/samsort.o \
+	    examples/simplecat.o
 
 samcat: utilities/samcat.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o -lcansam $(LDLIBS)
+
+samcount: utilities/samcount.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o -lcansam $(LDLIBS)
 
 samsort: utilities/samsort.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o -lcansam $(LDLIBS)
@@ -49,6 +53,8 @@ simplecat: examples/simplecat.o libcansam.a
 
 utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
 		    sam/stream.h
+utilities/samcount.o: utilities/samcount.cpp $(sam_alignment_h) \
+		      $(sam_header_h) sam/stream.h
 utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h
 examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
 

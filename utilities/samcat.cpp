@@ -1,8 +1,10 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <cerrno>
 
 #include "sam/alignment.h"
+#include "sam/exception.h"
 #include "sam/header.h"
 #include "sam/stream.h"
 
@@ -94,6 +96,7 @@ int main(int argc, char** argv) {
     }
 
   osamstream out(output_fname, std::ios::out | output_mode);
+  if (!out.is_open()) throw sam::system_error("buh!", errno);
 
   if (optind == argc) {
     isamstream in("-");

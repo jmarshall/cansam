@@ -609,7 +609,7 @@ bool bamio::get(isamstream& stream, collection& headers) {
     int nfields = getline(header_text_buffer, stream, fields);
     headers.push_back(string(fields[0], fields[nfields] - fields[0] - 1),
 		      add_header | add_refname);
-std::clog << *(headers.headers.back()) << '\n';
+//std::clog << *(headers.headers.back()) << '\n';
   }
 
   if (headers.refnames.empty()) {
@@ -625,10 +625,10 @@ std::clog << *(headers.headers.back()) << '\n';
     string name;
     coord_t length;
     int ref_count = read_int32(stream);
-std::clog << "# " << ref_count << " binary entries\n";
+//std::clog << "# " << ref_count << " binary entries\n";
     for (int index = 0; index < ref_count; index++) {
       read_refinfo(stream, name, length);
-std::clog << "@SQ\tSN:" << name << "\tLN:" << length << '\n';
+//std::clog << "@SQ\tSN:" << name << "\tLN:" << length << '\n';
       // FIXME more checking...
       refsequence* rhdr = headers.refnames[name];
       //rhdr->index_ = index;

@@ -751,31 +751,6 @@ void alignment::push_back_sam(const char* aux, int length) {
   }
 }
 
-// FIXME Someone set up us the templatey love!
-
-std::string alignment::aux(const char* tag) const {
-  const_iterator it = find(tag);
-  if (it != end())  return it->value();
-  else  throw "no such tag";
-}
-
-std::string
-alignment::aux(const char* tag, const std::string& default_value) const {
-  const_iterator it = find(tag);
-  return (it != end())? it->value() : default_value;
-}
-
-int alignment::aux_int(const char* tag) const {
-  const_iterator it = find(tag);
-  if (it != end())  return it->value_int();
-  else  throw "no such tag";
-}
-
-int alignment::aux_int(const char* tag, int default_value) const {
-  const_iterator it = find(tag);
-  return (it != end())? it->value_int() : default_value;
-}
-
 
 // 4. Iterators
 //=============
@@ -924,6 +899,48 @@ string alignment::tagfield::value() const {
   }
 }
 
+// FIXME Either this or the one above should go...
+string& alignment::tagfield::value(string& dest) const {
+  switch (type_) {
+  case 'A':
+    dest = data[0];
+    break;
+
+  case 'c':
+  case 's':
+  case 'i': {
+    char buffer[format::buffer<int>::size];
+    dest.assign(buffer, format::decimal(buffer, value_int()) - buffer);
+    break;
+    }
+
+  case 'C':
+  case 'S':
+  case 'I': {
+    // FIXME These ones should be value_uint() or so (especially I!)
+    char buffer[format::buffer<int>::size];
+    dest.assign(buffer, format::decimal(buffer, value_int()) - buffer);
+    break;
+    }
+
+  case 'f':
+  case 'd':
+    throw std::logic_error("Implement tagfield::value(f/d)"); // TODO
+
+  case 'Z':
+  case 'H':
+    dest = data;
+    break;
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+
+  return dest;
+}
+
 int alignment::tagfield::value_int() const {
   switch (type_) {
   case 'c':  { signed char   value = data[0]; return value; }
@@ -963,6 +980,14 @@ alignment::const_iterator alignment::find(const char* key) const {
     if (it->tag_equals(key))  return it;
 
   return end();
+}
+
+alignment::const_iterator alignment::find_or_throw(const char* key) const {
+  for (const_iterator it = begin(); it != end(); ++it)
+    if (it->tag_equals(key))  return it;
+
+  throw sam::exception(make_string()
+      << "Aux field '" << key[0] << key[1] << "' not found");
 }
 
 int alignment::erase(const char* key) {
