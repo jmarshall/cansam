@@ -17,6 +17,10 @@
 #include "lib/utilities.h"
 #include "lib/wire.h"
 
+#ifndef EOF
+#define EOF  (std::char_traits<char>::eof())
+#endif
+
 using std::string;
 
 namespace sam {
@@ -916,11 +920,9 @@ size_t gzsamio::xsgetn(isamstream&, char*, size_t) {
 
 // Construct a new concrete sambamio by reading the first few bytes
 // from the stream to determine what type of file it is.
-sambamio* sambamio::new_in(std::streambuf* sbuf) {
+sambamio* sambamio::new_in(isamstream& stream) {
   char buffer[BGZF::hsize];
-  std::streamsize n = sbuf->sgetn(buffer, sizeof buffer);
-  // FIXME eofbit, fixed as below:
-  // std::streamsize n = rdbuf_sgetn(stream, buffer, sizeof buffer);
+  std::streamsize n = rdbuf_sgetn(stream, buffer, sizeof buffer);
 
   if (BGZF::is_bgzf_header(buffer, n))
     return new bamio(buffer, n);

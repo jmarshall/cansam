@@ -584,24 +584,11 @@ private:
     char* data() { return reinterpret_cast<char*>(&this->c); }
     char* end_data() { return data() + sizeof(c.rest_length) + c.rest_length; }
 
-#if 0
-    // FIXME NUKE-ME foo_length() or foo_end() stuff is prob a waste of time
-    char* name_data()  { return this->extra; }
-    int name_length()  { return c.name_length; }
-    char* cigar_data() { return name_data() + name_length(); }
-    int cigar_length() { return sizeof(uint32_t) * c.cigar_length; }
-    char* seq_data()   { return cigar_data() + cigar_length(); }
-    int seq_length()   { return (c.read_length + 1) / 2; }
-    char* qual_data()  { return seq_data() + seq_length(); }
-    int qual_length()  { return c.read_length; }
-    char* auxen_data() { return qual_data() + qual_length(); }
-#else
     char* name_data()  { return this->extra; }
     char* cigar_data() { return name_data() + c.name_length; }
     char* seq_data()   { return cigar_data() + sizeof(uint32_t)*c.cigar_length;}
     char* qual_data()  { return seq_data() + (c.read_length + 1) / 2; }
     char* auxen_data() { return qual_data() + c.read_length; }
-#endif
 
     static block* create(int payload_size);
     static void destroy(block* block);

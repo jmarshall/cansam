@@ -52,7 +52,7 @@ rawfilebuf::open(const char* fname, std::ios_base::openmode mode, int perm) {
     return NULL;
 
   if (mode & ios::ate) {
-    if (::lseek(fd_, 0, SEEK_END) <= 0) {
+    if (::lseek(fd_, 0, SEEK_END) < 0) {
       int saved_errno = errno;
       close_nothrow();
       errno = saved_errno;

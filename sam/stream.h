@@ -32,10 +32,10 @@ class sambamio;
 This is a base class for the SAM/BAM stream hierarchy; it is unlikely to be
 usefully instantiated itself.
 
-@note This hierarchy doesn't provide a stream in the sense that @e anything can
-be streamed to/from it; it only accepts SAM alignment records.  The name does
-not parallel @c fstream and @c stringstream; it does not mean "a stream backed
-by a sam", whatever that might be.  */
+@note This hierarchy doesn't provide a stream in the sense that @e anything
+can be streamed to/from it; it only accepts SAM headers and alignment records.
+The name does not parallel @c fstream and @c stringstream; it does not mean
+"a stream backed by a sam", whatever that might be.  */
 class samstream_base : public std::ios {
 public:
   virtual ~samstream_base();
@@ -56,8 +56,8 @@ protected:
   // @cond infrastructure
   bool setstate_wouldthrow(iostate state);
 
-  samstream_base(std::streambuf* sbuf, bool owned, sambamio* io0)
-    : std::ios(sbuf), io(io0), filename_(), owned_rdbuf_(owned) { }
+  samstream_base(std::streambuf* sbuf, bool owned)
+    : std::ios(sbuf), io(), filename_(), owned_rdbuf_(owned) { }
 
   sambamio* io;
   // @endcond

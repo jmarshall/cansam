@@ -15,7 +15,8 @@ class sambamio {
 public:
   class eof_exception { };
 
-  static sambamio* new_in(std::streambuf*);
+  // FIXME isamstream or samstream_base?  is it an isamstream in the ctor already? yes, but are we happy with that?
+  static sambamio* new_in(isamstream&);
   static sambamio* new_out(std::ios::openmode);
 
   virtual ~sambamio() { }
@@ -34,7 +35,7 @@ protected:
   sambamio() : header_cindex(0) { }
 
   // FIXME blah blah
-  std::streamsize
+  static std::streamsize
   rdbuf_sgetn(isamstream& stream, char* buffer, std::streamsize length) {
     // FIXME can we get rid of this by always writing it out in the caller...?
     if (stream.eof())  return 0;

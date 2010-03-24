@@ -1,9 +1,9 @@
 #include "sam/stream.h"
 
 #include <fstream>
-#include <cctype>   // for tolower()
+#include <cctype>    // for tolower()
 
-#include <unistd.h> // FIXME for...? STDIN_FILENO etc presumably
+#include <unistd.h>  // for STDIN_FILENO etc
 
 // FIXME do we actually need all these, or could we just forward declare?
 #include "sam/alignment.h"
@@ -63,19 +63,21 @@ new_and_open(const std::string& filename, std::ios::openmode mode) {
     return sbuf;
   }
   else
-    return new rawfilebuf(filename.c_str(), mode);
+    return new rawfilebuf(filename.c_str(), mode & ~compressed);
+
+  // FIXME "& ~compressed" is because compressed == ate... hmmm... that's a hack
 }
 
 isamstream::isamstream(const std::string& filename, openmode mode)
-  : samstream_base(new_and_open(filename, mode | in), true, NULL) {
+  : samstream_base(new_and_open(filename, mode | in), true) {
   set_filename(filename);
   if (is_open())
-    io = sambamio::new_in(rdbuf());
+    io = sambamio::new_in(*this);
 }
 
 isamstream::isamstream(std::streambuf* sbuf)
-  : samstream_base(sbuf, false, sambamio::new_in(sbuf)) {
-  // FIXME read the heaaders, probably
+  : samstream_base(sbuf, false) {
+  io = sambamio::new_in(*this);
 }
 
 isamstream::~isamstream() {
@@ -155,7 +157,7 @@ isamstream& isamstream::operator>> (alignment& aln) {
 
 
 osamstream::osamstream(const std::string& filename, openmode mode)
-  : samstream_base(new_and_open(filename, mode | out), true, NULL) {
+  : samstream_base(new_and_open(filename, mode | out), true) {
   set_filename(filename);
   if (is_open())
     io = sambamio::new_out(mode);

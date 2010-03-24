@@ -1,4 +1,4 @@
-CXXFLAGS = -Wall -Wextra -O2 -g -I.
+CXXFLAGS = -Wall -Wextra -g -I.
 LDFLAGS  = -L.
 LDLIBS   = -lz
 
@@ -88,7 +88,7 @@ man3dir     = $(mandir)/man3
 INSTALL_DATA = install -p
 INSTALL_PROGRAM = install -p
 
-install: libcansam.a samcat samsort
+install: libcansam.a samcat samcount samsort
 	mkdir $(DESTDIR)$(includedir)
 	mkdir $(DESTDIR)$(includedir)/sam
 	for sam_hdr in sam/*.h; do \
@@ -98,6 +98,7 @@ install: libcansam.a samcat samsort
 	$(INSTALL_DATA) libcansam.a $(DESTDIR)$(libdir)/libcansam.a
 	mkdir $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) samcat $(DESTDIR)$(bindir)/samcat
+	$(INSTALL_PROGRAM) samcount $(DESTDIR)$(bindir)/samcount
 	$(INSTALL_PROGRAM) samsort $(DESTDIR)$(bindir)/samsort
 	# FIXME mkdir $(DESTDIR)$(prefix)/share
 	mkdir $(DESTDIR)$(mandir)
@@ -110,8 +111,10 @@ install: libcansam.a samcat samsort
 uninstall:
 	for sam_hdr in sam/*.h; do rm $(DESTDIR)$(includedir)/$$sam_hdr; done
 	-rmdir $(DESTDIR)$(includedir)/sam
-	rm $(DESTDIR)$(libdir)/libcansam.a
-	rm $(DESTDIR)$(bindir)/samcat $(DESTDIR)$(BINDIR)/samsort
+	-rm $(DESTDIR)$(libdir)/libcansam.a
+	-rm $(DESTDIR)$(bindir)/samcat
+	-rm $(DESTDIR)$(BINDIR)/samcount
+	-rm $(DESTDIR)$(BINDIR)/samsort
 	cd utilities; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
 	rm $(DESTDIR)$(man3dir)/cansam.3
 
