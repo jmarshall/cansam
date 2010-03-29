@@ -126,6 +126,18 @@ std::cout << "post: it: " << it << "\n";
 std::cout << "End of test_iterators()\n";
 }
 
+void test_auxen(test_harness& t) {
+  sam::alignment aln;
+  aln.push_back("XS", "carrot");
+  aln.push_back("XI", 37);
+
+  t.check(aln.aux<string>("XS"), "carrot", "aux<string>.1");
+  t.check(aln.aux<string>("XI"), "37", "aux<string>.2");
+
+  t.check(aln.aux<const char*>("XS"), "carrot", "aux<const char*>");
+  t.check(aln.aux<int>("XI"), 37, "aux<int>");
+}
+
 void test_alignments(test_harness& t) {
   sam::alignment aln;
 
@@ -140,4 +152,5 @@ void test_alignments(test_harness& t) {
 
   test_unpack_seq(t);
   test_iterators(t, a1);
+  test_auxen(t);
 }

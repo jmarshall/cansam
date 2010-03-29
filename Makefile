@@ -1,4 +1,4 @@
-CXXFLAGS = -Wall -Wextra -g -I.
+CXXFLAGS = -Wall -Wextra -O2 -I.
 LDFLAGS  = -L.
 LDLIBS   = -lz
 
@@ -55,7 +55,8 @@ utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
 		    sam/stream.h
 utilities/samcount.o: utilities/samcount.cpp $(sam_alignment_h) \
 		      $(sam_header_h) sam/stream.h
-utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h
+utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h \
+		     $(sam_alignment_h)
 examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
 
 

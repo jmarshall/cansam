@@ -586,7 +586,7 @@ char* format_sam(char* dest, const alignment::tagfield& aux) {
   case 'i':
     *dest++ = 'i';
     *dest++ = ':';
-    dest = format::decimal(dest, aux.value_int());
+    dest = format::decimal(dest, aux.value<int>());
     break;
 
   case 'C':
@@ -595,7 +595,7 @@ char* format_sam(char* dest, const alignment::tagfield& aux) {
     // FIXME These ones should be value_uint() or so (especially I!)
     *dest++ = 'i';
     *dest++ = ':';
-    dest = format::decimal(dest, aux.value_int());
+    dest = format::decimal(dest, aux.value<int>());
     break;
 
   case 'f':
@@ -864,42 +864,6 @@ int alignment::tagfield::size_sam(const char* text, int text_length) {
   }
 }
 
-string alignment::tagfield::value() const {
-  switch (type_) {
-  case 'A':
-    return string(1, data[0]);
-
-  case 'c':
-  case 's':
-  case 'i': {
-    char buffer[format::buffer<int>::size];
-    return string(buffer, format::decimal(buffer, value_int()) - buffer);
-    }
-
-  case 'C':
-  case 'S':
-  case 'I': {
-    // FIXME These ones should be value_uint() or so (especially I!)
-    char buffer[format::buffer<int>::size];
-    return string(buffer, format::decimal(buffer, value_int()) - buffer);
-    }
-
-  case 'f':
-  case 'd':
-    throw std::logic_error("Implement tagfield::value(f/d)"); // TODO
-
-  case 'Z':
-  case 'H':
-    return string(data);
-
-  default:
-    throw bad_format(make_string()
-	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
-	<< type_ << "')");
-  }
-}
-
-// FIXME Either this or the one above should go...
 string& alignment::tagfield::value(string& dest) const {
   switch (type_) {
   case 'A':
@@ -910,7 +874,7 @@ string& alignment::tagfield::value(string& dest) const {
   case 's':
   case 'i': {
     char buffer[format::buffer<int>::size];
-    dest.assign(buffer, format::decimal(buffer, value_int()) - buffer);
+    dest.assign(buffer, format::decimal(buffer, value<int>()) - buffer);
     break;
     }
 
@@ -919,7 +883,7 @@ string& alignment::tagfield::value(string& dest) const {
   case 'I': {
     // FIXME These ones should be value_uint() or so (especially I!)
     char buffer[format::buffer<int>::size];
-    dest.assign(buffer, format::decimal(buffer, value_int()) - buffer);
+    dest.assign(buffer, format::decimal(buffer, value<int>()) - buffer);
     break;
     }
 
@@ -941,7 +905,29 @@ string& alignment::tagfield::value(string& dest) const {
   return dest;
 }
 
-int alignment::tagfield::value_int() const {
+template<> const char* alignment::tagfield::value() const {
+  switch (type_) {
+  case 'Z':
+  case 'H':
+    return data;
+
+  case 'c':  case 'C':
+  case 's':  case 'S':
+  case 'i':  case 'I':
+  case 'f':  case 'd':
+  case 'A':
+    throw sam::exception(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' is of non-string type ('"
+	<< type_ << "')");
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+}
+
+template<> int alignment::tagfield::value() const {
   switch (type_) {
   case 'c':  { signed char   value = data[0]; return value; }
   case 'C':  { unsigned char value = data[0]; return value; }
@@ -967,6 +953,36 @@ int alignment::tagfield::value_int() const {
 	<< type_ << "')");
   }
 }
+
+template<> char alignment::tagfield::value() const {
+  switch (type_) {
+  case 'A':
+    return data[0];
+
+  case 'Z':
+    if (data[0] != '\0' && data[1] == '\0')
+      return data[0];
+    else
+      throw sam::exception(make_string()
+	  << "Aux field '" << tag_[0] << tag_[1]
+	  << "' has length other than 1");
+
+  case 'c':  case 'C':
+  case 's':  case 'S':
+  case 'i':  case 'I':
+  case 'f':  case 'd':
+  case 'H':
+    throw sam::exception(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' is of non-char type ('"
+	<< type_ << "')");
+
+  default:
+    throw bad_format(make_string()
+	<< "Aux field '" << tag_[0] << tag_[1] << "' has invalid type ('"
+	<< type_ << "')");
+  }
+}
+
 
 alignment::iterator alignment::find(const char* key) {
   for (iterator it = begin(); it != end(); ++it)

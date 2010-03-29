@@ -75,8 +75,14 @@ function can't be named @c errno().  */
 class system_error : public exception {
 public:
   /// Construct an exception with the given @a message and @a errno value
-  explicit system_error(const std::string& message, int errnum)
+  system_error(const std::string& message, int errnum)
     : exception(message), errnum_(errnum) { }
+
+  /// Construct an exception with the given @a message, @a filename,
+  /// and @a errno value
+  system_error(const std::string& message, const std::string& filename,
+	       int errnum)
+    : exception(message), errnum_(errnum) { set_filename(filename); }
 
   virtual ~system_error() throw() { }
 

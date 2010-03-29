@@ -225,8 +225,6 @@ public:
   /// Quality string (BLAH raw phred scores; not NUL-terminated)
   const char* qual_raw_data() const { return p->qual_data(); }
 
-  const char* aux_c_str(const char* tag) const;
-
   std::string& aux(std::string& dest, const char* tag) const
     { return find_or_throw(tag)->value(dest); }
 
@@ -274,17 +272,16 @@ public:
     that only appear in a BAM file.  */
     char type() const { return type_; }
 
+    /// Field value
+    template <typename ValueType>
+    ValueType value() const;
+
+#if 0
     /// Field value, as it would appear in a SAM file
     /** @return The text string representation of the field's value (rather
     than any binary representation that might appear in a BAM file).  */
-    std::string value() const;
-
-    /// Field value as an integer
-    /// (or throws if this field's type is non-integral)
-    int value_int() const;
-
-    // TODO  Implement value_coord(), value_float(), value_double()
-    // TODO  Actually, set up some templatey stuffs
+    std::string value_str() const;
+#endif
 
     /// Assigns SAM-style field value to @a dest (and returns @a dest)
     std::string& value(std::string& dest) const;
@@ -654,6 +651,13 @@ inline bool operator== (alignment::iterator it1, alignment::const_iterator it2)
   { return alignment::const_iterator(it1) == it2; }
 inline bool operator!= (alignment::iterator it1, alignment::const_iterator it2)
   { return alignment::const_iterator(it1) != it2; }
+
+template<> inline std::string alignment::tagfield::value() const
+  { std::string dest; return value(dest); }
+
+template<> const char* alignment::tagfield::value() const;
+template<> int alignment::tagfield::value() const;
+template<> char alignment::tagfield::value() const;
 // @endcond
 
 /// Compare alignments by genomic location

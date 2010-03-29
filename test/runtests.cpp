@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <cstring>
 
 #include "sam/exception.h"
 
@@ -17,6 +18,17 @@ void test_harness::check(bool expr, const string& title) {
 
 void test_harness::check(const string& a, const string& b, const string& title){
   if (a == b) {
+    npass++;
+  }
+  else {
+    std::cerr << "FAILED\t" << title << " (\"" << a << "\" != \"" << b
+	      << "\")\n";
+    nfail++;
+  }
+}
+
+void test_harness::check(const char* a, const char* b, const string& title) {
+  if (strcmp(a, b) == 0) {
     npass++;
   }
   else {

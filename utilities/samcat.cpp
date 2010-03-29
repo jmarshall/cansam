@@ -95,21 +95,30 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
 
-  osamstream out(output_fname, std::ios::out | output_mode);
-  if (!out.is_open()) throw sam::system_error("buh!", errno);
+  try {
+    osamstream out(output_fname, std::ios::out | output_mode);
+    if (!out.is_open())
+      throw sam::system_error("can't write to ", output_fname, errno);
 
-  if (optind == argc) {
-    isamstream in("-");
-    cat(in, out, suppress_headers);
-  }
-  else
-    for (int i = optind; i < argc; i++) {
-      isamstream in(argv[i]);
-      if (in.is_open())
-	cat(in, out, suppress_headers);
-      else
-	std::cerr << "error opening " << argv[i] << " or something\n";
+    if (optind == argc) {
+      isamstream in("-");
+      cat(in, out, suppress_headers);
     }
+    else
+      for (int i = optind; i < argc; i++) {
+	isamstream in(argv[i]);
+	if (in.is_open())
+	  cat(in, out, suppress_headers);
+	else {
+	  sam::system_error error("can't open ", argv[i], errno);
+	  std::cerr << "samcat: " << error.what() << '\n';
+	}
+      }
+  }
+  catch (const sam::exception& e) {
+    std::cerr << "samcat: " << e.what() << '\n';
+    return EXIT_FAILURE;
+  }
 
   return EXIT_SUCCESS;
 }

@@ -10,6 +10,7 @@ public:
 
   void check(bool expr, const string& title);
   void check(const string& a, const string& b, const string& title);
+  void check(const char* a, const char* b, const string& title);
   void check(size_t a, size_t b, const string& title);
 
   int npass, nfail;
