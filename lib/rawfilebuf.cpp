@@ -29,6 +29,32 @@ rawfilebuf::open(const char* fname, std::ios_base::openmode mode, int perm) {
   //
   // (Actually will be std, as will in|app, app, as per DR 596.)
 
+  /* FIXME Alternatively, like 27.8.1.3/27.9.1.4 [lib.filebuf.members] with
+  first-class app:
+
+  out           w     O_WRONLY|O_CREAT|O_TRUNC
+  out|app       a     O_WRONLY|O_CREAT|        O_APPEND
+      app       a     O_WRONLY|O_CREAT|        O_APPEND
+  out|trunc     w     O_WRONLY|O_CREAT|O_TRUNC
+  in            r     O_RDONLY
+  in|out        r+    O_RDWR
+  in|out|trunc  w+    O_RDWR  |O_CREAT|O_TRUNC
+  in|out|app    a+    O_RDWR  |O_CREAT|        O_APPEND
+  in|    app    a+    O_RDWR  |O_CREAT|        O_APPEND
+
+  * equivalently:
+
+   out |[trunc]    w     O_WRONLY|O_CREAT|O_TRUNC
+  [out]|app        a     O_WRONLY|O_CREAT|        O_APPEND
+
+  in               r     O_RDONLY
+
+  in| out          r+    O_RDWR
+  in| out |trunc   w+    O_RDWR  |O_CREAT|O_TRUNC
+  in|[out]|app     a+    O_RDWR  |O_CREAT|        O_APPEND
+
+  */
+
   int flags = 0;
   if (mode & ios::in) {
     flags = (mode & ios::out)? O_RDWR : O_RDONLY;

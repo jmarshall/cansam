@@ -1,6 +1,6 @@
 #include "sam/exception.h"
 
-#include <cstring>
+#include <cstring>  // for strerror()
 
 namespace sam {
 
