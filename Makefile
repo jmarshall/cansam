@@ -9,7 +9,7 @@ lib: libcansam.a
 
 LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
 	  lib/samstream.o lib/ostream.o lib/rawfilebuf.o \
-	  lib/exception.o lib/utilities.o
+	  lib/exception.o lib/system.o lib/utilities.o
 
 libcansam.a: $(LIBOBJS)
 	$(AR) cr $@ $(LIBOBJS)
@@ -33,6 +33,7 @@ lib/sambamio.o: lib/sambamio.cpp $(lib_sambamio_h) $(sam_alignment_h) \
 		sam/exception.h sam/stream.h $(lib_utilities_h) lib/wire.h
 lib/samstream.o: lib/samstream.cpp sam/stream.h $(sam_alignment_h) \
 		 sam/exception.h sam/streambuf.h $(lib_sambamio_h)
+lib/system.o: lib/system.cpp
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
 
 

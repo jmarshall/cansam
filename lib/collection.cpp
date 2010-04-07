@@ -16,8 +16,7 @@ collection::collection() {
 }
 
 collection::~collection() {
-  // delete through the pointers
-
+  clear();
   free_cindex();
 }
 
@@ -30,10 +29,22 @@ void collection::allocate_cindex() {
   collections.push_back(this);
 }
 
+template <typename InputIterator>
+void delete_each(InputIterator first, InputIterator last) {
+  for (InputIterator it = first; it != last; ++it)
+    delete *it;
+}
+
 void collection::clear() {
-  headers.clear();
-  refseqs.clear();
   refnames.clear();
+
+  if (! refseqs_in_headers)
+    delete_each(refseqs.begin(), refseqs.end());
+  refseqs.clear();
+
+  delete_each(headers.begin(), headers.end());
+  headers.clear();
+
   refseqs_in_headers = false;
 }
 

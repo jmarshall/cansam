@@ -717,13 +717,12 @@ void bamio::put(osamstream& stream, const collection& coln) {
   if (buffer.size() >= BGZF::uncompressed_max_size)
     flush_buffer(stream);
 
-  // FIXME  Better access to coln's refs guts
-  convert::set_bam_int32(buffer.end, coln.refseqs.size());
+  convert::set_bam_int32(buffer.end, coln.ref_size());
   buffer.end += sizeof(int32_t);
 
-  for (std::vector<refsequence*>::const_iterator it = coln.refseqs.begin();
-       it != coln.refseqs.end(); ++it) {
-    const string& name = (*it)->name();
+  for (collection::const_ref_iterator it = coln.ref_begin();
+       it != coln.ref_end(); ++it) {
+    const string& name = it->name();
     int namelen = name.length();
 
     if (buffer.available() >= sizeof(int32_t) + namelen+1 + sizeof(int32_t)) {
@@ -732,7 +731,7 @@ void bamio::put(osamstream& stream, const collection& coln) {
       memcpy(buffer.end, name.data(), namelen);
       buffer.end += namelen;
       *buffer.end++ = '\0';
-      convert::set_bam_int32(buffer.end, (*it)->length());
+      convert::set_bam_int32(buffer.end, it->length());
       buffer.end += sizeof(int32_t);
     }
     else {
@@ -838,7 +837,7 @@ bool samio::get(isamstream& stream, collection& headers) {
   }
 
   // Further refsequences can be added if there were no @SQ headers.
-  reflist_open = headers.refseqs.empty();
+  reflist_open = headers.ref_empty();
 
   return ! (headers.empty() && peek(buffer, stream) == EOF);
 }

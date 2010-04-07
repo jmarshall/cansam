@@ -35,7 +35,7 @@ void callback(std::ios_base::event event, std::ios_base& stream, int index) {
   }
 }
 
-// Returns a buffer of the specified capacity local to the stream.
+// Returns a buffer of at least the specified capacity local to the stream.
 char* get_buffer(std::ios_base& stream, int capacity) {
   static const int index = std::ios_base::xalloc();
 
@@ -62,13 +62,9 @@ char* get_buffer(std::ios_base& stream, int capacity) {
 namespace sam {
 
 std::ostream& operator<< (std::ostream& out, const header& header) {
-#if 1
   char* buffer = get_buffer(out, header.sam_length() + 1);
   *format_sam(buffer, header) = '\0';
   return out << buffer;
-#else
-  return out << header.str();
-#endif
 }
 
 std::ostream& operator<< (std::ostream& out, const collection& headers) {
@@ -79,9 +75,9 @@ std::ostream& operator<< (std::ostream& out, const collection& headers) {
   if (out.flags() & std::ios::showpoint) {
     int i = 0;
     out << "Reflist:";
-    for (std::vector<refsequence*>::const_iterator it = headers.refseqs.begin();
-	 it != headers.refseqs.end(); ++it, ++i)
-      out << " " << i << "->" << (*it)->name();
+    for (collection::const_ref_iterator it = headers.ref_begin();
+	 it != headers.ref_end(); ++it, ++i)
+      out << " " << i << "->" << it->name();
     out << "\nRefmap:";
     for (std::map<std::string, refsequence*>::const_iterator
 	 it = headers.refnames.begin(); it != headers.refnames.end(); ++it)

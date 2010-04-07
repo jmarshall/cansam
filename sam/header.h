@@ -340,10 +340,6 @@ private:
 /** @class sam::collection sam/header.h
     @brief Header information for a collection of SAM/BAM records */
 class collection {
-private:
-  // TODO  This might be becoming boost::ptr_vector<header>
-  typedef std::vector<header*> header_array;
-
 public:
   /// Construct an empty collection
   collection();
@@ -358,7 +354,13 @@ public:
   collection& operator= (const collection& collection);
 
   /** @name Container functionality
-  Collections provide limited container-style access to their headers.  */
+  Collections provide limited container-style access to their headers and
+  reference sequences.
+
+  The various @c iterator classes are <b>random access iterators</b> providing
+  all the usual iterator functionality.  Dereferencing an @c iterator or
+  @c const_iterator produces a sam::header, while dereferencing a
+  @c ref_iterator or @c const_ref_iterator produces a sam::refsequence.  */
   //@{
 
   // @cond infrastructure
@@ -438,13 +440,9 @@ public:
 
   void push_back(const std::string& header_line);
 
+  size_t size() const { return headers.size(); }
   bool empty() const { return headers.empty(); }
   void clear();
-  //@}
-
-  refsequence& findseq(const std::string& name);
-  refsequence& findseq(const char* name);
-  refsequence& findseq(int index);
 
   ref_iterator ref_begin() { return ref_iterator(refseqs.begin()); }
   const_ref_iterator ref_begin() const
@@ -454,6 +452,14 @@ public:
   const_ref_iterator ref_end() const
     { return const_ref_iterator(refseqs.end()); }
 
+  size_t ref_size() const { return refseqs.size(); }
+  bool ref_empty() const { return refseqs.empty(); }
+  //@}
+
+  refsequence& findseq(const std::string& name);
+  refsequence& findseq(const char* name);
+  refsequence& findseq(int index);
+
   // FIXME prob not public
   static collection& find(unsigned cindex) { return *collections[cindex]; }
 
@@ -461,7 +467,9 @@ private:
   friend class sambamio;
   friend class bamio;
   friend class samio;
+  // @cond private
   friend std::ostream& operator<< (std::ostream&, const collection&);
+  // @endcond
 
   void allocate_cindex();
   void free_cindex() { collections[cindex] = NULL; cindex = 0; }
