@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   else if (argc == 2) {
     string arg = argv[1];
     if (arg == "--version") {
-      std::cout << "samcat 0.2\n";
+      std::cout << "samcat 0.3\n";
       return EXIT_SUCCESS;
     }
     else if (arg == "--help") {

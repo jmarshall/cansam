@@ -1,4 +1,4 @@
-CXXFLAGS = -Wall -Wextra -O2 -I.
+CXXFLAGS = -Wall -Wextra -g -I.
 LDFLAGS  = -L.
 LDLIBS   = -lz
 

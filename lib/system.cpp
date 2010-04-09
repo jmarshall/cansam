@@ -20,16 +20,18 @@ unsigned long get_vss() {
 
 #elif defined __linux__
 
+#include <fcntl.h>
+
 #include "sam/streambuf.h"
 
 namespace sam {
 
 unsigned long get_vss() {
-  rawfilebuf statfile("/proc/self/stat", O_RDONLY);
-  if (! statfile.is_open())
+  rawfilebuf statfile;
+  if (! statfile.open("/proc/self/stat", O_RDONLY))
     return 0;
 
-  return info.virtual_size;
+  return 0;  // FIXME
 }
 
 } // namespace sam

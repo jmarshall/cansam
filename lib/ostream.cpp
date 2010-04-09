@@ -108,17 +108,9 @@ std::ostream& operator<< (std::ostream& out, const alignment& aln) {
 }
 
 std::ostream& operator<< (std::ostream& out, const alignment::tagfield& aux) {
-#if 1
   char* buffer = get_buffer(out, aux.sam_length() + 1);
   *format_sam(buffer, aux) = '\0';
   return out << buffer;
-#else
-  static string bam_only = "cCsSI";
-
-  char type = aux.type();
-  if (bam_only.find(type) != string::npos)  type = 'i';
-  return out << aux.tag() << ':' << type << ':' << aux.value();
-#endif
 }
 
 std::ostream& operator<< (std::ostream& out, alignment::const_iterator it) {

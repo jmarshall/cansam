@@ -32,14 +32,20 @@ void collection::allocate_cindex() {
 template <typename InputIterator>
 void delete_each(InputIterator first, InputIterator last) {
   for (InputIterator it = first; it != last; ++it)
+    { //std::clog << "nuking " << *it << " -> {" << **it << "}\n" << std::flush;
+    // FIXME nuke these 3 lines of code
     delete *it;
+    }
 }
 
 void collection::clear() {
   refnames.clear();
 
+// FIXME Apparently refseqs_in_headers is not properly set up yet
+#if 0
   if (! refseqs_in_headers)
     delete_each(refseqs.begin(), refseqs.end());
+#endif
   refseqs.clear();
 
   delete_each(headers.begin(), headers.end());
