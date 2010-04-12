@@ -406,6 +406,7 @@ bamio::deflate_onto_cdata(osamstream& stream, char* data, size_t length) {
     if (cdata.available() < 10 * 1024) {
       // Ensure that there is space available for the header
       // and a reasonable stab at compression.
+      // FIXME dammit and cdata.size() > 0!!!!
       while (cdata.available() < 10 * 1024)
 	cdata.begin += stream.rdbuf()->sputn(cdata.begin, cdata.size());
       cdata.flush();
