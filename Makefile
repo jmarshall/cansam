@@ -1,5 +1,5 @@
 CXXFLAGS = -Wall -Wextra -g -O2 -I.
-LDFLAGS  = -L.
+LDFLAGS  =
 LDLIBS   = -lz
 
 OUTPUTS = libcansam.a samcat samcount samgroupbyname samsort test/runtests
@@ -42,19 +42,20 @@ MISC_OBJS = utilities/samcat.o utilities/samcount.o \
 	    examples/simplecat.o
 
 samcat: utilities/samcat.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o -lcansam $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o libcansam.a $(LDLIBS)
 
 samcount: utilities/samcount.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o -lcansam $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o libcansam.a $(LDLIBS)
 
 samgroupbyname: utilities/samgroupbyname.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samgroupbyname.o -lcansam $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ utilities/samgroupbyname.o libcansam.a $(LDLIBS)
 
 samsort: utilities/samsort.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o -lcansam $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o libcansam.a $(LDLIBS)
 
 simplecat: examples/simplecat.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ examples/simplecat.o -lcansam $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ examples/simplecat.o libcansam.a $(LDLIBS)
+
 
 utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
 		    sam/stream.h
@@ -74,7 +75,7 @@ TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
 	    test/wire.o
 
 test/runtests: $(TEST_OBJS) libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) -lcansam $(LDLIBS)
+	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) libcansam.a $(LDLIBS)
 
 test/runtests.o: test/runtests.cpp test/test.h sam/exception.h
 test/alignment.o: test/alignment.cpp test/test.h $(sam_alignment_h)
