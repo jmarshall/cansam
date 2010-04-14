@@ -1,4 +1,8 @@
-CXXFLAGS = -Wall -Wextra -g -O2 -I.
+srcdir = .
+VPATH  = $(srcdir)
+
+CXX      = g++
+CXXFLAGS = -Wall -Wextra -g -O2 -I$(srcdir)
 LDFLAGS  =
 LDLIBS   = -lz
 
