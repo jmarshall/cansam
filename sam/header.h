@@ -331,6 +331,7 @@ protected:
   virtual void sync();
 
 private:
+  friend class bamio;
   static std::string name_length_string(const std::string&, coord_t);
 
   std::string name_;

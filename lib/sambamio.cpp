@@ -2,8 +2,8 @@
 
 #include <streambuf>
 #include <string>
+#include <utility>
 #include <vector>
-#include <stdexcept>
 #include <cstddef>
 #include <cstring>
 
@@ -13,6 +13,7 @@
 
 #include "sam/alignment.h"
 #include "sam/exception.h"
+#include "sam/header.h"
 #include "sam/stream.h"
 #include "lib/utilities.h"
 #include "lib/wire.h"
@@ -286,6 +287,7 @@ packed cigar and seq fields are first and thus naturally aligned.  */
 class bamio : public sambamio {
 public:
   bamio(const char* text, std::streamsize textsize);
+  bamio(bool compression);
   virtual ~bamio();
 
   virtual bool get(isamstream&, collection&);
@@ -336,6 +338,12 @@ bamio::bamio(const char* text, std::streamsize textsize)
     zinflate_active(false), zdeflate_active(false) {
   memcpy(cdata.end, text, textsize);
   cdata.end += textsize;
+}
+
+bamio::bamio(bool compression)
+  : buffer(65536), cdata(65536),
+    compression_level(compression? Z_DEFAULT_COMPRESSION : Z_NO_COMPRESSION),
+    zinflate_active(false), zdeflate_active(false) {
 }
 
 string bamio::zlib_message(const char* function, const z_stream& z) {
@@ -404,10 +412,9 @@ bamio::deflate_onto_cdata(osamstream& stream, char* data, size_t length) {
     // into the available space after  cdata.end.
 
     if (cdata.available() < 10 * 1024) {
-      // Ensure that there is space available for the header
+      // Ensure that there is space available for the block header
       // and a reasonable stab at compression.
-      // FIXME dammit and cdata.size() > 0!!!!
-      while (cdata.available() < 10 * 1024)
+      while (cdata.size() > 0)
 	cdata.begin += stream.rdbuf()->sputn(cdata.begin, cdata.size());
       cdata.flush();
     }
@@ -616,17 +623,11 @@ bool bamio::get(isamstream& stream, collection& headers) {
 		      add_header | add_refname);
 //std::clog << *(headers.headers.back()) << '\n';
   }
+//std::clog << "bamio::get: headers: " << headers.headers.size() << "; refseqs: " << headers.refseqs.size() << "; refnames: " << headers.refnames.size() << "\n";
+  // There are two cases, depending on whether there are any @SQ text headers.
+  headers.refseqs_in_headers = ! headers.refnames.empty();
 
-  if (headers.refnames.empty()) {
-#if 0
-    string name;
-    coord_t length;
-    int ref_count = read_int32(stream);
-#endif
-
-    throw std::logic_error("No @SQ headers case not implemented");
-  }
-  else {
+  if (headers.refseqs_in_headers) {
     string name;
     coord_t length;
     int ref_count = read_int32(stream);
@@ -636,8 +637,24 @@ bool bamio::get(isamstream& stream, collection& headers) {
 //std::clog << "@SQ\tSN:" << name << "\tLN:" << length << '\n';
       // FIXME more checking...
       refsequence* rhdr = headers.refnames[name];
-      //rhdr->index_ = index;
+      rhdr->index_ = index;
       headers.refseqs.push_back(rhdr);
+    }
+  }
+  else {
+    string name;
+    coord_t length;
+    int ref_count = read_int32(stream);
+    for (int index = 0; index < ref_count; index++) {
+      read_refinfo(stream, name, length);
+      refsequence* refp = new refsequence(name, length, index);
+      if (! headers.refnames.insert(make_pair(name, refp)).second) {
+	delete refp;
+	throw sam::exception(make_string()
+	    << "Reference \"" << name << "\" duplicated in BAM reference list");
+      }
+
+      headers.refseqs.push_back(refp);
     }
   }
 
@@ -837,6 +854,8 @@ bool samio::get(isamstream& stream, collection& headers) {
 		      add_header | add_refseq | add_refname);
   }
 
+  headers.refseqs_in_headers = ! headers.ref_empty();
+
   // Further refsequences can be added if there were no @SQ headers.
   reflist_open = headers.ref_empty();
 
@@ -935,7 +954,7 @@ sambamio* sambamio::new_in(isamstream& stream) {
 // Construct a new concrete sambamio according to MODE.
 sambamio* sambamio::new_out(std::ios::openmode mode) {
   if (mode & std::ios::binary)
-    return new bamio(NULL, 0 /*, mode & compressed*/);
+    return new bamio(mode & compressed);
   else if (mode & compressed)
     return new gzsamio(NULL, 0);
   else

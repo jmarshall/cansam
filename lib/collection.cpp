@@ -41,11 +41,8 @@ void delete_each(InputIterator first, InputIterator last) {
 void collection::clear() {
   refnames.clear();
 
-// FIXME Apparently refseqs_in_headers is not properly set up yet
-#if 0
   if (! refseqs_in_headers)
     delete_each(refseqs.begin(), refseqs.end());
-#endif
   refseqs.clear();
 
   delete_each(headers.begin(), headers.end());

@@ -1,8 +1,8 @@
-CXXFLAGS = -Wall -Wextra -g -I.
+CXXFLAGS = -Wall -Wextra -g -O2 -I.
 LDFLAGS  = -L.
 LDLIBS   = -lz
 
-OUTPUTS = libcansam.a samcat samcount samsort test/runtests
+OUTPUTS = libcansam.a samcat samcount samgroupbyname samsort test/runtests
 all: $(OUTPUTS)
 
 lib: libcansam.a
@@ -37,7 +37,8 @@ lib/system.o: lib/system.cpp
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
 
 
-MISC_OBJS = utilities/samcat.o utilities/samcount.o utilities/samsort.o \
+MISC_OBJS = utilities/samcat.o utilities/samcount.o \
+	    utilities/samgroupbyname.o utilities/samsort.o \
 	    examples/simplecat.o
 
 samcat: utilities/samcat.o libcansam.a
@@ -45,6 +46,9 @@ samcat: utilities/samcat.o libcansam.a
 
 samcount: utilities/samcount.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o -lcansam $(LDLIBS)
+
+samgroupbyname: utilities/samgroupbyname.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ utilities/samgroupbyname.o -lcansam $(LDLIBS)
 
 samsort: utilities/samsort.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o -lcansam $(LDLIBS)
@@ -55,6 +59,8 @@ simplecat: examples/simplecat.o libcansam.a
 utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
 		    sam/stream.h
 utilities/samcount.o: utilities/samcount.cpp $(sam_alignment_h) \
+		      $(sam_header_h) sam/stream.h
+utilities/samgroupbyname.o: utilities/samgroupbyname.cpp $(sam_alignment_h) \
 		      $(sam_header_h) sam/stream.h
 utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h \
 		     $(sam_alignment_h)
@@ -90,7 +96,7 @@ man3dir     = $(mandir)/man3
 INSTALL_DATA = install -p
 INSTALL_PROGRAM = install -p
 
-install: libcansam.a samcat samcount samsort
+install: libcansam.a samcat samcount samgroupbyname samsort
 	mkdir $(DESTDIR)$(includedir)
 	mkdir $(DESTDIR)$(includedir)/sam
 	for sam_hdr in sam/*.h; do \
@@ -101,6 +107,7 @@ install: libcansam.a samcat samcount samsort
 	mkdir $(DESTDIR)$(bindir)
 	$(INSTALL_PROGRAM) samcat $(DESTDIR)$(bindir)/samcat
 	$(INSTALL_PROGRAM) samcount $(DESTDIR)$(bindir)/samcount
+	$(INSTALL_PROGRAM) samgroupbyname $(DESTDIR)$(bindir)/samgroupbyname
 	$(INSTALL_PROGRAM) samsort $(DESTDIR)$(bindir)/samsort
 	# FIXME mkdir $(DESTDIR)$(prefix)/share
 	mkdir $(DESTDIR)$(mandir)
@@ -116,6 +123,7 @@ uninstall:
 	-rm $(DESTDIR)$(libdir)/libcansam.a
 	-rm $(DESTDIR)$(bindir)/samcat
 	-rm $(DESTDIR)$(BINDIR)/samcount
+	-rm $(DESTDIR)$(bindir)/samgroupbyname
 	-rm $(DESTDIR)$(BINDIR)/samsort
 	cd utilities; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
 	rm $(DESTDIR)$(man3dir)/cansam.3
