@@ -73,7 +73,7 @@ examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
 
 
 test: test/runtests
-	test/runtests
+	test/runtests test $(srcdir)/test
 
 TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
 	    test/wire.o

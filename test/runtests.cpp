@@ -53,8 +53,15 @@ extern void test_headers(test_harness&);
 extern void test_sam_io(test_harness&);
 extern void test_wire(test_harness&);
 
-int main() {
+string test_objdir_prefix;
+string test_srcdir_prefix;
+
+int main(int argc, char** argv) {
   test_harness t;
+
+  string slash = "/";
+  test_objdir_prefix = (argc >= 2)? argv[1] + slash : "";
+  test_srcdir_prefix = (argc >= 3)? argv[2] + slash : test_objdir_prefix;
 
   try {
     test_headers(t);

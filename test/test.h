@@ -16,4 +16,6 @@ public:
   int npass, nfail;
 };
 
+extern string test_objdir_prefix, test_srcdir_prefix;
+
 #endif
