@@ -1,6 +1,7 @@
 #include "sam/header.h"
 
 #include <string>
+#include <cstring>
 
 #include "sam/exception.h"
 #include "lib/utilities.h"
