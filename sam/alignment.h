@@ -318,7 +318,6 @@ public:
   };
 
   // @cond infrastructure
-  typedef std::char_traits<char> traits_type;
   class const_iterator;
 
   class iterator : public std::iterator<std::forward_iterator_tag, tagfield> {
@@ -397,7 +396,7 @@ public:
 
   void push_back_sam(const char* aux_text, int aux_text_length);
   void push_back_sam(const char* aux_text)
-    { push_back_sam(aux_text, traits_type::length(aux_text)); }
+    { push_back_sam(aux_text, strlen(aux_text)); }
   void push_back_sam(const std::string& aux_text)
     { push_back_sam(aux_text.c_str(), aux_text.length()); }
 
@@ -460,8 +459,7 @@ public:
 
   /** @name Additional field modifiers  */
   //@{
-  void set_qname(const char* qname)
-    { set_qname(qname, traits_type::length(qname)); }
+  void set_qname(const char* qname) { set_qname(qname, strlen(qname)); }
 
   void set_cigar(const char* cigar);
 
@@ -620,8 +618,7 @@ private:
 
   iterator replace_(iterator start, iterator limit,
 		    const char* tag, const char* value)
-    { return replace_string(start, limit, tag, 'Z',
-			    value, traits_type::length(value)); }
+    { return replace_string(start, limit, tag, 'Z', value, strlen(value)); }
 
   iterator replace_(iterator start, iterator limit, const char* tag,char value);
   iterator replace_(iterator start, iterator limit, const char* tag, int value);
