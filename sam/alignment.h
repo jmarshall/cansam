@@ -10,6 +10,7 @@
 #include <iterator>
 //#include <algorithm>  // FIXME NUKE-ME, but for specialising std::swap IIRC
 #include <iosfwd>
+#include <cstring>
 
 #include <stdint.h>
 
@@ -669,6 +670,12 @@ bool operator< (const alignment& a, const alignment& b);
 /// Compare alignments by genomic location, similarly to @c operator< above
 /** @relatesalso alignment */
 inline bool operator> (const alignment& a, const alignment& b) { return b < a; }
+
+/// Compare alignments by query name
+/** @return Less than, equal to, or greater than 0, similarly to @c strcmp().
+@relatesalso alignment */
+inline int cmp_by_qname(const alignment& a, const alignment& b)
+  { return strcmp(a.qname_c_str(), b.qname_c_str()); }
 
 /// Swap two alignments
 /** @relatesalso alignment */
