@@ -31,5 +31,9 @@
   - Doxygen HTML filename overachieving: build the filename myself by hacking
     on util.cpp's convertNameToFile() and/or filename.cpp's generateDiskNames()
 
+* Utilities:
+  - samgroupbyname: add -m or so that populates R2/Q2/etc (samtools-help,
+    "Fill R2 and Q2 tags")
+
 * Things that samtools does that we don't:
   - Pileups
