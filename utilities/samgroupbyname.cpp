@@ -93,8 +93,8 @@ int main(int argc, char** argv) {
 
   string input_fname = (optind < argc)? argv[optind++] : "-";
   if (optind < argc) {
-    // This utility accepts at most one input file.
-    std::cerr << usage;
+    std::cerr << "samgroupbyname: "
+		 "only one input file can be processed at a time" << std::endl;
     return EXIT_FAILURE;
   }
 
