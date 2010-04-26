@@ -1,0 +1,71 @@
+.TH samgroupbyname 1 "" "Cancer Genome Project" "Cancer Genome Project"
+.SH NAME
+samgroupbyname \- order a SAM/BAM file so that read pairs are together
+.SH SYNOPSIS
+.BR samgroupbyname " [" -bpv "] [" -o
+.IR FILE "] [" FILE "]
+.SH DESCRIPTION
+The
+.B samgroupbyname
+utility reads one file in SAM or BAM format, and writes it to standard output
+(or a specified file) with its alignment records reordered so that records
+with the same query name (i.e., paired reads) are adjacent.
+If
+.I FILE
+is a single hyphen ("-") or is absent,
+.B samgroupbyname
+reads from standard input.
+.P
+If an
+.B @HD
+header is present, any
+.B SO
+tags are removed from it (as the output file is almost certainly no longer
+fully sorted) and a
+.B GO:query
+field is added.
+.P
+It is assumed that, for each query name appearing in the input file, there are
+no more than two alignment records with that query name.
+Thus
+.B samgroupbyname
+can be used to group paired mates when each read in the pair appears only once.
+If individual reads appear in more than one alignment record, for example,
+if the file contains non-primary or split alignments, then these records and
+their mate records will not be correctly grouped together.
+.P
+The following options are accepted:
+.TP 5n
+.B -b
+Write output in BAM format.
+By default, output is written as text in SAM format.
+.TP
+.BI "-o " FILE
+Write to
+.I FILE
+rather than standard output.
+.TP
+.B -p
+Emit paired reads only; any leftover singleton reads will be silently discarded.
+By default, singleton reads are emitted en mass at the end of the output file.
+.TP
+.B -v
+Display file information and statistics, on standard error.
+.SH BUGS
+Alignment records are held in memory until their mate is encountered.
+If large numbers of reads and their mates are separated by vast numbers of
+records in the input file,
+.B samgroupbyname
+will require vast amounts of memory.
+Ideally it would use temporary files when necessary and a sensible amount
+of memory, but this is not yet implemented.
+.P
+Fortunately this effect is usually sufficiently reduced for the common case
+of input files sorted by location using the half-unmapped location trick
+(i.e., giving unmapped reads their mapped mate's location).
+.P
+Occurrences of more than two alignment records with the same query name do not
+produce a diagnostic.
+.SH SEE ALSO
+.IR samcat (1),
+.IR samsort (1)
