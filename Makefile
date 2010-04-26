@@ -119,6 +119,8 @@ install: libcansam.a samcat samcount samgroupbyname samsort
 	mkdir $(DESTDIR)$(mandir)
 	mkdir $(DESTDIR)$(man1dir)
 	$(INSTALL_DATA) utilities/samcat.1 $(DESTDIR)$(man1dir)/samcat.1
+	$(INSTALL_DATA) utilities/samgroupbyname.1 \
+	                $(DESTDIR)$(man1dir)/samgroupbyname.1
 	$(INSTALL_DATA) utilities/samsort.1 $(DESTDIR)$(man1dir)/samsort.1
 	mkdir $(DESTDIR)$(man3dir)
 	$(INSTALL_DATA) utilities/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
