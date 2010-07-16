@@ -1,0 +1,9 @@
+*.[oa]
+
+doc/html
+
+samcat
+samcount
+samgroupbyname
+samsort
+test/runtests
