@@ -275,7 +275,17 @@ void alignment::set_flags(int flags) {
   p->c.flags = flags;
 }
 
-// void alignment::set_rindex(int rindex)
+void alignment::set_rindex(int rindex) {
+  int ref_size = collection::find(p->h.cindex).ref_size();
+  if (rindex < -1 || rindex >= ref_size)
+    throw std::out_of_range(make_string()
+	<< "New rindex value (" << rindex
+	<< ") is outwith range [-1," << ref_size << ")");
+
+  if (p == &empty_block)  resize_unshare_copy(p->size());
+  p->c.rindex = rindex;
+}
+
 // void alignment::set_rname(const std::string& rname)
 
 void alignment::set_pos(coord_t pos) {
@@ -306,7 +316,17 @@ void alignment::set_cigar(const char* cigar) {
     pack_cigar(cbuffer, cigar);
 }
 
-// void alignment::set_mate_rindex(int mate_rindex)
+void alignment::set_mate_rindex(int rindex) {
+  int ref_size = collection::find(p->h.cindex).ref_size();
+  if (rindex < -1 || rindex >= ref_size)
+    throw std::out_of_range(make_string()
+	<< "New mate_rindex value (" << rindex
+	<< ") is outwith range [-1," << ref_size << ")");
+
+  if (p == &empty_block)  resize_unshare_copy(p->size());
+  p->c.mate_rindex = rindex;
+}
+
 // void alignment::set_mate_rname(const std::string& mate_rname)
 
 void alignment::set_mate_pos(coord_t pos) {
