@@ -199,6 +199,9 @@ public:
   /// Query name
   const char* qname_c_str() const { return p->name_data(); }
 
+  /// Query name length (not including the NUL terminator)
+  int qname_length() const { return p->c.name_length - 1; }
+
   /// Assigns query name to @a dest (and returns @a dest)
   std::string& qname(std::string& dest) const
     { return dest.assign(p->name_data(), p->c.name_length - 1); }
