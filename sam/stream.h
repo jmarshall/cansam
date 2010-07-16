@@ -119,6 +119,10 @@ public:
 
   /// Write the alignment
   osamstream& operator<< (const alignment& aln);
+
+  /// Apply @a manipulator to this stream
+  osamstream& operator<< (ios_base& (*manipulator)(ios_base&))
+    { manipulator(*this); return *this; }
 };
 
 /** @class sam::samstream sam/stream.h
