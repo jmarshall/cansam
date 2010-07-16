@@ -59,16 +59,43 @@ public:
   /// of this header
   int sam_length() const { return str_.length(); }
 
-  std::string field_str(const char* tag) const;
-
+  /// Returns the @a tag's value, or throws an exception if not found
+  /** Returns the value of the header field with the given @a tag,
+  or throws sam::exception if there is no such field or sam::bad_format
+  if the field cannot be expressed as a @a ValueType.
+  @note In most cases, it will be necessary to use explicit syntax such
+  as <tt>field<int>("LN")</tt> to specify which type is desired.  */
   template <typename ValueType>
   ValueType field(const char* tag) const
     { return find_or_throw(tag)->template value<ValueType>(); }
 
+  /// Returns the @a tag's value, or @a default_value if not found
+  /** Returns the value of the header field with the given @a tag,
+  or @a default_value if there is no such field; or throws sam::bad_format
+  if the field cannot be expressed as a @a ValueType.  */
   template <typename ValueType>
   ValueType field(const char* tag, ValueType default_value) const
     { const_iterator it = find(tag);
       return (it != end())? it->value<ValueType>() : default_value; }
+
+  /** @name Additional field accessors
+  These field accessors operate similarly to those above; but, rather than
+  returning a newly-constructed string, they assign to a destination string
+  and return that string.  */
+  //@{
+  std::string& field(std::string& dest, const char* tag) const
+    { return find_or_throw(tag)->value(dest); }
+
+  std::string& field(std::string& dest,
+		     const char* tag, const char* default_value) const
+    { const_iterator it = find(tag);
+      return (it != end())? it->value(dest) : dest.assign(default_value); }
+
+  std::string& field(std::string& dest,
+		     const char* tag, const std::string& default_value) const
+    { const_iterator it = find(tag);
+      return (it != end())? it->value(dest) : dest.assign(default_value); }
+  //@}
 
   /** @name Container functionality
   Headers that have fields provide limited container-style access
@@ -98,14 +125,15 @@ public:
     std::string tag() const;
 
     /// Field value
-    std::string value_str() const;
-
     template <typename ValueType>
-    ValueType value() const { return value_str(); }
+    ValueType value() const;
+
+    /// Assigns field value to @a dest (and returns @a dest)
+    std::string& value(std::string& dest) const { return dest.assign(data_); }
 
     /// Returns whether the field's tag is the same as the given @a key_tag
     bool tag_equals(const char* key_tag) const
-      { return tag_[0] == key_tag[0] && tag_[1] == key_tag[1]; }
+      {return tag_[0] == key_tag[0] && tag_[1] == key_tag[1] && colon_ == ':';}
 
   private:
     friend class const_iterator;
@@ -262,8 +290,13 @@ private:
   const char* cstr_;
 };
 
-template<> int header::tagfield::value<int>() const;
-template<> coord_t header::tagfield::value<coord_t>() const;
+template<> inline std::string header::tagfield::value() const
+  { return std::string(data_); }
+template<> inline const char* header::tagfield::value() const
+  { return data_; }
+
+template<> int header::tagfield::value() const;
+template<> coord_t header::tagfield::value() const;
 
 template <typename ValueType>
 void header::set_field(const char* tag, ValueType value) {

@@ -63,15 +63,7 @@ string header::tagfield::tag() const {
   return string(tag_, sizeof tag_);
 }
 
-string header::tagfield::value_str() const {
-  const char* limit = next(tag_);
-  if (! (limit >= data_ && colon_ == ':'))
-    throw bad_format("Malformatted header field");
-
-  return string(data_, limit - data_);
-}
-
-template<> int header::tagfield::value<int>() const {
+template<> int header::tagfield::value() const {
   if (! (tag_[0] && tag_[1] && colon_ == ':'))
     throw bad_format("Malformatted header field");
 
@@ -82,8 +74,7 @@ template<> int header::tagfield::value<int>() const {
   return x;
 }
 
-template<> coord_t header::tagfield::value<coord_t>() const {
-  // FIXME template-ify me
+template<> coord_t header::tagfield::value() const {
   if (! (tag_[0] && tag_[1] && colon_ == ':'))
     throw bad_format("Malformatted header field");
 
@@ -103,7 +94,7 @@ size_t header::find_or_eos(const char* tag) const {
 header::const_iterator header::find_or_throw(const char* tag) const {
   size_t pos = find_or_eos(tag);
   if (pos == str_.length())
-    throw bad_format(make_string()
+    throw sam::exception(make_string()
 	<< "Header field '" << tag[0] << tag[1] << "' not found");
 
   return const_iterator(cstr_ + pos);
