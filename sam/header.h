@@ -335,9 +335,6 @@ class refsequence : public header {
 public:
   refsequence(const std::string& name, coord_t length, int index);
 
-  // FIXME should be private; is only for header virtual ctor
-  refsequence(const std::string& nul_delimited_text, int index);
-
   ~refsequence() { }
 
   int index() const { return index_; }
@@ -367,6 +364,9 @@ protected:
 private:
   friend class bamio;
   static std::string name_length_string(const std::string&, coord_t);
+
+  friend class collection;
+  refsequence(const std::string& nul_delimited_text, int index);
 
   std::string name_;
   int index_;
@@ -523,9 +523,16 @@ public:
 
   /// @name Searching
   //@{
-  refsequence& findseq(const std::string& name);
-  refsequence& findseq(const char* name);
-  refsequence& findseq(int index);
+  refsequence& findseq(const std::string& name) { return findseq_(name); }
+  const refsequence& findseq(const std::string& name) const
+    { return findseq_(name); }
+  refsequence& findseq(const char* name) { return findseq_(name); }
+  /// Find reference sequence by @a name, which may be "*"
+  const refsequence& findseq(const char* name) const { return findseq_(name); }
+
+  refsequence& findseq(int index) { return findseq_(index); }
+  /// Find reference sequence by @a index, where -1 <= @a index < ref_size()
+  const refsequence& findseq(int index) const { return findseq_(index); }
 
   readgroup& findgroup(const std::string& id) { return findgroup_(id); }
   const readgroup& findgroup(const std::string& id) const
@@ -552,6 +559,9 @@ private:
 
   void push_back(const std::string& nul_delimited_text, int flags);
 
+  refsequence& findseq_(const std::string& name) const;
+  refsequence& findseq_(const char* name) const;
+  refsequence& findseq_(int index) const;
   readgroup& findgroup_(const std::string& id) const;
 
   typedef std::map<std::string, refsequence*> refname_map;

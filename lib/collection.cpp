@@ -50,7 +50,7 @@ void collection::clear() {
 // FIXME Make me class static?
 static refsequence unmapped_refseq("*", 0, -1);
 
-refsequence& collection::findseq(int index) {
+refsequence& collection::findseq_(int index) const {
   if (index >= 0 && index < int(refseqs.size()))
     return *refseqs[index];
   else if (index == -1)
@@ -59,8 +59,8 @@ refsequence& collection::findseq(int index) {
     throw sam::exception("Reference sequence index out of range"); // FIXME
 }
 
-refsequence& collection::findseq(const string& name) {
-  refname_map::iterator it = refnames.find(name);
+refsequence& collection::findseq_(const string& name) const {
+  refname_map::const_iterator it = refnames.find(name);
   if (it != refnames.end())
     return *(it->second);
   else if (name == "*")  // FIXME Is "*" going to be in refnames, or not?
@@ -70,11 +70,16 @@ refsequence& collection::findseq(const string& name) {
 	<< "No such reference sequence ('" << name << "')");
 }
 
-refsequence& collection::findseq(const char* name) {
+refsequence& collection::findseq_(const char* name) const {
   if (name[0] == '*' && name[1] == '\0')
     return unmapped_refseq;
 
-  return *refnames[string(name)];
+  refname_map::const_iterator it = refnames.find(string(name));
+  if (it != refnames.end())
+    return *(it->second);
+  else
+    throw sam::exception(make_string()
+	<< "No such reference sequence ('" << name << "')");
 }
 
 readgroup& collection::findgroup_(const std::string& id) const {
