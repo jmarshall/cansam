@@ -2,8 +2,6 @@
 #include "sam/exception.h"
 #include "lib/sambamio.h"  // for push_back() flags
 
-#include <iostream> // FIXME NUKE-ME
-
 #include "lib/utilities.h"
 
 using std::string;
@@ -32,10 +30,7 @@ void collection::allocate_cindex() {
 template <typename InputIterator>
 void delete_each(InputIterator first, InputIterator last) {
   for (InputIterator it = first; it != last; ++it)
-    { //std::clog << "nuking " << *it << " -> {" << **it << "}\n" << std::flush;
-    // FIXME nuke these 3 lines of code
     delete *it;
-    }
 }
 
 void collection::clear() {
@@ -92,8 +87,13 @@ readgroup& collection::findgroup_(const std::string& id) const {
 }
 
 void collection::push_back(const std::string& header_line) {
-std::clog << "collection::push_back(\"" << header_line << "\")\n";
-  // FIXME
+  std::string text = header_line;
+  size_t pos = 0;
+  while ((pos = text.find('\t', pos)) != string::npos)
+    text[pos++] = '\0';
+
+  // FIXME  Is all-flags-always correct?
+  push_back(text, add_header | add_refseq | add_refname);
 }
 
 // TEXT is NUL-delimited.
