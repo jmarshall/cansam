@@ -40,6 +40,7 @@ void delete_each(InputIterator first, InputIterator last) {
 
 void collection::clear() {
   refnames.clear();
+  rgroups.clear();
 
   if (! refseqs_in_headers)
     delete_each(refseqs.begin(), refseqs.end());
@@ -81,6 +82,15 @@ refsequence& collection::findseq(const char* name) {
   return *refnames[string(name)];
 }
 
+readgroup& collection::findgroup_(const std::string& id) const {
+  readgroup_map::const_iterator it = rgroups.find(id);
+  if (it == rgroups.end())
+    throw sam::exception(make_string()
+	<< "No such read group ('" << id << "')");
+
+  return *(it->second);
+}
+
 void collection::push_back(const std::string& header_line) {
 std::clog << "collection::push_back(\"" << header_line << "\")\n";
   // FIXME
@@ -96,6 +106,11 @@ void collection::push_back(const std::string& text, int flags) {
     if (flags & add_refseq)   refseqs.push_back(rhdr);
     if (flags & add_refname)  refnames[rhdr->name()] = rhdr;
     hdr = rhdr;
+  }
+  else if (text.compare(0, 3, "@RG") == 0) {
+    readgroup* rghdr = new readgroup(text);
+    rgroups[rghdr->id()] = rghdr;
+    hdr = rghdr;
   }
   else
     hdr = new header(text);

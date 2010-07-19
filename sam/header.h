@@ -18,6 +18,7 @@ namespace sam {
 class sambamio;
 class bamio;
 class samio;
+class collection;
 
 /** @class sam::header sam/header.h
     @brief SAM/BAM header record, representing a single '@@' header line
@@ -371,6 +372,36 @@ private:
   int index_;
 };
 
+
+/** @class sam::readgroup sam/header.h
+    @brief Read group record, corresponding to a single '@@RG' header */
+class readgroup : public header {
+public:
+  ~readgroup() { }
+
+  /** @name Read group fields
+  Accessors and modifiers for the defined read group fields.  */
+  //@{
+  std::string id() const { return id_; }
+  const char* id_c_str() const { return id_.c_str(); }
+  std::string sample() const { return field<std::string>("SM"); }
+  std::string library() const { return field<std::string>("LB"); }
+  std::string description() const { return field<std::string>("DS"); }
+  std::string unit() const { return field<std::string>("PU"); }
+  coord_t median_isize() const { return field<coord_t>("PI"); }
+  //@}
+
+protected:
+  virtual void sync();
+
+private:
+  friend class collection;
+  readgroup(const std::string& nul_delimited_text);
+
+  std::string id_;
+};
+
+
 /** @class sam::collection sam/header.h
     @brief Header information for a collection of SAM/BAM records */
 class collection {
@@ -490,9 +521,19 @@ public:
   bool ref_empty() const { return refseqs.empty(); }
   //@}
 
+  /// @name Searching
+  //@{
   refsequence& findseq(const std::string& name);
   refsequence& findseq(const char* name);
   refsequence& findseq(int index);
+
+  readgroup& findgroup(const std::string& id) { return findgroup_(id); }
+  const readgroup& findgroup(const std::string& id) const
+    { return findgroup_(id); }
+  readgroup& findgroup(const char* id) { return findgroup_(id); }
+  /// Find read group by @a id
+  const readgroup& findgroup(const char* id) const { return findgroup_(id); }
+  //@}
 
   // FIXME prob not public
   static collection& find(unsigned cindex) { return *collections[cindex]; }
@@ -511,13 +552,17 @@ private:
 
   void push_back(const std::string& nul_delimited_text, int flags);
 
+  readgroup& findgroup_(const std::string& id) const;
+
   typedef std::map<std::string, refsequence*> refname_map;
+  typedef std::map<std::string, readgroup*> readgroup_map;
 
   int cindex;
   std::vector<header*> headers;
   std::vector<refsequence*> refseqs;
   refname_map refnames;
   bool refseqs_in_headers;
+  readgroup_map rgroups;
 
   static std::vector<collection*> collections;
 };

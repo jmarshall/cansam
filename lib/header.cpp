@@ -206,4 +206,18 @@ void refsequence::sync() {
   // in the header.
 }
 
+
+// Read groups
+// ===========
+
+// TEXT is NUL-delimited.
+readgroup::readgroup(const string& text) : header(text) {
+  id_ = field<string>("ID");
+}
+
+void readgroup::sync() {
+  header::sync();
+  id_ = field<string>("ID");
+}
+
 } // namespace sam
