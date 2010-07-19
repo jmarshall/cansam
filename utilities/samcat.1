@@ -1,22 +1,91 @@
-.TH samcat 1 "" "Cancer Genome Project" "Cancer Genome Project"
+.TH samcat 1 "July 2010" "Cansam" "Bioinformatics tools"
 .SH NAME
 samcat \- concatenate and print SAM and BAM files
 .SH SYNOPSIS
-.BR samcat " [" -bv "] [" -o
-.IR FILE "] [" FILE "]..."
+.B samcat
+.RB [ -bnv ]
+.RB [ -f
+.IR FLAGS ]
+.RB [ -o
+.IR FILE ]
+.RB [ -O
+.IR FORMAT ]
+.RI [ FILE ]...
 .SH DESCRIPTION
-
-.\" Probably either 4n or 9n
-.TP 5n
+The \fBsamcat\fP utility reads files in SAM or BAM format, merges their headers,
+and writes the merged headers and alignment records, sequentially from each
+specified file in turn, to standard output or to a specified file.
+If no input files are specified, or when \fIFILE\fP is a single hyphen ("-"),
+\fBsamcat\fP reads from standard input.
+.P
+The following options are accepted:
+.TP 4n
 .B -b
 Write output in BAM format.
 .TP
+.BI "-f " FLAGS
+Display only alignment records matching \fIFLAGS\fP, as described below.
+This option may be used more than once, with all
+.I FLAGS
+given accumulating.
+.TP
+.B -n
+Suppress headers from the output.
+.TP
 .BI "-o " FILE
-Write to FILE rather than standard output.
+Write to \fIFILE\fP rather than standard output.
+.TP
+.BI "-O " FORMAT
+Write output according to \fIFORMAT\fP, as described below.
 .TP
 .B -v
-Display file information and statistics.
-.PP
-Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+Display file information and statistics, on standard error.
+.SS Filtering alignment records
+The
+.BI "-f " FLAGS
+option lists combinations of flags to be included and/or excluded in the format
+[[\fB+\fP]\fIinc\fP][\fB-\fIexcl\fR]
+where either clause may be omitted, and the "+" introducing the \fIinc\fP
+clause is also optional.
+Each clause is either numeric or a set of the flag characters listed below.
+.P
+Each alignment record will be emitted only if it has all the flags listed in
+\fIinc\fP set, and all of the flags in \fIexcl\fP not set.
+.SS Output formats
+By default, output is written as text in SAM format, with the \fBFLAG\fP field
+displayed in decimal.
+The following alternatives can be selected:
+.TP 6n
+.B bam
+Compressed binary BAM format.
+.TP
+.B hex
+Text SAM format, with the \fBFLAG\fP field displayed in hexadecimal.
+.TP
+.B text
+Text SAM format, with the \fBFLAG\fP field displayed symbolically as a set of
+characters representing individual bit flags:
+.TS
+center nokeep;
+cb l .
+u	Read is unmapped
+f/r	Mapped to the forward (reverse) strand
+U	Mate is unmapped
+F/R	Mate is mapped to the forward (reverse) strand
+p	Paired (lowercase "p")
+P	Properly paired (capital "P")
+1/2	Read is the first (second) in a pair
+s	Record is not a primary alignment
+q	Failed platform or vendor quality checks
+d	PCR or optical duplicate
+.TE
+.IP
+Note that this differs slightly from \fBsamtools\fP's symbolic flag notation,
+which uses "f" for quality failure and doesn't explicitly denote that reads
+are on the forward strand.
 .SH SEE ALSO
-The SAM file format specification http://samtools.sourceforge.net/
+.IR cansam (3),
+.IR samtools (1)
+.TP
+http://samtools.sourceforge.net/
+The SAM file format specification.

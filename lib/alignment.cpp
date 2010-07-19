@@ -502,6 +502,24 @@ int parse_flags(const char* s) {
   return value;
 }
 
+void parse_flags(const std::string& text, int& positive, int& negative) {
+  size_t next_pos;
+  for (size_t pos = 0; pos < text.length(); pos = next_pos) {
+    next_pos = text.find_first_of("+-", pos + 1);
+
+    bool positive_item = (text[pos] != '-');
+    if (text[pos] == '+' || text[pos] == '-')  pos++;
+    string item = text.substr(pos, next_pos - pos);
+
+    int& flags  = positive_item? positive : negative;
+    int& others = positive_item? negative : positive;
+
+    flags |= parse_flags(item);
+    if (item.find('f') != string::npos)  others |= REVERSE_STRAND;
+    if (item.find('F') != string::npos)  others |= MATE_REVERSE_STRAND;
+  }
+}
+
 int alignment::sam_length() const {
   int len = 0;
 

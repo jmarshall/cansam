@@ -53,6 +53,14 @@ int parse_flags(const char* flags);
 inline int parse_flags(const std::string& flags)
   { return parse_flags(flags.c_str()); }
 
+/// Accumulates @a flags into signed categories
+/** @param flags A string representing several sets of alignment flags,
+separated by '+' or '-' characters.
+@param positive Gains set bits corresponding to flags following '+' characters.
+@param negative Gains set bits corresponding to flags following '-' characters.
+@relatesalso alignment */
+void parse_flags(const std::string& flags, int& positive, int& negative);
+
 /// Returns the BAM bin number (1-based)
 /** Returns the BAM bin number for an alignment spanning [@a pos, @a right],
     i.e., a 1-based range.  */
