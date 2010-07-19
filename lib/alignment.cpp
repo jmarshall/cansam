@@ -461,9 +461,8 @@ int decimal(const char* s, const char* field_name) {
   return x;
 }
 
-// FIXME Where do these functions go?
-static uint16_t to_flags(const char* s) {
-  uint16_t value;
+int parse_flags(const char* s) {
+  int value;
 
   if (isdigit(s[0])) {
     char* slim;
@@ -473,9 +472,31 @@ static uint16_t to_flags(const char* s) {
 	  << "Flag value ('" << s << "') is non-numeric");
   }
   else {
-    // TODO One day there'll be a defined text representation
-    throw bad_format(make_string()
-	<< "Unknown flag representation ('" << s << "')");
+    value = 0;
+    for (const char* schr = s; *schr; schr++)
+      switch (*schr) {
+      case 'p':  value |= PAIRED;  break;
+      case 'P':  value |= PROPER_PAIRED;  break;
+      case 'u':  value |= UNMAPPED;  break;
+      case 'U':  value |= MATE_UNMAPPED;  break;
+      case 'r':  value |= REVERSE_STRAND;  break;
+      case 'R':  value |= MATE_REVERSE_STRAND;  break;
+      case '1':  value |= FIRST_IN_PAIR;  break;
+      case '2':  value |= SECOND_IN_PAIR;  break;
+      case 's':  value |= NONPRIMARY;  break;
+      case 'q':  value |= QUALITY_FAILED;  break;
+      case 'd':  value |= DUPLICATE;  break;
+
+      case 'f':
+      case 'F':
+      case '_':
+	break;
+
+      default:
+	throw bad_format(make_string()
+	    << "Unknown flag character ('" << *schr << "') in value ('" << s
+	    << "')");
+      }
   }
 
   return value;
@@ -485,7 +506,14 @@ int alignment::sam_length() const {
   int len = 0;
 
   len += p->c.name_length - 1;  // name_length includes the trailing NUL
-  len += 1 + 4;  // FIXME symbolic flags can be longer
+
+  if (flags() & (PAIRED | PROPER_PAIRED | MATE_UNMAPPED | MATE_REVERSE_STRAND |
+		 FIRST_IN_PAIR | SECOND_IN_PAIR)) {
+    len += 1 + 11;  // Longest FLAG is "urURpP12sqd"
+  }
+  else
+    len += 1 + 5;  // Longest unpaired FLAG is "ursqd" or "0x400"
+
   len += 1 + rname().length();
   len += 1 + format::buffer<coord_t>::size;
   len += 1 + 3;  // Longest MAPQ is "255"
@@ -503,20 +531,6 @@ int alignment::sam_length() const {
   return len;
 }
 
-template <typename IntType>
-char* format_hex(char* dest, IntType val) {
-  *dest++ = '0';
-  *dest++ = 'x';
-
-  IntType n = val;
-  do { dest++; n >>= 4; } while (n != 0);
-
-  char* destlim = dest;
-  do { *--dest = "0123456789ABCDEF"[val & 0xf]; val >>= 4; } while (val != 0);
-
-  return destlim;
-}
-
 // As strcpy(), but returns the first unused position in DEST.
 inline char* copy(char* dest, const char* s) {
   char c;
@@ -525,17 +539,10 @@ inline char* copy(char* dest, const char* s) {
 }
 
 char* format_sam(char* dest, const alignment& aln, const std::ios& format) {
-  std::ios::fmtflags fmtflags = format.flags();
-
   dest = copy(dest, aln.qname_c_str());
 
   *dest++ = '\t';
-  if (fmtflags & std::ios::boolalpha)
-    strcpy(dest, "FIXME"), dest += 5; // FIXME
-  else if (fmtflags & std::ios::hex)
-    dest = format_hex(dest, aln.flags());
-  else
-    dest = format::decimal(dest, aln.flags());
+  dest = format_sam(dest, aln.flags(), format);
 
   *dest++ = '\t';
   if (aln.rindex() < 0)  *dest++ = '*';
@@ -587,6 +594,36 @@ char* format_sam(char* dest, const alignment& aln, const std::ios& format) {
     *dest++ = '\t';
     dest = format_sam(dest, *it);
   }
+
+  return dest;
+}
+
+char* format_sam(char* dest, int flags, const std::ios& format) {
+  std::ios::fmtflags fmtflags = format.flags();
+
+  if (fmtflags & std::ios::boolalpha) {
+    if (flags & UNMAPPED)  *dest++ = 'u';
+    if (flags & REVERSE_STRAND)  *dest++ = 'r';
+    else if (! (flags & UNMAPPED))  *dest++ = 'f';
+
+    if (flags & MATE_UNMAPPED)  *dest++ = 'U';
+    if (flags & MATE_REVERSE_STRAND)  *dest++ = 'R';
+    else if ((flags & (PAIRED | MATE_UNMAPPED)) == PAIRED)  *dest++ = 'F';
+
+    if (flags & PAIRED)          *dest++ = 'p';
+    if (flags & PROPER_PAIRED)   *dest++ = 'P';
+    if (flags & FIRST_IN_PAIR)   *dest++ = '1';
+    if (flags & SECOND_IN_PAIR)  *dest++ = '2';
+    if (flags & NONPRIMARY)      *dest++ = 's';
+    if (flags & QUALITY_FAILED)  *dest++ = 'q';
+    if (flags & DUPLICATE)       *dest++ = 'd';
+  }
+  else if (fmtflags & std::ios::oct)
+    dest = format::octal(dest, flags);
+  else if (fmtflags & std::ios::hex)
+    dest = format::hexadecimal(dest, flags);
+  else
+    dest = format::decimal(dest, flags);
 
   return dest;
 }
@@ -690,7 +727,7 @@ void alignment::assign(int nfields, const std::vector<char*>& fields, int cindex
   p->c.mapq = decimal(fields[mapq], "MAPQ"); // 0..255
   p->c.bin = -1;
   p->c.cigar_length = cigar_length;
-  p->c.flags = to_flags(fields[flag]);
+  p->c.flags = parse_flags(fields[flag]);
   p->c.read_length = seq_length;
 
   //a name or "*" or "="

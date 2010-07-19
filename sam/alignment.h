@@ -40,6 +40,19 @@ enum alignment_flag {
   DUPLICATE           = 0x400  ///< PCR duplicate or optical duplicate
 };
 
+/// Returns the bitwise representation of @a flags
+/** @param flags A string representing a set of flags either numerically
+or symbolically.
+@return The bitwise integer representation of the alignment flags specified
+by @a flags, which may be either decimal, octal, hexadecimal, or symbolic.
+@relatesalso alignment */
+int parse_flags(const char* flags);
+
+/// Returns the bitwise representation of @a flags
+/** @relatesalso alignment */
+inline int parse_flags(const std::string& flags)
+  { return parse_flags(flags.c_str()); }
+
 /// Returns the BAM bin number (1-based)
 /** Returns the BAM bin number for an alignment spanning [@a pos, @a right],
     i.e., a 1-based range.  */
@@ -702,10 +715,22 @@ std::ostream& operator<< (std::ostream& stream, const alignment& aln);
 /** @param dest  Character array to be written to; must have space for at least
 alignment::sam_length() characters.
 @param aln  The alignment record to be formatted.
-@param format  Format flags controlling how the record should be formatted.
+@param format  Format flags controlling how the record (in particular,
+its @em FLAG field) should be formatted.
 @return  A pointer to the first unused character position in @a dest.
 @relatesalso alignment */
 char* format_sam(char* dest, const alignment& aln, const std::ios& format);
+
+/// Write alignment flags to @a dest in SAM format
+/** @param dest  Character array to be written to; must have space for
+at least 16 characters.
+@param flags  The alignment flags to be formatted.
+@param format  The representation written will be symbolic if @a format.flags()
+has @c boolalpha set; otherwise numeric as determined by @c basefield,
+but always in uppercase irrespective of @c uppercase.
+@return  A pointer to the first unused character position in @a dest.
+@relatesalso alignment */
+char* format_sam(char* dest, int flags, const std::ios& format);
 
 /// Print an auxiliary field to the stream
 /** Writes an auxiliary field to a stream as text in SAM format.

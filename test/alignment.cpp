@@ -1,4 +1,5 @@
 #include <iostream> // FIXME NUKE-ME
+#include <sstream>
 
 #include "test/test.h"
 #include "sam/alignment.h"
@@ -138,6 +139,35 @@ void test_auxen(test_harness& t) {
   t.check(aln.aux<int>("XI"), 37, "aux<int>");
 }
 
+void test_format(test_harness& t, std::ios::fmtflags fmt, const char* prefix) {
+  char buffer[64];
+
+  for (int i = 0; i <= 0x7ff; i++) {
+    std::ostringstream s;
+    s.setf(fmt, std::ios::basefield|std::ios::showbase|std::ios::uppercase);
+    if ((fmt & std::ios::hex) && i != 0)  s << "0x";
+    s << i;
+
+    *sam::format_sam(buffer, i, s) = '\0';
+    t.check(buffer, s.str(), prefix + s.str());
+  }
+}
+
+void test_format(test_harness& t) {
+  test_format(t, std::ios::dec, "dec.");
+  test_format(t, std::ios::oct|std::ios::showbase,  "oct.");
+  test_format(t, std::ios::hex|std::ios::uppercase, "hex.");
+
+  char buffer[64];
+  std::ostringstream s;
+  s << std::boolalpha;
+
+  for (int i = 0; i <= 0x7ff; i++) {
+    *sam::format_sam(buffer, i, s) = '\0';
+    t.check(sam::parse_flags(buffer), i, std::string("symbolic.") + buffer);
+  }
+}
+
 void test_alignments(test_harness& t) {
   sam::alignment aln;
 
@@ -153,4 +183,6 @@ void test_alignments(test_harness& t) {
   test_unpack_seq(t);
   test_iterators(t, a1);
   test_auxen(t);
+
+  test_format(t);
 }

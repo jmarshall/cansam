@@ -7,6 +7,8 @@ using std::string;
 
 namespace sam {
 
+extern const char format::hexadecimal_digits[] = "0123456789ABCDEF";
+
 // Removes a trailing line terminator, whether it be LF, CR, or CR-LF.
 // (Usually CR would be because there was a CR-LF terminator and the LF has
 // already been elided.)
