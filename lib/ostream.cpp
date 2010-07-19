@@ -78,6 +78,7 @@ std::ostream& operator<< (std::ostream& out, const collection& headers) {
     for (collection::const_ref_iterator it = headers.ref_begin();
 	 it != headers.ref_end(); ++it, ++i)
       out << " " << i << "->" << it->name();
+    if (! headers.refseqs_in_headers)  out << "  (owned)";
     out << "\nRefmap:";
     for (std::map<std::string, refsequence*>::const_iterator
 	 it = headers.refnames.begin(); it != headers.refnames.end(); ++it)

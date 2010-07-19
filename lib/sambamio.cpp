@@ -610,6 +610,7 @@ bool bamio::get(isamstream& stream, collection& headers) {
 	<< magic[0] << magic[1] << magic[2] << magic[3] << "')");
 
   headers.clear();
+  headers.refseqs_in_headers = false;
   set_cindex(headers);
 
   header_text_length = read_int32(stream);
@@ -626,6 +627,9 @@ bool bamio::get(isamstream& stream, collection& headers) {
 //std::clog << "bamio::get: headers: " << headers.headers.size() << "; refseqs: " << headers.refseqs.size() << "; refnames: " << headers.refnames.size() << "\n";
   // There are two cases, depending on whether there are any @SQ text headers.
   headers.refseqs_in_headers = ! headers.refnames.empty();
+
+  // FIXME Is refseqs_in_headers set up right if an exception is thrown in
+  // the loops below?  Is it even possible?
 
   if (headers.refseqs_in_headers) {
     string name;
@@ -846,6 +850,7 @@ size_t samio::xsgetn(isamstream& stream, char* buffer, size_t length) {
 
 bool samio::get(isamstream& stream, collection& headers) {
   headers.clear();
+  headers.refseqs_in_headers = true;
   set_cindex(headers);
 
   while (peek(buffer, stream) == '@') {
@@ -854,10 +859,9 @@ bool samio::get(isamstream& stream, collection& headers) {
 		      add_header | add_refseq | add_refname);
   }
 
-  headers.refseqs_in_headers = ! headers.ref_empty();
-
   // Further refsequences can be added if there were no @SQ headers.
   reflist_open = headers.ref_empty();
+  headers.refseqs_in_headers = ! reflist_open;
 
   return ! (headers.empty() && peek(buffer, stream) == EOF);
 }
