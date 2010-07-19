@@ -44,16 +44,17 @@ lib/version.o: lib/version.cpp sam/version.h
 
 MISC_OBJS = utilities/samcat.o utilities/samcount.o \
 	    utilities/samgroupbyname.o utilities/samsort.o \
+	    utilities/utilities.o \
 	    examples/simplecat.o
 
-samcat: utilities/samcat.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o libcansam.a $(LDLIBS)
+samcat: utilities/samcat.o utilities/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o utilities/utilities.o libcansam.a $(LDLIBS)
 
-samcount: utilities/samcount.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o libcansam.a $(LDLIBS)
+samcount: utilities/samcount.o utilities/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o utilities/utilities.o libcansam.a $(LDLIBS)
 
-samgroupbyname: utilities/samgroupbyname.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samgroupbyname.o libcansam.a $(LDLIBS)
+samgroupbyname: utilities/samgroupbyname.o utilities/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ utilities/samgroupbyname.o utilities/utilities.o libcansam.a $(LDLIBS)
 
 samsort: utilities/samsort.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o libcansam.a $(LDLIBS)
@@ -63,14 +64,16 @@ simplecat: examples/simplecat.o libcansam.a
 
 
 utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
-		    sam/stream.h
+		    sam/stream.h utilities/utilities.h
 utilities/samcount.o: utilities/samcount.cpp $(sam_alignment_h) \
-		      $(sam_header_h) sam/stream.h
+		      $(sam_header_h) sam/stream.h utilities/utilities.h
 utilities/samgroupbyname.o: utilities/samgroupbyname.cpp sam/algorithm.h \
 			    $(sam_alignment_h) sam/exception.h $(sam_header_h) \
-			    sam/stream.h
+			    sam/stream.h utilities/utilities.h
 utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h \
 		     $(sam_alignment_h)
+utilities/utilities.o: utilities/utilities.cpp utilities/utilities.h \
+		       sam/version.h
 examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
 
 

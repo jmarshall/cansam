@@ -6,6 +6,7 @@
 #include "sam/alignment.h"
 #include "sam/header.h"
 #include "sam/stream.h"
+#include "utilities/utilities.h"
 
 using std::string;
 using namespace sam;
@@ -75,7 +76,7 @@ int main(int argc, char** argv) {
   if (argc == 2) {
     string arg = argv[1];
     if (arg == "--version") {
-      std::cout << "samcount 0.2\n";
+      print_version(std::cout, "samcount");
       return EXIT_SUCCESS;
     }
     else if (arg == "--help") {

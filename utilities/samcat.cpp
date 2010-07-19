@@ -7,6 +7,7 @@
 #include "sam/exception.h"
 #include "sam/header.h"
 #include "sam/stream.h"
+#include "utilities/utilities.h"
 
 using std::string;
 using namespace sam;
@@ -24,11 +25,8 @@ void cat(isamstream& in, osamstream& out, bool suppress_headers) {
   }
 
   alignment aln;
-//  std::cout << "default ctored: "; aln.dump_on(std::cout);
   while (in >> aln) {
-    //std::cout << "in loop: "; aln.dump_on(std::cout);
     out << aln;
-    //std::cout << aln << '\n';
   }
 }
 
@@ -74,7 +72,7 @@ int main(int argc, char** argv) {
   else if (argc == 2) {
     string arg = argv[1];
     if (arg == "--version") {
-      std::cout << "samcat 0.3\n";
+      print_version(std::cout, "samcat");
       return EXIT_SUCCESS;
     }
     else if (arg == "--help") {

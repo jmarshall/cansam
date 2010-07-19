@@ -10,6 +10,7 @@
 #include "sam/exception.h"
 #include "sam/header.h"
 #include "sam/stream.h"
+#include "utilities/utilities.h"
 
 using std::string;
 using namespace sam;
@@ -67,7 +68,7 @@ int main(int argc, char** argv) {
   if (argc == 2) {
     string arg = argv[1];
     if (arg == "--version") {
-      std::cout << "samgroupbyname 0.4\n";
+      print_version(std::cout, "samgroupbyname");
       return EXIT_SUCCESS;
     }
     else if (arg == "--help") {
