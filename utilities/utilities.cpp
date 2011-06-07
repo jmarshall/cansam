@@ -1,6 +1,6 @@
 /*  utilities.cpp -- Support routines common to the various utilities.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2011 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,11 +31,27 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <ostream>
 
+#include <unistd.h>  // for STDIN_FILENO, isatty()
+
 #include "sam/version.h"
+
+using std::string;
 
 void print_version(std::ostream& stream, const char* name) {
   stream << name << " (Cansam) " << sam::version() << "\n"
-"Copyright (C) 2010 Genome Research Ltd.\n"
+"Copyright (C) 2011 Genome Research Ltd.\n"
 "This is free software: you are free to change and redistribute it.\n"
 "There is NO WARRANTY, to the extent permitted by law.\n";
+}
+
+bool cin_likely_from_user() {
+  return isatty(STDIN_FILENO);
+}
+
+string basename(const string& path) {
+  size_t slashpos = path.rfind('/');
+  size_t basepos = (slashpos != string::npos)? slashpos+1 : 0;
+  size_t dotpos = path.find('.', basepos);
+  size_t length = (dotpos != string::npos)? dotpos - basepos : string::npos;
+  return path.substr(basepos, length);
 }

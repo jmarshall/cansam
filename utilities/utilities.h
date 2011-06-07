@@ -1,6 +1,6 @@
 /*  utilities.cpp -- Support routines common to the various utilities.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2011 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,9 +31,21 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #define UTILITIES_UTILITIES_H
 
 #include <iosfwd>
+#include <string>
 
 // Prints Cansam version number as PROGNAME's version number and
 // brief copyright and (lack of) warranty information to STREAM.
 void print_version(std::ostream& stream, const char* progname);
+
+// Returns whether standard input appears not to have been redirected,
+// i.e., is coming from the user.  This lets us determine when we should
+// read copiously from standard input (when it's redirected from a BAM file)
+// or when it would be more useful to produce e.g. a usage display (when the
+// user probably doesn't want to type a SAM file by hand); for example, when
+// a utility is invoked with no arguments.
+bool cin_likely_from_user();
+
+// Returns PATH with any leading directories and trailing extensions removed.
+std::string basename(const std::string& path);
 
 #endif
