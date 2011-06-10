@@ -6,4 +6,5 @@ samcat
 samcount
 samgroupbyname
 samsort
+samsplit
 test/runtests

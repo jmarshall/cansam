@@ -1,6 +1,6 @@
 # Makefile for the Cansam library, which provides tools for SAM/BAM files.
 #
-#    Copyright (C) 2010 Genome Research Ltd.
+#    Copyright (C) 2010-2011 Genome Research Ltd.
 #
 #    Author: John Marshall <jm18@sanger.ac.uk>
 #
@@ -37,7 +37,7 @@ CXXFLAGS = -Wall -Wextra -g -O2 -I$(srcdir)
 LDFLAGS  =
 LDLIBS   = -lz
 
-OUTPUTS = libcansam.a samcat samcount samgroupbyname samsort test/runtests
+OUTPUTS = libcansam.a samcat samcount samgroupbyname samsort samsplit test/runtests
 all: $(OUTPUTS)
 
 lib: libcansam.a
@@ -75,7 +75,7 @@ lib/version.o: lib/version.cpp sam/version.h
 
 MISC_OBJS = utilities/samcat.o utilities/samcount.o \
 	    utilities/samgroupbyname.o utilities/samsort.o \
-	    utilities/utilities.o \
+	    utilities/samsplit.o utilities/utilities.o \
 	    examples/simplecat.o
 
 samcat: utilities/samcat.o utilities/utilities.o libcansam.a
@@ -90,6 +90,9 @@ samgroupbyname: utilities/samgroupbyname.o utilities/utilities.o libcansam.a
 samsort: utilities/samsort.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o libcansam.a $(LDLIBS)
 
+samsplit: utilities/samsplit.o utilities/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ utilities/samsplit.o utilities/utilities.o libcansam.a $(LDLIBS)
+
 simplecat: examples/simplecat.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ examples/simplecat.o libcansam.a $(LDLIBS)
 
@@ -103,6 +106,9 @@ utilities/samgroupbyname.o: utilities/samgroupbyname.cpp sam/algorithm.h \
 			    sam/stream.h utilities/utilities.h
 utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h \
 		     $(sam_alignment_h)
+utilities/samsplit.o: utilities/samsplit.cpp $(sam_alignment_h) \
+		      sam/exception.h $(sam_header_h) sam/stream.h \
+		      $(lib_utilities_h) utilities/utilities.h
 utilities/utilities.o: utilities/utilities.cpp utilities/utilities.h \
 		       sam/version.h
 examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
@@ -137,7 +143,7 @@ man3dir     = $(mandir)/man3
 INSTALL_DATA = install -p
 INSTALL_PROGRAM = install -p
 
-install: libcansam.a samcat samcount samgroupbyname samsort
+install: libcansam.a samcat samcount samgroupbyname samsort samsplit
 	mkdir $(DESTDIR)$(includedir)
 	mkdir $(DESTDIR)$(includedir)/sam
 	for sam_hdr in sam/*.h; do \
@@ -150,6 +156,7 @@ install: libcansam.a samcat samcount samgroupbyname samsort
 	$(INSTALL_PROGRAM) samcount $(DESTDIR)$(bindir)/samcount
 	$(INSTALL_PROGRAM) samgroupbyname $(DESTDIR)$(bindir)/samgroupbyname
 	$(INSTALL_PROGRAM) samsort $(DESTDIR)$(bindir)/samsort
+	$(INSTALL_PROGRAM) samsplit $(DESTDIR)$(bindir)/samsplit
 	# FIXME mkdir $(DESTDIR)$(prefix)/share
 	mkdir $(DESTDIR)$(mandir)
 	mkdir $(DESTDIR)$(man1dir)
@@ -157,6 +164,7 @@ install: libcansam.a samcat samcount samgroupbyname samsort
 	$(INSTALL_DATA) utilities/samgroupbyname.1 \
 	                $(DESTDIR)$(man1dir)/samgroupbyname.1
 	$(INSTALL_DATA) utilities/samsort.1 $(DESTDIR)$(man1dir)/samsort.1
+	$(INSTALL_DATA) utilities/samsplit.1 $(DESTDIR)$(man1dir)/samsplit.1
 	mkdir $(DESTDIR)$(man3dir)
 	$(INSTALL_DATA) utilities/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
 
@@ -168,6 +176,7 @@ uninstall:
 	-rm $(DESTDIR)$(BINDIR)/samcount
 	-rm $(DESTDIR)$(bindir)/samgroupbyname
 	-rm $(DESTDIR)$(BINDIR)/samsort
+	-rm $(DESTDIR)$(BINDIR)/samsplit
 	cd utilities; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
 	rm $(DESTDIR)$(man3dir)/cansam.3
 
