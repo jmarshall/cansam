@@ -44,6 +44,7 @@ lib: libcansam.a
 
 LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
 	  lib/samstream.o lib/ostream.o lib/rawfilebuf.o \
+	  lib/intervalmap.o \
 	  lib/exception.o lib/system.o lib/utilities.o lib/version.o
 
 libcansam.a: $(LIBOBJS)
@@ -53,6 +54,7 @@ libcansam.a: $(LIBOBJS)
 
 sam_alignment_h = sam/alignment.h sam/types.h sam/header.h
 sam_header_h    = sam/header.h sam/types.h
+sam_intervalmap_h=sam/intervalmap.h sam/types.h
 lib_sambamio_h  = lib/sambamio.h sam/stream.h
 lib_utilities_h = lib/utilities.h sam/types.h
 
@@ -61,6 +63,7 @@ lib/alignment.o: lib/alignment.cpp $(sam_alignment_h) sam/exception.h \
 lib/collection.o: lib/collection.cpp $(sam_header_h) sam/exception.h
 lib/exception.o: lib/exception.cpp sam/exception.h
 lib/header.o: lib/header.cpp $(sam_header_h) sam/exception.h $(lib_utilities_h)
+lib/intervalmap.o: lib/intervalmap.cpp $(sam_intervalmap_h)
 lib/ostream.o: lib/ostream.cpp $(sam_alignment_h) $(sam_header_h) \
 	       $(lib_utilities_h)
 lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/streambuf.h sam/exception.h
@@ -118,7 +121,7 @@ test: test/runtests
 	test/runtests test $(srcdir)/test
 
 TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
-	    test/wire.o
+	    test/wire.o test/intervalmap.o
 
 test/runtests: $(TEST_OBJS) libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) libcansam.a $(LDLIBS)
@@ -126,6 +129,7 @@ test/runtests: $(TEST_OBJS) libcansam.a
 test/runtests.o: test/runtests.cpp test/test.h sam/exception.h
 test/alignment.o: test/alignment.cpp test/test.h $(sam_alignment_h)
 test/header.o: test/header.cpp test/test.h $(sam_header_h)
+test/intervalmap.o: test/intervalmap.cpp test/test.h $(sam_intervalmap_h)
 test/sam.o: test/sam.cpp test/test.h $(sam_alignment_h) sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 

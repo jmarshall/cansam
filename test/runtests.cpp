@@ -1,6 +1,6 @@
 /*  test/runtests.cpp -- Simple test harness.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2011 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -79,6 +79,7 @@ void test_harness::check(size_t a, size_t b, const string& title) {
 
 extern void test_alignments(test_harness&);
 extern void test_headers(test_harness&);
+extern void test_intervals(test_harness&);
 extern void test_sam_io(test_harness&);
 extern void test_wire(test_harness&);
 
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
   try {
     test_headers(t);
     test_alignments(t);
+    test_intervals(t);
     test_sam_io(t);
     test_wire(t);
   }
