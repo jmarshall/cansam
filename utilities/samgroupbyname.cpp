@@ -1,6 +1,6 @@
 /*  samgroupbyname.cpp -- Order a SAM/BAM file so that read pairs are together.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2011 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -120,6 +120,9 @@ int main(int argc, char** argv) {
       std::cerr << usage;
       return EXIT_FAILURE;
     }
+
+  if (argc == 1 && cin_likely_from_user())
+    { std::cerr << usage; return EXIT_FAILURE; }
 
   string input_fname = (optind < argc)? argv[optind++] : "-";
   if (optind < argc) {

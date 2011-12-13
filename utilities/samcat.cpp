@@ -1,6 +1,6 @@
 /*  samcat.cpp -- Concatenate and print SAM and BAM files.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2011 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -125,11 +125,7 @@ try {
   bool suppress_headers = false;
   bool verbose = false;
 
-  if (argc == 1) {
-    std::cerr << usage;
-    return EXIT_FAILURE;
-    }
-  else if (argc == 2) {
+  if (argc == 2) {
     string arg = argv[1];
     if (arg == "--version") {
       print_version(std::cout, "samcat");
@@ -156,6 +152,9 @@ try {
       std::cerr << usage;
       return EXIT_FAILURE;
     }
+
+  if (argc == 1 && cin_likely_from_user())
+    { std::cerr << usage; return EXIT_FAILURE; }
 
   stats.nin = stats.nout = 0;
 
