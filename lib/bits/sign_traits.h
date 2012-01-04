@@ -1,6 +1,6 @@
 /*  bits/sign_traits.h -- Provides some missing type traits.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,22 +31,22 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #define BITS_SIGN_TRAITS_H
 
 // Arranges for traits::is_signed<IntType> and traits::make_unsigned<IntType>
-// to be the corresponding C++-0x or Boost.TypeTraits templates, if available.
+// to be the corresponding C++11 or Boost.TypeTraits templates, if available.
 
-#if __cplusplus >= 201001L  // Actual C++-0x value is yet to be determined.
+#if __cplusplus >= 201103L
   #include <type_traits>
   namespace traits = std;
 #else
   #include <boost/version.hpp>
 
-  #if BOOST_VERSION >= 104000  // Check this: 1.39.1 bad; 1.40 good?
+  #if BOOST_VERSION >= 103500
     #include <boost/type_traits/is_signed.hpp>
     #include <boost/type_traits/make_unsigned.hpp>
     namespace traits = boost;
   #else
     #include <boost/type_traits/is_signed.hpp>
 
-    // Debian ships a version of Boost that predates boost::make_unsigned<>.
+    // Debian 5.0 (lenny) ships a version of Boost without make_unsigned<>.
     // This defines it for integer types, which is all we need.
     namespace traits {
       using boost::false_type;
