@@ -1,8 +1,8 @@
-.TH samcat 1 "July 2010" "Cansam" "Bioinformatics tools"
+.TH samcat 1 "January 2012" "Cansam" "Bioinformatics tools"
 .SH NAME
 samcat \- concatenate and print SAM and BAM files
 .\"
-.\" Copyright (C) 2010 Genome Research Ltd.
+.\" Copyright (C) 2010-2012 Genome Research Ltd.
 .\"
 .\" Author: John Marshall <jm18@sanger.ac.uk>
 .\"
@@ -113,6 +113,10 @@ d	PCR or optical duplicate
 Note that this differs slightly from \fBsamtools\fP's symbolic flag notation,
 which uses "f" for quality failure and doesn't explicitly denote that reads
 are on the forward strand.
+.TP
+.B ubam
+Uncompressed binary BAM format.  Sets the compression level so as to maximise
+writing speed, at the cost of increased output size.
 .SH SEE ALSO
 .IR cansam (3),
 .IR samtools (1)

@@ -1,6 +1,6 @@
 /*  samcat.cpp -- Concatenate and print SAM and BAM files.
 
-    Copyright (C) 2010-2011 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -99,6 +99,7 @@ void parse_format(const string& s,
   if (s == "bam")  mode = bam_format;
   else if (s == "hex")  format = std::ios::hex;
   else if (s == "text")  format = std::ios::boolalpha;
+  else if (s == "ubam")  mode = bam_format & ~compressed;
   else  throw bad_format("Invalid output format ('" + s + "')");
 }
 
@@ -117,6 +118,7 @@ try {
 "  bam        Compressed binary BAM format\n"
 "  hex        SAM format, with flags displayed in hexadecimal\n"
 "  text       SAM format, with flags displayed as readable strings\n"
+"  ubam       Uncompressed binary BAM format\n"
 "";
 
   string output_fname = "-";
