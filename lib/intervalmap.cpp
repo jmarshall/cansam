@@ -1,6 +1,6 @@
 /*  intervalmap.cpp -- Classes for sequence intervals and interval containers.
 
-    Copyright (C) 2011 Genome Research Ltd.
+    Copyright (C) 2011-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -29,9 +29,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include "sam/intervalmap.h"
 
+#include <limits>
 #include <ostream>
 
 #include <iostream>  // FIXME NUKE-ME
+
+#include "sam/exception.h"
+#include "lib/utilities.h"
+
+using std::string;
 
 namespace sam {
 
@@ -44,8 +50,66 @@ inline int32_t max(int32_t i, int32_t j, int32_t k) {
   return m;
 }
 
+int32_t parse_numeral(const char*& s0, int32_t default_value) {
+  const char* s = s0;
+  int32_t value = 0;
+
+  while (true)
+    if (*s >= '0' && *s <= '9')  value = 10 * value + (*s++ - '0');
+    else if (*s == ',')  s++;
+    else  break;
+
+  if (s > s0)  s0 = s;
+  else  value = default_value;
+
+  return value;
+}
+
 } // unnamed namespace
 
+
+interval& interval::assign(const string& text, size_t pos) {
+  // The string is either "[START]", "[START]-[END]", or "[START]+[LENGTH]".
+  const char* s = text.c_str() + pos;
+
+  zstart_ = parse_numeral(s, 1) - 1;
+
+  switch (*s) {
+  case '-':
+    s++;
+    zlimit_ = parse_numeral(s, std::numeric_limits<int32_t>::max());
+    break;
+
+  case '+':
+    s++;
+    zlimit_ = zstart_ + parse_numeral(s, 0);
+    break;
+
+  case '\0':
+    zlimit_ = zstart_ + 1;
+    break;
+
+  default:
+    break;
+  }
+
+  if (*s != '\0')
+    throw bad_format(make_string()
+	<< "Invalid interval value ('" << text.substr(pos) << "')");
+
+  return *this;
+}
+
+seqinterval& seqinterval::assign(const string& text, size_t pos) {
+  size_t colonpos = text.rfind(':');
+  if (colonpos < pos)  colonpos = string::npos;
+
+  name_.assign(text, pos, colonpos - pos);
+  if (colonpos == string::npos)  interval::assign("-");
+  else  interval::assign(text, colonpos+1);
+
+  return *this;
+}
 
 std::ostream& operator<< (std::ostream& stream, const interval& i) {
   return stream << i.start() << '-' << i.end();

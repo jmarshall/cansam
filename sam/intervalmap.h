@@ -1,7 +1,7 @@
 /// @file sam/intervalmap.h
 /// Classes for sequence intervals and interval containers
 
-/*  Copyright (C) 2011 Genome Research Ltd.
+/*  Copyright (C) 2011-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -57,6 +57,9 @@ public:
   /// Construct a zero-based, half-open interval
   interval(coord_t zstart, coord_t end) : zstart_(zstart), zlimit_(end) { }
 
+  /// Construct an interval from a "START-END"-style string
+  explicit interval(const std::string& text) { assign(text); }
+
   /// Construct a copy of an interval
   interval(const interval& i) : zstart_(i.zstart_), zlimit_(i.zlimit_) { }
 
@@ -66,6 +69,9 @@ public:
   /// Copy an interval
   interval& operator= (const interval& i)
     { zstart_ = i.zstart_; zlimit_ = i.zlimit_; return *this; }
+
+  /// Assign to this interval from a "START-END"-style string
+  interval& assign(const std::string& text, size_t pos = 0);
 
   /** @name Field accessors
   Two variants are provided for each field: @c %start() et al return 1-based
@@ -134,6 +140,9 @@ public:
   seqinterval(const char* name, coord_t zstart, coord_t end)
     : interval(zstart, end), name_(name) { }
 
+  /// Construct a seqinterval from a "NAME:START-END"-style string
+  explicit seqinterval(const std::string& text) { assign(text); }
+
   /// Construct a copy of a seqinterval
   seqinterval(const seqinterval& i) : interval(i), name_(i.name_) { }
 
@@ -143,6 +152,17 @@ public:
   /// Copy a seqinterval
   seqinterval& operator= (const seqinterval& i)
     { name_ = i.name_; zstart_ = i.zstart_; zlimit_ = i.zlimit_; return *this; }
+
+  /// Assign to this seqinterval
+  seqinterval& assign(const std::string& name, coord_t zstart, coord_t end)
+    { name_ = name; zstart_ = zstart; zlimit_ = end; return *this; }
+
+  /// Assign to this seqinterval
+  seqinterval& assign(const char* name, coord_t zstart, coord_t end)
+    { name_ = name; zstart_ = zstart; zlimit_ = end; return *this; }
+
+  /// Assign to this seqinterval from a "NAME:START-END"-style string
+  seqinterval& assign(const std::string& text, size_t pos = 0);
 
   /// @name Field accessors
   //@{

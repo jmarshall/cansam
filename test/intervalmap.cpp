@@ -1,6 +1,6 @@
 /*  test/intervalmap.cpp -- Tests for intervals and interval containers.
 
-    Copyright (C) 2011 Genome Research Ltd.
+    Copyright (C) 2011-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,6 +28,8 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <iostream>
+#include <limits>
+#include <sstream>
 
 #include "test/test.h"
 #include "sam/intervalmap.h"
@@ -43,7 +45,7 @@ void search(sam::interval_multimap<char>& m, const sam::seqinterval& i) {
   std::cout << "  iterator!\n\n";
 }
 
-void test_intervals(test_harness& t) {
+void test_intervalmap(test_harness& t) {
   sam::seqinterval si("X", 1000, 5000);
   std::cout << si << "\n";
 
@@ -91,4 +93,66 @@ void test_intervals(test_harness& t) {
   for (sam::interval_multimap<char>::iterator it = range.first;
        it != range.second; ++it)
     std::clog << "Y:" << it->first << " -> " << it->second << "\n";
+}
+
+void check_interval(test_harness& t, const string& region, int start, int end) {
+  string title = "interval.region[" + region + "]";
+
+  sam::interval si(region);
+  t.check(si.start(), start, title);
+  t.check(si.end(), end, title);
+
+  std::ostringstream s1, s2;
+  s1 << si;
+  s2 << start << '-' << end;
+  t.check(s1.str(), s2.str(), title);
+}
+
+void check_seqinterval(test_harness& t, const string& region,
+		       const string& name, int start, int end) {
+  string title = "seqinterval.region[" + region + "]";
+
+  sam::seqinterval si(region);
+  t.check(si.name(), name, title);
+  t.check(si.start(), start, title);
+  t.check(si.end(), end, title);
+
+  std::ostringstream s1, s2;
+  s1 << si;
+  s2 << name << ':' << start << '-' << end;
+  t.check(s1.str(), s2.str(), title);
+}
+
+void test_intervals(test_harness& t) {
+  sam::interval empty;
+  t.check(empty.zstart(), 0, "empty.zstart");
+  t.check(empty.zlimit(), 0, "empty.zlimit");
+
+  int huge = std::numeric_limits<int32_t>::max();
+
+  check_interval(t, "300", 300, 300);
+  check_interval(t, "1,100-2,543", 1100, 2543);
+  check_interval(t, "-200", 1, 200);
+  check_interval(t, "4,123,456-", 4123456, huge);
+  check_interval(t, "-", 1, huge);
+  check_interval(t, "", 1, 1);
+  check_interval(t, "1,100+150", 1100, 1249);
+  check_interval(t, "1,100+", 1100, 1099);
+  check_interval(t, "+100", 1, 100);
+
+  check_seqinterval(t, "ChrMT:1,100-2,543", "ChrMT", 1100, 2543);
+  check_seqinterval(t, "Chr whatever", "Chr whatever", 1, huge);
+  check_seqinterval(t, "15:-600005", "15", 1, 600005);
+  check_seqinterval(t, "1:10000-", "1", 10000, huge);
+  check_seqinterval(t, "8:12,500+1,101", "8", 12500, 13600);
+  check_seqinterval(t, "8:+2,000", "8", 1, 2000);
+  check_seqinterval(t, "8:2,000+", "8", 2000, 1999);
+  check_seqinterval(t, "18:98,765", "18", 98765, 98765);
+  check_seqinterval(t, ":50-80", "", 50, 80);
+  check_seqinterval(t, "foo",  "foo", 1, huge);
+  check_seqinterval(t, "foo:", "foo", 1, 1);
+  check_seqinterval(t, ":", "", 1, 1);
+  check_seqinterval(t, "", "", 1, huge);
+
+  test_intervalmap(t);
 }
