@@ -1,7 +1,7 @@
-/// @file sam/exception.h
+/// @file cansam/exception.h
 /// Exceptions thrown by Cansam classes and functions
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -36,7 +36,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 namespace sam {
 
-/** @class sam::exception sam/exception.h
+/** @class sam::exception cansam/exception.h
     @brief Base class for Cansam exceptions */
 class exception : public std::runtime_error {
 public:
@@ -56,7 +56,7 @@ private:
   std::string filename_;
 };
 
-/** @class sam::bad_format sam/exception.h
+/** @class sam::bad_format cansam/exception.h
     @brief Exception representing a SAM or BAM parsing error
 
 Invalid records encountered while reading SAM or BAM streams cause the
@@ -84,7 +84,7 @@ private:
   mutable std::string what_text_;
 };
 
-/** @class sam::system_error sam/exception.h
+/** @class sam::system_error cansam/exception.h
     @brief Exception raised from system call failures
 
 The message returned by what() is in the format

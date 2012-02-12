@@ -1,6 +1,6 @@
 /*  version.cpp -- Cansam library version information.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -27,7 +27,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#include "sam/version.h"
+#include "cansam/version.h"
 
 #include <sstream>
 

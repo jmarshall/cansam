@@ -1,6 +1,6 @@
 /*  alignment.cpp -- Classes and functions for SAM/BAM alignment records.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #error - This implementation requires 8-, 16-, and 32-bit integer types
 #endif
 
-#include "sam/alignment.h"
+#include "cansam/sam/alignment.h"
 
 #include <stdexcept>
 #include <string>
@@ -43,8 +43,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <iostream> // FIXME NUKE-ME
 
-#include "sam/exception.h"
-#include "sam/header.h"
+#include "cansam/sam/header.h"
+#include "cansam/exception.h"
 #include "lib/utilities.h"
 #include "lib/wire.h"
 

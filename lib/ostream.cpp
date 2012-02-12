@@ -1,6 +1,6 @@
 /*  ostream.cpp -- Various output stream inserters.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -29,8 +29,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <ostream>
 
-#include "sam/alignment.h"
-#include "sam/header.h"
+#include "cansam/sam/alignment.h"
+#include "cansam/sam/header.h"
 #include "lib/utilities.h"  // FIXME NUKE-ME want make_string for dump_on()
 
 using std::string;

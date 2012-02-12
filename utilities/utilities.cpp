@@ -33,7 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <unistd.h>  // for STDIN_FILENO, isatty()
 
-#include "sam/version.h"
+#include "cansam/version.h"
 
 using std::string;
 

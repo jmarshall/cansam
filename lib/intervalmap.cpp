@@ -27,14 +27,14 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#include "sam/intervalmap.h"
+#include "cansam/intervalmap.h"
 
 #include <limits>
 #include <ostream>
 
 #include <iostream>  // FIXME NUKE-ME
 
-#include "sam/exception.h"
+#include "cansam/exception.h"
 #include "lib/utilities.h"
 
 using std::string;

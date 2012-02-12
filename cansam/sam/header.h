@@ -1,7 +1,7 @@
-/// @file sam/header.h
+/// @file cansam/sam/header.h
 /// Classes for SAM/BAM headers
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,8 +28,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#ifndef CANSAM_HEADER_H
-#define CANSAM_HEADER_H
+#ifndef CANSAM_SAM_HEADER_H
+#define CANSAM_SAM_HEADER_H
 
 #include <string>
 #include <vector>
@@ -37,7 +37,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <iterator>
 #include <iosfwd>
 
-#include "sam/types.h"
+#include "cansam/types.h"
 
 namespace sam {
 
@@ -46,7 +46,7 @@ class bamio;
 class samio;
 class collection;
 
-/** @class sam::header sam/header.h
+/** @class sam::header cansam/sam/header.h
     @brief SAM/BAM header record, representing a single '@@' header line
 
 This class blah FIXME blah container-style blah, so a header object itself
@@ -137,7 +137,7 @@ public:
   //@{
   class const_iterator;
 
-  /** @class sam::header::tagfield sam/header.h
+  /** @class sam::header::tagfield cansam/sam/header.h
       @brief Helper class representing a header field as seen via an iterator
 
   Dereferencing a sam::header @c iterator or @c const_iterator produces
@@ -355,7 +355,7 @@ std::ostream& operator<< (std::ostream& stream, const header::tagfield& field);
 std::ostream& operator<< (std::ostream& stream, header::const_iterator it);
 
 
-/** @class sam::refsequence sam/header.h
+/** @class sam::refsequence cansam/sam/header.h
     @brief Reference sequence record, corresponding to a single '@@SQ' header */
 class refsequence : public header {
 public:
@@ -399,7 +399,7 @@ private:
 };
 
 
-/** @class sam::readgroup sam/header.h
+/** @class sam::readgroup cansam/sam/header.h
     @brief Read group record, corresponding to a single '@@RG' header */
 class readgroup : public header {
 public:
@@ -428,7 +428,7 @@ private:
 };
 
 
-/** @class sam::collection sam/header.h
+/** @class sam::collection cansam/sam/header.h
     @brief Header information for a collection of SAM/BAM records */
 class collection {
 public:

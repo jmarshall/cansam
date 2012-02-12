@@ -32,7 +32,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <sstream>
 
 #include "test/test.h"
-#include "sam/intervalmap.h"
+#include "cansam/intervalmap.h"
 
 void search(sam::interval_multimap<char>& m, const sam::seqinterval& i) {
   m.dump_intersecting(i);

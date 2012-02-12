@@ -1,6 +1,6 @@
 /*  utilities.h -- Various library support functions.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -34,7 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <sstream>
 #include <limits>
 
-#include "sam/types.h"
+#include "cansam/types.h"
 #include "lib/bits/sign_traits.h"
 
 namespace sam {

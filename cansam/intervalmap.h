@@ -1,4 +1,4 @@
-/// @file sam/intervalmap.h
+/// @file cansam/intervalmap.h
 /// Classes for sequence intervals and interval containers
 
 /*  Copyright (C) 2011-2012 Genome Research Ltd.
@@ -42,11 +42,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <iostream> // FIXME NUKEME
 
-#include "sam/types.h"
+#include "cansam/types.h"
 
 namespace sam {
 
-/** @class sam::interval sam/intervalmap.h
+/** @class sam::interval cansam/intervalmap.h
     @brief Interval within an unspecified sequence
 */
 class interval {
@@ -124,7 +124,7 @@ inline bool operator> (const interval& a, const interval& b) { return b < a; }
 inline bool overlaps(const interval& a, const interval& b)
   { return a.zstart() < b.zlimit() && b.zstart() < a.zlimit(); }
 
-/** @class sam::seqinterval sam/intervalmap.h
+/** @class sam::seqinterval cansam/intervalmap.h
     @brief Interval within a named sequence
 */
 class seqinterval : public interval {
@@ -334,7 +334,7 @@ void interval_tree<MappedType>::delete_tree(node* x) {
 }
 // @endcond
 
-/** @class sam::interval_multimap sam/intervalmap.h
+/** @class sam::interval_multimap cansam/intervalmap.h
     @brief Associative container keyed by sequence intervals
 */
 template <typename MappedType>

@@ -1,6 +1,6 @@
 /*  samgroupbyname.cpp -- Order a SAM/BAM file so that read pairs are together.
 
-    Copyright (C) 2010-2011 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -34,11 +34,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <cerrno>
 #include <cstdlib>
 
-#include "sam/algorithm.h"
-#include "sam/alignment.h"
-#include "sam/exception.h"
-#include "sam/header.h"
-#include "sam/stream.h"
+#include "cansam/sam/algorithm.h"
+#include "cansam/sam/alignment.h"
+#include "cansam/sam/header.h"
+#include "cansam/sam/stream.h"
+#include "cansam/exception.h"
 #include "utilities/utilities.h"
 
 using std::string;

@@ -1,7 +1,7 @@
-/// @file sam/stream.h
+/// @file cansam/sam/stream.h
 /// Classes for SAM/BAM input/output streams
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,8 +28,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#ifndef CANSAM_STREAM_H
-#define CANSAM_STREAM_H
+#ifndef CANSAM_SAM_STREAM_H
+#define CANSAM_SAM_STREAM_H
 
 #include <ios>
 #include <string>
@@ -53,7 +53,7 @@ class alignment;
 class collection;
 class sambamio;
 
-/** @class sam::samstream_base sam/stream.h
+/** @class sam::samstream_base cansam/sam/stream.h
     @brief Base class for SAM/BAM streams
 
 This is a base class for the SAM/BAM stream hierarchy; it is unlikely to be
@@ -96,7 +96,7 @@ private:
   bool owned_rdbuf_;
 };
 
-/** @class sam::isamstream sam/stream.h
+/** @class sam::isamstream cansam/sam/stream.h
     @brief SAM/BAM input stream
 */
 class isamstream : virtual public samstream_base {
@@ -129,7 +129,7 @@ public:
   // FIXME  Some form of seek/tell -- or maybe that's in samstream_base
 };
 
-/** @class sam::osamstream sam/stream.h
+/** @class sam::osamstream cansam/sam/stream.h
     @brief SAM/BAM output stream */
 class osamstream : virtual public samstream_base {
 public:
@@ -152,7 +152,7 @@ public:
     { manipulator(*this); return *this; }
 };
 
-/** @class sam::samstream sam/stream.h
+/** @class sam::samstream cansam/sam/stream.h
     @brief SAM/BAM input/output stream  */
 class samstream : public isamstream, public osamstream {
 public:

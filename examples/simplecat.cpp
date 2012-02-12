@@ -4,8 +4,8 @@
 #include <cstdlib>
 #include <cerrno>
 
-#include "sam/header.h"
-#include "sam/alignment.h"
+#include "cansam/sam/header.h"
+#include "cansam/sam/alignment.h"
 
 void cat(std::istream& in, bool print_headers) {
   // FIXME there is no hope, as istream >> aln is silly to implement

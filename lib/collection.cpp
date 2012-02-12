@@ -1,6 +1,6 @@
 /*  collection.cpp -- Class for a set of SAM/BAM headers.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -27,8 +27,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#include "sam/header.h"
-#include "sam/exception.h"
+#include "cansam/sam/header.h"
+#include "cansam/exception.h"
 #include "lib/sambamio.h"  // for push_back() flags
 
 #include "lib/utilities.h"

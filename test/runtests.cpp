@@ -1,6 +1,6 @@
 /*  test/runtests.cpp -- Simple test harness.
 
-    Copyright (C) 2010-2011 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <cstdlib>
 #include <cstring>
 
-#include "sam/exception.h"
+#include "cansam/exception.h"
 
 #include "test/test.h"
 

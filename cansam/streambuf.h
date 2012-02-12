@@ -1,7 +1,7 @@
-/// @file sam/streambuf.h
+/// @file cansam/streambuf.h
 /// Low-level classes for input/output
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -39,7 +39,7 @@ Most code will not need to use these classes directly.  */
 
 namespace sam {
 
-/** @class sam::streambuf sam/streambuf.h
+/** @class sam::streambuf cansam/streambuf.h
     @brief Stream buffer that can be open or closed */
 class streambuf : public std::streambuf {
 public:
@@ -60,7 +60,7 @@ private:
   streambuf& operator= (const streambuf&);
 };
 
-/** @class sam::rawfilebuf sam/streambuf.h
+/** @class sam::rawfilebuf cansam/streambuf.h
     @brief Unbuffered file descriptor stream buffer
 
 Provides unbuffered bulk access to a Unix-style file descriptor.

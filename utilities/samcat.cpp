@@ -32,10 +32,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <cstdlib>
 #include <cerrno>
 
-#include "sam/alignment.h"
-#include "sam/exception.h"
-#include "sam/header.h"
-#include "sam/stream.h"
+#include "cansam/sam/alignment.h"
+#include "cansam/sam/header.h"
+#include "cansam/sam/stream.h"
+#include "cansam/exception.h"
 #include "utilities/utilities.h"
 
 using std::string;

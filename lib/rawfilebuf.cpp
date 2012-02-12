@@ -1,6 +1,6 @@
 /*  rawfilebuf.cpp -- Low-level class for input/output.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -27,7 +27,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#include "sam/streambuf.h"
+#include "cansam/streambuf.h"
 
 #include <ios>
 #include <stdexcept>
@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <unistd.h>
 #include <errno.h>
 
-#include "sam/exception.h"
+#include "cansam/exception.h"
 
 namespace sam {
 

@@ -1,7 +1,7 @@
-/// @file sam/version.h
-/// Cansam library version information
+/// @file cansam/sam/algorithm.h
+/// Algorithms operating on alignment records
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,38 +28,45 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#ifndef CANSAM_VERSION_H
-#define CANSAM_VERSION_H
+#ifndef CANSAM_SAM_ALGORITHM_H
+#define CANSAM_SAM_ALGORITHM_H
 
-#include <string>
+#include <functional>
 
-/** @file
-The Cansam library version number is a 3-part @c major.minor.patch number,
-provided both as a preprocessor constant and a text string.  While the former
-denotes the Cansam headers your code is compiled against and the latter the
-Cansam library used at link- or run-time, in most circumstances both will
-represent the same value.
-
-The preprocessor macro #CANSAM_VERSION encodes the version as an integer
-literal in the same way as <a href="http://www.boost.org/">Boost</a>'s
-version macro, with two decimal digits of @c patch and three of @c minor.
-The version() function returns the version number in text form, with the
-final @c ".nn" omitted if @c patch is 0.
-
-This header file is not included by other Cansam header files, so your code
-should @c @#include it itself where necessary.
-
-@note While the utilities supplied with the Cansam library use this library
-version number directly as their own version number, external code should not
--- as such code is not updated in concert with the library.  */
-
-/// Library version, as an integer @c Mmmmpp
-#define CANSAM_VERSION  690
+#include "cansam/sam/alignment.h"
 
 namespace sam {
 
-/// Library version, as @c "n.nnn[.nn]"
-std::string version();
+/// Function object class for comparing alignments
+class less_by_qname :
+  public std::binary_function<const alignment&, const alignment&, bool> {
+public:
+  /// Returns whether the query name of @a a is lexicographically less than
+  /// that of @a b
+  bool operator() (const alignment& a, const alignment& b) const
+    { return cmp_by_qname(a, b) < 0; }
+};
+
+/// Function object class for comparing alignments
+class equal_by_qname :
+  public std::binary_function<const alignment&, const alignment&, bool> {
+public:
+  /// Returns whether the query name of @a a is the same as that of @a b
+  bool operator() (const alignment& a, const alignment& b) const
+    { return cmp_by_qname(a, b) == 0; }
+};
+
+/// Function object class for hashing alignments
+class hash_by_qname : public std::unary_function<const alignment&, size_t> {
+public:
+  /// Returns a hash value derived from the alignment's query name
+  size_t operator() (const alignment& aln) const {
+    size_t result = 0;
+    for (const char* s = aln.qname_c_str(); *s; s++)
+      result = (result * 131) + *s;
+    return result;
+  }
+};
 
 } // namespace sam
 

@@ -1,6 +1,6 @@
 /*  system.cpp -- Miscellaneous system-specific utility functions.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -51,7 +51,7 @@ unsigned long get_vss() {
 
 #include <fcntl.h>
 
-#include "sam/streambuf.h"
+#include "cansam/streambuf.h"
 
 namespace sam {
 

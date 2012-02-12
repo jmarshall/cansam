@@ -1,6 +1,6 @@
 /*  test/alignment.cpp -- Tests for alignment records.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <sstream>
 
 #include "test/test.h"
-#include "sam/alignment.h"
+#include "cansam/sam/alignment.h"
 
 std::string unpack_seq(const char* raw_seq, int seq_length) {
   std::string s;

@@ -1,7 +1,7 @@
-/// @file sam/algorithm.h
-/// Algorithms operating on alignment records
+/// @file cansam/types.h
+/// Basic types for some SAM/BAM fields
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,45 +28,17 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#ifndef CANSAM_ALGORITHM_H
-#define CANSAM_ALGORITHM_H
-
-#include <functional>
-
-#include "sam/alignment.h"
+#ifndef CANSAM_TYPES_H
+#define CANSAM_TYPES_H
 
 namespace sam {
 
-/// Function object class for comparing alignments
-class less_by_qname :
-  public std::binary_function<const alignment&, const alignment&, bool> {
-public:
-  /// Returns whether the query name of @a a is lexicographically less than
-  /// that of @a b
-  bool operator() (const alignment& a, const alignment& b) const
-    { return cmp_by_qname(a, b) < 0; }
-};
+/// Type for positions and coordinates
+typedef long coord_t;
 
-/// Function object class for comparing alignments
-class equal_by_qname :
-  public std::binary_function<const alignment&, const alignment&, bool> {
-public:
-  /// Returns whether the query name of @a a is the same as that of @a b
-  bool operator() (const alignment& a, const alignment& b) const
-    { return cmp_by_qname(a, b) == 0; }
-};
-
-/// Function object class for hashing alignments
-class hash_by_qname : public std::unary_function<const alignment&, size_t> {
-public:
-  /// Returns a hash value derived from the alignment's query name
-  size_t operator() (const alignment& aln) const {
-    size_t result = 0;
-    for (const char* s = aln.qname_c_str(); *s; s++)
-      result = (result * 131) + *s;
-    return result;
-  }
-};
+/// @b Signed type for insert sizes, etc, or generally a difference
+/// between coordinates
+typedef long scoord_t;
 
 } // namespace sam
 

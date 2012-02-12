@@ -1,7 +1,7 @@
-/// @file sam/alignment.h
+/// @file cansam/sam/alignment.h
 /// Classes and functions for SAM/BAM alignment records
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+/*  Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,8 +28,8 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#ifndef CANSAM_ALIGNMENT_H
-#define CANSAM_ALIGNMENT_H
+#ifndef CANSAM_SAM_ALIGNMENT_H
+#define CANSAM_SAM_ALIGNMENT_H
 
 #include <string>
 #include <vector>
@@ -40,8 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <stdint.h>
 
-#include "sam/types.h"
-#include "sam/header.h"
+#include "cansam/types.h"
+#include "cansam/sam/header.h"
 
 namespace sam {
 
@@ -97,7 +97,7 @@ int calc_bin(coord_t pos, coord_t right);
     i.e., a 0-based range.  */
 int calc_zbin(coord_t zpos, coord_t zright);
 
-/** @class sam::alignment sam/alignment.h
+/** @class sam::alignment cansam/sam/alignment.h
     @brief SAM/BAM alignment record
 
 Blah blah blah about alignment records, including how they are represented and
@@ -303,7 +303,7 @@ public:
 
   The possible types for the @c ValueType parameter are listed below.  */
   //@{
-  /** @class sam::alignment::tagfield sam/alignment.h
+  /** @class sam::alignment::tagfield cansam/sam/alignment.h
       @brief Helper class representing an auxiliary field as seen via an
 	     iterator
 

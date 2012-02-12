@@ -1,6 +1,6 @@
 /*  test/sam.cpp -- Tests for SAM and BAM formatting.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -30,8 +30,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <iostream>
 #include <sstream>
 
-#include "sam/alignment.h"
-#include "sam/stream.h"
+#include "cansam/sam/alignment.h"
+#include "cansam/sam/stream.h"
 #include "test/test.h"
 
 static void test_reader(test_harness& t) {

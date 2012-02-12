@@ -1,6 +1,6 @@
 /*  header.cpp -- Classes for SAM/BAM headers.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -27,12 +27,12 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#include "sam/header.h"
+#include "cansam/sam/header.h"
 
 #include <string>
 #include <cstring>
 
-#include "sam/exception.h"
+#include "cansam/exception.h"
 #include "lib/utilities.h"
 
 using std::string;

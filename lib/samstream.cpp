@@ -1,6 +1,6 @@
 /*  samstream.cpp -- Classes for SAM/BAM input/output streams.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -27,7 +27,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#include "sam/stream.h"
+#include "cansam/sam/stream.h"
 
 #include <fstream>
 #include <cctype>    // for tolower()
@@ -35,9 +35,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <unistd.h>  // for STDIN_FILENO etc
 
 // FIXME do we actually need all these, or could we just forward declare?
-#include "sam/alignment.h"
-#include "sam/exception.h"
-#include "sam/streambuf.h"
+#include "cansam/sam/alignment.h"
+#include "cansam/exception.h"
+#include "cansam/streambuf.h"
 #include "lib/sambamio.h"
 
 using std::string;

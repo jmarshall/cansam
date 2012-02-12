@@ -1,6 +1,6 @@
 # Makefile for the Cansam library, which provides tools for SAM/BAM files.
 #
-#    Copyright (C) 2010-2011 Genome Research Ltd.
+#    Copyright (C) 2010-2012 Genome Research Ltd.
 #
 #    Author: John Marshall <jm18@sanger.ac.uk>
 #
@@ -52,28 +52,28 @@ libcansam.a: $(LIBOBJS)
 	ranlib $@
 
 
-sam_alignment_h = sam/alignment.h sam/types.h sam/header.h
-sam_header_h    = sam/header.h sam/types.h
-sam_intervalmap_h=sam/intervalmap.h sam/types.h
-lib_sambamio_h  = lib/sambamio.h sam/stream.h
-lib_utilities_h = lib/utilities.h sam/types.h
+sam_alignment_h = cansam/sam/alignment.h cansam/types.h cansam/sam/header.h
+sam_header_h    = cansam/sam/header.h cansam/types.h
+sam_intervalmap_h=cansam/intervalmap.h cansam/types.h
+lib_sambamio_h  = lib/sambamio.h cansam/sam/stream.h
+lib_utilities_h = lib/utilities.h cansam/types.h
 
-lib/alignment.o: lib/alignment.cpp $(sam_alignment_h) sam/exception.h \
+lib/alignment.o: lib/alignment.cpp $(sam_alignment_h) cansam/exception.h \
 		 $(sam_header_h) $(lib_utilities_h) lib/wire.h
-lib/collection.o: lib/collection.cpp $(sam_header_h) sam/exception.h
-lib/exception.o: lib/exception.cpp sam/exception.h
-lib/header.o: lib/header.cpp $(sam_header_h) sam/exception.h $(lib_utilities_h)
+lib/collection.o: lib/collection.cpp $(sam_header_h) cansam/exception.h
+lib/exception.o: lib/exception.cpp cansam/exception.h
+lib/header.o: lib/header.cpp $(sam_header_h) cansam/exception.h $(lib_utilities_h)
 lib/intervalmap.o: lib/intervalmap.cpp $(sam_intervalmap_h)
 lib/ostream.o: lib/ostream.cpp $(sam_alignment_h) $(sam_header_h) \
 	       $(lib_utilities_h)
-lib/rawfilebuf.o: lib/rawfilebuf.cpp sam/streambuf.h sam/exception.h
+lib/rawfilebuf.o: lib/rawfilebuf.cpp cansam/streambuf.h cansam/exception.h
 lib/sambamio.o: lib/sambamio.cpp $(lib_sambamio_h) $(sam_alignment_h) \
-		sam/exception.h sam/stream.h $(lib_utilities_h) lib/wire.h
-lib/samstream.o: lib/samstream.cpp sam/stream.h $(sam_alignment_h) \
-		 sam/exception.h sam/streambuf.h $(lib_sambamio_h)
+		cansam/exception.h cansam/sam/stream.h $(lib_utilities_h) lib/wire.h
+lib/samstream.o: lib/samstream.cpp cansam/sam/stream.h $(sam_alignment_h) \
+		 cansam/exception.h cansam/streambuf.h $(lib_sambamio_h)
 lib/system.o: lib/system.cpp
 lib/utilities.o: lib/utilities.cpp lib/utilities.h
-lib/version.o: lib/version.cpp sam/version.h
+lib/version.o: lib/version.cpp cansam/version.h
 
 
 MISC_OBJS = utilities/samcat.o utilities/samcount.o \
@@ -101,20 +101,20 @@ simplecat: examples/simplecat.o libcansam.a
 
 
 utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
-		    sam/stream.h utilities/utilities.h
+		    cansam/sam/stream.h utilities/utilities.h
 utilities/samcount.o: utilities/samcount.cpp $(sam_alignment_h) \
-		      $(sam_header_h) sam/stream.h utilities/utilities.h
-utilities/samgroupbyname.o: utilities/samgroupbyname.cpp sam/algorithm.h \
-			    $(sam_alignment_h) sam/exception.h $(sam_header_h) \
-			    sam/stream.h utilities/utilities.h
+		      $(sam_header_h) cansam/sam/stream.h utilities/utilities.h
+utilities/samgroupbyname.o: utilities/samgroupbyname.cpp cansam/sam/algorithm.h \
+			    $(sam_alignment_h) cansam/exception.h $(sam_header_h) \
+			    cansam/sam/stream.h utilities/utilities.h
 utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h \
 		     $(sam_alignment_h)
 utilities/samsplit.o: utilities/samsplit.cpp $(sam_alignment_h) \
-		      sam/exception.h $(sam_header_h) sam/stream.h \
+		      cansam/exception.h $(sam_header_h) cansam/sam/stream.h \
 		      $(lib_utilities_h) utilities/utilities.h
 utilities/utilities.o: utilities/utilities.cpp utilities/utilities.h \
-		       sam/version.h
-examples/simplecat.o: examples/simplecat.cpp sam/header.h sam/alignment.h
+		       cansam/version.h
+examples/simplecat.o: examples/simplecat.cpp cansam/sam/header.h cansam/sam/alignment.h
 
 
 test: test/runtests
@@ -126,11 +126,11 @@ TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
 test/runtests: $(TEST_OBJS) libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) libcansam.a $(LDLIBS)
 
-test/runtests.o: test/runtests.cpp test/test.h sam/exception.h
+test/runtests.o: test/runtests.cpp test/test.h cansam/exception.h
 test/alignment.o: test/alignment.cpp test/test.h $(sam_alignment_h)
 test/header.o: test/header.cpp test/test.h $(sam_header_h)
 test/intervalmap.o: test/intervalmap.cpp test/test.h $(sam_intervalmap_h)
-test/sam.o: test/sam.cpp test/test.h $(sam_alignment_h) sam/stream.h
+test/sam.o: test/sam.cpp test/test.h $(sam_alignment_h) cansam/sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 
 .PHONY: all clean doc docclean install lib tags test uninstall
@@ -149,10 +149,10 @@ INSTALL_PROGRAM = install -p
 
 install: libcansam.a samcat samcount samgroupbyname samsort samsplit
 	mkdir $(DESTDIR)$(includedir)
-	mkdir $(DESTDIR)$(includedir)/sam
-	for sam_hdr in sam/*.h; do \
-	    $(INSTALL_DATA) $$sam_hdr $(DESTDIR)$(includedir)/$$sam_hdr; \
-	done
+	mkdir $(DESTDIR)$(includedir)/cansam
+	$(INSTALL_DATA) cansam/*.h $(DESTDIR)$(includedir)/cansam
+	mkdir $(DESTDIR)$(includedir)/cansam/sam
+	$(INSTALL_DATA) cansam/sam/*.h $(DESTDIR)$(includedir)/cansam/sam
 	mkdir $(DESTDIR)$(libdir)
 	$(INSTALL_DATA) libcansam.a $(DESTDIR)$(libdir)/libcansam.a
 	mkdir $(DESTDIR)$(bindir)
@@ -173,8 +173,8 @@ install: libcansam.a samcat samcount samgroupbyname samsort samsplit
 	$(INSTALL_DATA) utilities/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
 
 uninstall:
-	for sam_hdr in sam/*.h; do rm $(DESTDIR)$(includedir)/$$sam_hdr; done
-	-rmdir $(DESTDIR)$(includedir)/sam
+	for sam_hdr in cansam/*.h cansam/sam/*.h; do rm $(DESTDIR)$(includedir)/$$sam_hdr; done
+	-rmdir $(DESTDIR)$(includedir)/cansam/sam $(DESTDIR)$(includedir)/cansam
 	-rm $(DESTDIR)$(libdir)/libcansam.a
 	-rm $(DESTDIR)$(bindir)/samcat
 	-rm $(DESTDIR)$(BINDIR)/samcount
@@ -189,8 +189,7 @@ doc:
 	@echo "Remove <p></p> from enum (see namespacesam.html)" >&2
 
 tags:
-	@#ctags -o TAGS */*.h */*.cpp
-	ctags -o TAGS {examples,lib,sam,test,utilities}/*.[ch]*
+	ctags -f TAGS [cltu]*/*.h [cl]*/*/*.h [cltu]*/*.cpp
 
 clean:
 	-rm -f $(OUTPUTS) $(LIBOBJS) $(MISC_OBJS) $(TEST_OBJS) TAGS
