@@ -38,7 +38,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include "cansam/sam/stream.h"
 #include "cansam/exception.h"
 #include "lib/utilities.h"
-#include "utilities/utilities.h"
+#include "tools/utilities.h"
 
 using std::string;
 using namespace sam;

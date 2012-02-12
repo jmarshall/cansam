@@ -35,7 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include "cansam/sam/alignment.h"
 #include "cansam/sam/header.h"
 #include "cansam/sam/stream.h"
-#include "utilities/utilities.h"
+#include "tools/utilities.h"
 
 using std::string;
 using namespace sam;

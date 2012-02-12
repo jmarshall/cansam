@@ -1,7 +1,6 @@
-/// @file utilities/samsort.h
-/// Infrastructure for extending the @c samsort utility
+/*  utilities.cpp -- Support routines common to the various utilities.
 
-/*  Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010-2012 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -28,43 +27,31 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
-#ifndef SAMSORT_H
-#define SAMSORT_H
+#include "tools/utilities.h"
 
-namespace sam { class alignment; }
+#include <ostream>
 
-/** @class  alignment_comparator utilities/samsort.h
-    @brief  Helper class for adding new comparison functions to the
-	    @c samsort utility.
+#include <unistd.h>  // for STDIN_FILENO, isatty()
 
-New code can be added to @c samsort simply by adding your object file to
-@c SAMSORT_OBJS in the makefile.  Your source file should include a static
-object informing the existing code of your new comparison function, like this:
+#include "cansam/version.h"
 
-@code
-bool less_than(const sam::alignment& a, const sam::alignment& b) {
-  // ...
+using std::string;
+
+void print_version(std::ostream& stream, const char* name) {
+  stream << name << " (Cansam) " << sam::version() << "\n"
+"Copyright (C) 2012 Genome Research Ltd.\n"
+"This is free software: you are free to change and redistribute it.\n"
+"There is NO WARRANTY, to the extent permitted by law.\n";
 }
 
-static const alignment_comparator
-  my_comparator("custom", "Order by my custom criteria", less_than);
-  @endcode
+bool cin_likely_from_user() {
+  return isatty(STDIN_FILENO);
+}
 
-This object's constructor runs before @e main() to add your function to
-the list; there is no need to change the existing @c samsort code itself
-to inform it of your new function.  */
-class alignment_comparator {
-public:
-  /// Signature for comparison functions, which should return true iff @a a @< @a b
-  typedef bool compare(const sam::alignment& a, const sam::alignment& b);
-
-  /** @brief Constructor, registering the comparison function.
-  */
-  alignment_comparator(const char* name, const char* description,
-		       compare* function);
-
-  const char* description; ///< The description that was provided
-  compare* comparer; ///< The comparison function that was provided
-};
-
-#endif
+string basename(const string& path) {
+  size_t slashpos = path.rfind('/');
+  size_t basepos = (slashpos != string::npos)? slashpos+1 : 0;
+  size_t dotpos = path.find('.', basepos);
+  size_t length = (dotpos != string::npos)? dotpos - basepos : string::npos;
+  return path.substr(basepos, length);
+}

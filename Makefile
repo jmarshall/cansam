@@ -78,44 +78,41 @@ lib/utilities.o: lib/utilities.cpp lib/utilities.h
 lib/version.o: lib/version.cpp cansam/version.h
 
 
-MISC_OBJS = utilities/samcat.o utilities/samcount.o \
-	    utilities/samgroupbyname.o utilities/samsort.o \
-	    utilities/samsplit.o utilities/utilities.o \
-	    examples/simplecat.o
+MISC_OBJS = tools/samcat.o tools/samcount.o tools/samgroupbyname.o \
+	    tools/samsort.o tools/samsplit.o \
+	    tools/utilities.o examples/simplecat.o
 
-samcat: utilities/samcat.o utilities/utilities.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcat.o utilities/utilities.o libcansam.a $(LDLIBS)
+samcat: tools/samcat.o tools/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ tools/samcat.o tools/utilities.o libcansam.a $(LDLIBS)
 
-samcount: utilities/samcount.o utilities/utilities.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samcount.o utilities/utilities.o libcansam.a $(LDLIBS)
+samcount: tools/samcount.o tools/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ tools/samcount.o tools/utilities.o libcansam.a $(LDLIBS)
 
-samgroupbyname: utilities/samgroupbyname.o utilities/utilities.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samgroupbyname.o utilities/utilities.o libcansam.a $(LDLIBS)
+samgroupbyname: tools/samgroupbyname.o tools/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ tools/samgroupbyname.o tools/utilities.o libcansam.a $(LDLIBS)
 
-samsort: utilities/samsort.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samsort.o libcansam.a $(LDLIBS)
+samsort: tools/samsort.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ tools/samsort.o libcansam.a $(LDLIBS)
 
-samsplit: utilities/samsplit.o utilities/utilities.o libcansam.a
-	$(CXX) $(LDFLAGS) -o $@ utilities/samsplit.o utilities/utilities.o libcansam.a $(LDLIBS)
+samsplit: tools/samsplit.o tools/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ tools/samsplit.o tools/utilities.o libcansam.a $(LDLIBS)
 
 simplecat: examples/simplecat.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ examples/simplecat.o libcansam.a $(LDLIBS)
 
 
-utilities/samcat.o: utilities/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
-		    cansam/sam/stream.h utilities/utilities.h
-utilities/samcount.o: utilities/samcount.cpp $(sam_alignment_h) \
-		      $(sam_header_h) cansam/sam/stream.h utilities/utilities.h
-utilities/samgroupbyname.o: utilities/samgroupbyname.cpp cansam/sam/algorithm.h \
-			    $(sam_alignment_h) cansam/exception.h $(sam_header_h) \
-			    cansam/sam/stream.h utilities/utilities.h
-utilities/samsort.o: utilities/samsort.cpp utilities/samsort.h \
-		     $(sam_alignment_h)
-utilities/samsplit.o: utilities/samsplit.cpp $(sam_alignment_h) \
-		      cansam/exception.h $(sam_header_h) cansam/sam/stream.h \
-		      $(lib_utilities_h) utilities/utilities.h
-utilities/utilities.o: utilities/utilities.cpp utilities/utilities.h \
-		       cansam/version.h
+tools/samcat.o: tools/samcat.cpp $(sam_alignment_h) $(sam_header_h) \
+		cansam/sam/stream.h tools/utilities.h
+tools/samcount.o: tools/samcount.cpp $(sam_alignment_h) $(sam_header_h) \
+		  cansam/sam/stream.h tools/utilities.h
+tools/samgroupbyname.o: tools/samgroupbyname.cpp cansam/sam/algorithm.h \
+			$(sam_alignment_h) cansam/exception.h $(sam_header_h) \
+			cansam/sam/stream.h tools/utilities.h
+tools/samsort.o: tools/samsort.cpp tools/samsort.h $(sam_alignment_h)
+tools/samsplit.o: tools/samsplit.cpp $(sam_alignment_h) cansam/exception.h \
+		  $(sam_header_h) cansam/sam/stream.h $(lib_utilities_h) \
+		  tools/utilities.h
+tools/utilities.o: tools/utilities.cpp tools/utilities.h cansam/version.h
 examples/simplecat.o: examples/simplecat.cpp cansam/sam/header.h cansam/sam/alignment.h
 
 
@@ -166,13 +163,13 @@ install: libcansam.a samcat samcount samgroupbyname samsort samsplit
 	# FIXME mkdir $(DESTDIR)$(prefix)/share
 	mkdir $(DESTDIR)$(mandir)
 	mkdir $(DESTDIR)$(man1dir)
-	$(INSTALL_DATA) utilities/samcat.1 $(DESTDIR)$(man1dir)/samcat.1
-	$(INSTALL_DATA) utilities/samgroupbyname.1 \
+	$(INSTALL_DATA) tools/samcat.1 $(DESTDIR)$(man1dir)/samcat.1
+	$(INSTALL_DATA) tools/samgroupbyname.1 \
 	                $(DESTDIR)$(man1dir)/samgroupbyname.1
-	$(INSTALL_DATA) utilities/samsort.1 $(DESTDIR)$(man1dir)/samsort.1
-	$(INSTALL_DATA) utilities/samsplit.1 $(DESTDIR)$(man1dir)/samsplit.1
+	$(INSTALL_DATA) tools/samsort.1 $(DESTDIR)$(man1dir)/samsort.1
+	$(INSTALL_DATA) tools/samsplit.1 $(DESTDIR)$(man1dir)/samsplit.1
 	mkdir $(DESTDIR)$(man3dir)
-	$(INSTALL_DATA) utilities/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
+	$(INSTALL_DATA) tools/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
 
 uninstall:
 	for sam_hdr in cansam/*.h cansam/sam/*.h; do rm $(DESTDIR)$(includedir)/$$sam_hdr; done
@@ -183,7 +180,7 @@ uninstall:
 	-rm $(DESTDIR)$(bindir)/samgroupbyname
 	-rm $(DESTDIR)$(BINDIR)/samsort
 	-rm $(DESTDIR)$(BINDIR)/samsplit
-	cd utilities; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
+	cd tools; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
 	rm $(DESTDIR)$(man3dir)/cansam.3
 
 doc:
@@ -191,7 +188,7 @@ doc:
 	@echo "Remove <p></p> from enum (see namespacesam.html)" >&2
 
 tags:
-	ctags -f TAGS [cltu]*/*.h [cl]*/*/*.h [cltu]*/*.cpp
+	ctags -f TAGS [clt]*/*.h [cl]*/*/*.h [clt]*/*.cpp
 
 clean:
 	-rm -f $(OUTPUTS) $(LIBOBJS) $(MISC_OBJS) $(TEST_OBJS) TAGS
