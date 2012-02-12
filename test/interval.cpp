@@ -1,4 +1,4 @@
-/*  test/intervalmap.cpp -- Tests for intervals and interval containers.
+/*  test/interval.cpp -- Tests for intervals and interval containers.
 
     Copyright (C) 2011-2012 Genome Research Ltd.
 

@@ -44,7 +44,7 @@ lib: libcansam.a
 
 LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
 	  lib/samstream.o lib/ostream.o lib/rawfilebuf.o \
-	  lib/intervalmap.o \
+	  lib/interval.o lib/intervalmap.o \
 	  lib/exception.o lib/system.o lib/utilities.o lib/version.o
 
 libcansam.a: $(LIBOBJS)
@@ -54,7 +54,8 @@ libcansam.a: $(LIBOBJS)
 
 sam_alignment_h = cansam/sam/alignment.h cansam/types.h cansam/sam/header.h
 sam_header_h    = cansam/sam/header.h cansam/types.h
-sam_intervalmap_h=cansam/intervalmap.h cansam/types.h
+sam_interval_h  = cansam/interval.h cansam/types.h
+sam_intervalmap_h=cansam/intervalmap.h cansam/interval.h cansam/types.h
 lib_sambamio_h  = lib/sambamio.h cansam/sam/stream.h
 lib_utilities_h = lib/utilities.h cansam/types.h
 
@@ -63,6 +64,7 @@ lib/alignment.o: lib/alignment.cpp $(sam_alignment_h) cansam/exception.h \
 lib/collection.o: lib/collection.cpp $(sam_header_h) cansam/exception.h
 lib/exception.o: lib/exception.cpp cansam/exception.h
 lib/header.o: lib/header.cpp $(sam_header_h) cansam/exception.h $(lib_utilities_h)
+lib/interval.o: lib/interval.cpp $(sam_interval_h)
 lib/intervalmap.o: lib/intervalmap.cpp $(sam_intervalmap_h)
 lib/ostream.o: lib/ostream.cpp $(sam_alignment_h) $(sam_header_h) \
 	       $(lib_utilities_h)
@@ -121,7 +123,7 @@ test: test/runtests
 	test/runtests test $(srcdir)/test
 
 TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
-	    test/wire.o test/intervalmap.o
+	    test/wire.o test/interval.o
 
 test/runtests: $(TEST_OBJS) libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ $(TEST_OBJS) libcansam.a $(LDLIBS)
@@ -129,7 +131,7 @@ test/runtests: $(TEST_OBJS) libcansam.a
 test/runtests.o: test/runtests.cpp test/test.h cansam/exception.h
 test/alignment.o: test/alignment.cpp test/test.h $(sam_alignment_h)
 test/header.o: test/header.cpp test/test.h $(sam_header_h)
-test/intervalmap.o: test/intervalmap.cpp test/test.h $(sam_intervalmap_h)
+test/interval.o: test/interval.cpp test/test.h $(sam_intervalmap_h)
 test/sam.o: test/sam.cpp test/test.h $(sam_alignment_h) cansam/sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 

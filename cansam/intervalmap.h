@@ -1,5 +1,5 @@
 /// @file cansam/intervalmap.h
-/// Classes for sequence intervals and interval containers
+/// Classes for sequence interval containers
 
 /*  Copyright (C) 2011-2012 Genome Research Ltd.
 
@@ -32,7 +32,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #define CANSAM_INTERVALMAP_H
 
 #include <functional>
-#include <iosfwd>
 #include <iterator>
 #include <map>
 #include <string>
@@ -42,155 +41,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <iostream> // FIXME NUKEME
 
-#include "cansam/types.h"
+#include "cansam/interval.h"
 
 namespace sam {
-
-/** @class sam::interval cansam/intervalmap.h
-    @brief Interval within an unspecified sequence
-*/
-class interval {
-public:
-  /// Construct an empty interval
-  interval() : zstart_(0), zlimit_(0) { }
-
-  /// Construct a zero-based, half-open interval
-  interval(coord_t zstart, coord_t end) : zstart_(zstart), zlimit_(end) { }
-
-  /// Construct an interval from a "START-END"-style string
-  explicit interval(const std::string& text) { assign(text); }
-
-  /// Construct a copy of an interval
-  interval(const interval& i) : zstart_(i.zstart_), zlimit_(i.zlimit_) { }
-
-  //  Destroy this interval object (not interesting enough to warrant ///)
-  ~interval() { }
-
-  /// Copy an interval
-  interval& operator= (const interval& i)
-    { zstart_ = i.zstart_; zlimit_ = i.zlimit_; return *this; }
-
-  /// Assign to this interval from a "START-END"-style string
-  interval& assign(const std::string& text, size_t pos = 0);
-
-  /** @name Field accessors
-  Two variants are provided for each field: @c %start() et al return 1-based
-  coordinates, while @c %zstart() et al return the same positions in 0-based
-  coordinates.  */
-  //@{
-  coord_t start() const  { return zstart_+1; }
-  coord_t zstart() const { return zstart_; }
-
-  coord_t end() const  { return zlimit_; }
-  coord_t zend() const { return zlimit_-1; }
-
-  coord_t limit() const  { return zlimit_+1; }
-  coord_t zlimit() const { return zlimit_; }
-
-  coord_t length() const { return zlimit_ - zstart_;  }
-  //@}
-
-  /// @name Field modifiers
-  //@{
-  void set_start(coord_t start)   { zstart_ = start-1; }
-  void set_zstart(coord_t zstart) { zstart_ = zstart; }
-
-  void set_end(coord_t end)   { zlimit_ = end; }
-  void set_zend(coord_t zend) { zlimit_ = zend+1; }
-
-  void set_limit(coord_t limit)   { zlimit_ = limit-1; }
-  void set_zlimit(coord_t zlimit) { zlimit_ = zlimit; }
-  //@}
-
-protected:
-  // @cond infrastructure
-  // Represented as a zero-based half-open interval [zstart_, zlimit_).
-  int32_t zstart_;
-  int32_t zlimit_;
-  // @endcond
-};
-
-/// Compare intervals
-/** The intervals are ordered by starting coordinate.
-@relatesalso interval */
-inline bool operator< (const interval& a, const interval& b)
-  { return a.zstart() < b.zstart(); }
-
-/// Compare intervals, similarly to @c operator< above
-/** @relatesalso interval */
-inline bool operator> (const interval& a, const interval& b) { return b < a; }
-
-// TODO  Perhaps pick an operator for this
-inline bool overlaps(const interval& a, const interval& b)
-  { return a.zstart() < b.zlimit() && b.zstart() < a.zlimit(); }
-
-/** @class sam::seqinterval cansam/intervalmap.h
-    @brief Interval within a named sequence
-*/
-class seqinterval : public interval {
-public:
-  /// Construct an empty seqinterval
-  seqinterval() { }
-
-  /// Construct a zero-based, half-open seqinterval
-  seqinterval(const std::string& name, coord_t zstart, coord_t end)
-    : interval(zstart, end), name_(name) { }
-
-  /// Construct a zero-based, half-open seqinterval
-  seqinterval(const char* name, coord_t zstart, coord_t end)
-    : interval(zstart, end), name_(name) { }
-
-  /// Construct a seqinterval from a "NAME:START-END"-style string
-  explicit seqinterval(const std::string& text) { assign(text); }
-
-  /// Construct a copy of a seqinterval
-  seqinterval(const seqinterval& i) : interval(i), name_(i.name_) { }
-
-  //  Destroy this seqinterval object (not interesting enough to warrant ///)
-  ~seqinterval() { }
-
-  /// Copy a seqinterval
-  seqinterval& operator= (const seqinterval& i)
-    { name_ = i.name_; zstart_ = i.zstart_; zlimit_ = i.zlimit_; return *this; }
-
-  /// Assign to this seqinterval
-  seqinterval& assign(const std::string& name, coord_t zstart, coord_t end)
-    { name_ = name; zstart_ = zstart; zlimit_ = end; return *this; }
-
-  /// Assign to this seqinterval
-  seqinterval& assign(const char* name, coord_t zstart, coord_t end)
-    { name_ = name; zstart_ = zstart; zlimit_ = end; return *this; }
-
-  /// Assign to this seqinterval from a "NAME:START-END"-style string
-  seqinterval& assign(const std::string& text, size_t pos = 0);
-
-  /// @name Field accessors
-  //@{
-  std::string name() const { return name_; }
-  const char* name_c_str() const { return name_.c_str(); }
-  //@}
-
-  /// @name Field modifiers
-  //@{
-  void set_name(const std::string& name) { name_ = name; }
-  //@}
-
-private:
-  std::string name_;
-};
-
-/// Print an interval to the stream
-/** Writes an interval to a stream in the format "START-END", with 1-based
-coordinates.
-@relatesalso interval */
-std::ostream& operator<< (std::ostream& stream, const interval& i);
-
-/// Print a seqinterval to the stream
-/** Writes a seqinterval to a stream in the format "NAME:START-END", with
-1-based coordinates.
-@relatesalso seqinterval */
-std::ostream& operator<< (std::ostream& stream, const seqinterval& i);
-
 
 // @cond infrastructure
 class interval_tree_base {
