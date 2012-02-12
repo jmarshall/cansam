@@ -36,6 +36,8 @@ CXX      = g++
 CXXFLAGS = -Wall -Wextra -g -O2 -I$(srcdir)
 LDFLAGS  =
 LDLIBS   = -lz
+AR       = ar
+RANLIB   = ranlib
 
 OUTPUTS = libcansam.a samcat samcount samgroupbyname samsort samsplit test/runtests
 all: $(OUTPUTS)
@@ -48,8 +50,9 @@ LIBOBJS = lib/alignment.o lib/collection.o lib/header.o lib/sambamio.o \
 	  lib/exception.o lib/system.o lib/utilities.o lib/version.o
 
 libcansam.a: $(LIBOBJS)
-	$(AR) cr $@ $(LIBOBJS)
-	ranlib $@
+	-rm -f $@
+	$(AR) rc $@ $(LIBOBJS)
+	-$(RANLIB) $@
 
 
 sam_alignment_h = cansam/sam/alignment.h cansam/types.h cansam/sam/header.h
