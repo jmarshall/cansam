@@ -166,6 +166,8 @@ try {
 
   out.setf(output_format, std::ios::basefield | std::ios::boolalpha);
 
+  int status = EXIT_SUCCESS;
+
   if (optind == argc) {
     isamstream in("-");
     cat(in, out, suppress_headers);
@@ -176,8 +178,10 @@ try {
       if (in.is_open())
 	cat(in, out, suppress_headers);
       else {
+	std::cout << std::flush;
 	sam::system_error error("can't open ", argv[i], errno);
-	std::cerr << "samcat: " << error.what() << '\n';
+	std::cerr << "samcat: " << error.what() << std::endl;
+	status = EXIT_FAILURE;
       }
     }
 
@@ -188,7 +192,7 @@ try {
     std::clog << '\n';
   }
 
-  return EXIT_SUCCESS;
+  return status;
 }
 catch (const sam::exception& e) {
   std::cout << std::flush;
