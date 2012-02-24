@@ -177,7 +177,7 @@ char* char_buffer::flush_make_space(char* ptr, std::vector<char*>& ptrvec) {
   if (begin > array) {
     memmove(array, begin, end - begin);
   }
-  else {
+  else if (available() < 1024 + capacity / 4) {
     size_t newcapacity = capacity * 2;
     char* newarray = new char[newcapacity];
     oldarray = array;
@@ -334,7 +334,7 @@ private:
   void read_refinfo(isamstream& stream, string& name, coord_t& length);
 
   bool underflow(isamstream&);
-  void fill_cdata(isamstream&);
+  void fill_cdata(isamstream&, size_t);
   size_t inflate_into_buffer(char*, size_t);
 
   size_t deflate_onto_cdata(osamstream&, char*, size_t);
@@ -405,13 +405,20 @@ bamio::~bamio() {
   }
 }
 
-// Fill  cdata  by reading from the streambuf.  Reads as much as will fit into
+// Fill  cdata  by reading from the streambuf.  Reads at least  desired_size
+// bytes (unless EOF occurs first), but potentially as much as will fit into
 // the buffer, which is probably several BGZF blocks.  This reduces the number
 // of read(2) system calls for sequential access, and (with modern disk block
 // sizes) shouldn't mean too much data is discarded by any subsequent seek().
-void bamio::fill_cdata(isamstream& stream) {
+void bamio::fill_cdata(isamstream& stream, size_t desired_size) {
   cdata.flush();
-  cdata.end += rdbuf_sgetn(stream, cdata.end, cdata.available());
+
+  if (! stream.eof())
+    do {
+      std::streamsize n = rdbuf_sgetn(stream, cdata.end, cdata.available());
+      if (n == 0)  break;
+      cdata.end += n;
+    } while (cdata.size() < desired_size);
 }
 
 // Compress the specified data into  cdata, appending to whatever is already
@@ -542,16 +549,17 @@ size_t bamio::inflate_into_buffer(char* data, size_t length) {
 // necessary.  Returns true if  buffer  is nonempty afterwards.
 bool bamio::underflow(isamstream& stream) {
   if (cdata.size() < BGZF::hsize) {
-    fill_cdata(stream);
+    fill_cdata(stream, BGZF::hsize);
     // If there's still no data, we're cleanly at EOF.
     if (cdata.size() == 0)  return false;
   }
 
   if (BGZF::is_bgzf_header(cdata.begin, cdata.size())) {
+    // "Block only" measures compressed-payload & trailer, excluding the header.
     size_t blockonly_length = BGZF::block_size(cdata.begin) - BGZF::hsize;
     cdata.begin += BGZF::hsize;
     if (cdata.size() < blockonly_length) {
-      fill_cdata(stream);
+      fill_cdata(stream, blockonly_length);
       if (cdata.size() < blockonly_length)
 	throw bad_format(make_string()
 	    << "Truncated BGZF block (expected " << blockonly_length
@@ -974,7 +982,10 @@ size_t gzsamio::xsgetn(isamstream&, char*, size_t) {
 // from the stream to determine what type of file it is.
 sambamio* sambamio::new_in(isamstream& stream) {
   char buffer[BGZF::hsize];
-  std::streamsize n = rdbuf_sgetn(stream, buffer, sizeof buffer);
+
+  std::streamsize n = 0;
+  while (n < BGZF::hsize && ! stream.eof())
+    n += rdbuf_sgetn(stream, buffer + n, sizeof buffer - n);
 
   if (BGZF::is_bgzf_header(buffer, n))
     return new bamio(buffer, n);
