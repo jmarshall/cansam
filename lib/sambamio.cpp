@@ -137,10 +137,10 @@ public:
   // Ensure the buffer has at least the specified caacity
   void reserve(size_t sz) { if (capacity < sz)  reserve_(sz); }
 
-  // Produce more available space beyond  end  by flushing, or, if the unread
-  // characters are already at the start of the buffer, by enlarging it.
+  // Move any unread characters to the start of the buffer and ensure there is
+  // reasonable space available beyond  end, possibly by enlarging the buffer.
   // Updates begin/end and the specified pointers accordingly.
-  char* flush_make_space(char* ptr, std::vector<char*>& ptrvec);
+  void flush_make_space(char*& ptr, std::vector<char*>& ptrvec);
 
 private:
   void reserve_(size_t sz);
@@ -165,12 +165,7 @@ void char_buffer::reserve_(size_t sz) {
   delete [] oldarray;
 }
 
-// Produces more space at the end of the buffer by moving the remaining
-// unread characters in [begin,end) -- not including the sentinel -- to the
-// start of the buffer, or, if  begin  is already at the start of the buffer,
-// by enlarging it; rewires pointers, including  ptr  and those in  ptrvec,
-// to point to the same places in the new location.  FIXME NUKE THIS COMMENT
-char* char_buffer::flush_make_space(char* ptr, std::vector<char*>& ptrvec) {
+void char_buffer::flush_make_space(char*& ptr, std::vector<char*>& ptrvec) {
   char* oldarray = NULL;
   char* oldbegin = begin;
 
@@ -185,6 +180,8 @@ char* char_buffer::flush_make_space(char* ptr, std::vector<char*>& ptrvec) {
     array = newarray;
     capacity = newcapacity;
   }
+  else
+    return;  // Don't bother rewiring the pointers when nothing has changed.
 
   begin = array;
   end = &begin[end - oldbegin];
@@ -195,8 +192,6 @@ char* char_buffer::flush_make_space(char* ptr, std::vector<char*>& ptrvec) {
     *it = &begin[*it - oldbegin];
 
   delete [] oldarray;
-
-  return ptr;
 }
 
 
@@ -260,7 +255,7 @@ int sambamio::getline(char_buffer& b, isamstream& stream,
 	if (s > b.begin) {
 	  // Move the sentinel one character later, to make room for a \0.
 	  b.end++;
-	  if (b.available() == 0)  s = b.flush_make_space(s, fields);
+	  if (b.available() == 0)  b.flush_make_space(s, fields);
 	  *b.end = '\n';
 
 	  *s++ = '\0';
@@ -271,7 +266,7 @@ int sambamio::getline(char_buffer& b, isamstream& stream,
       }
       else {
 	// This is the sentinel, and there are more characters to be read.
-	s = b.flush_make_space(s, fields);
+	b.flush_make_space(s, fields);
 
 	// Read more characters, leaving one position spare for the sentinel.
 	b.end += xsgetn(stream, b.end, b.available() - 1);
