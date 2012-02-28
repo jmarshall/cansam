@@ -206,6 +206,9 @@ public:
   //  Destroy this container object (not interesting enough to warrant ///)
   ~interval_multimap() { }
 
+  /// Returns whether the container is empty
+  bool empty() const { return trees.empty(); }
+
   /// Insert (a copy of) @a value
   iterator insert(const std::pair<seqinterval, MappedType>& value)
     { return trees[value.first.name()].insert(value.first, value.second); }
