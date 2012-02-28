@@ -30,7 +30,8 @@
 # THE POSSIBILITY OF SUCH DAMAGE.
 
 srcdir = .
-VPATH  = $(srcdir)
+# SRC will be $(srcdir)/ when building in a separate directory
+SRC =
 
 CXX      = g++
 CXXFLAGS = -Wall -Wextra -g -O2 -I$(srcdir)
@@ -39,7 +40,8 @@ LDLIBS   = -lz
 AR       = ar
 RANLIB   = ranlib
 
-OUTPUTS = libcansam.a samcat samcount samgroupbyname samsort samsplit test/runtests
+TOOLS   = samcat samcount samgroupbyname samsort samsplit
+OUTPUTS = libcansam.a $(TOOLS) test/runtests
 all: $(OUTPUTS)
 
 lib: libcansam.a
@@ -120,7 +122,7 @@ examples/simplecat.o: examples/simplecat.cpp cansam/sam/header.h cansam/sam/alig
 
 
 test: test/runtests
-	test/runtests test $(srcdir)/test
+	test/runtests test $(SRC)test
 
 TEST_OBJS = test/runtests.o test/alignment.o test/header.o test/sam.o \
 	    test/wire.o test/interval.o
@@ -146,45 +148,31 @@ mandir      = $(prefix)/share/man
 man1dir     = $(mandir)/man1
 man3dir     = $(mandir)/man3
 
-INSTALL_DATA = install -p
-INSTALL_PROGRAM = install -p
+MKDIR_P = mkdir -p
+INSTALL = install -p
+INSTALL_PROGRAM = $(INSTALL)
+INSTALL_DATA    = $(INSTALL) -m 644
 
-install: libcansam.a samcat samcount samgroupbyname samsort samsplit
-	mkdir $(DESTDIR)$(includedir)
-	mkdir $(DESTDIR)$(includedir)/cansam
-	$(INSTALL_DATA) cansam/*.h $(DESTDIR)$(includedir)/cansam
-	mkdir $(DESTDIR)$(includedir)/cansam/sam
-	$(INSTALL_DATA) cansam/sam/*.h $(DESTDIR)$(includedir)/cansam/sam
-	mkdir $(DESTDIR)$(libdir)
+install: libcansam.a $(TOOLS)
+	$(MKDIR_P) $(DESTDIR)$(includedir)/cansam/sam $(DESTDIR)$(libdir)
+	$(INSTALL_DATA) $(SRC)cansam/*.h $(DESTDIR)$(includedir)/cansam
+	$(INSTALL_DATA) $(SRC)cansam/sam/*.h $(DESTDIR)$(includedir)/cansam/sam
 	$(INSTALL_DATA) libcansam.a $(DESTDIR)$(libdir)/libcansam.a
-	mkdir $(DESTDIR)$(bindir)
-	$(INSTALL_PROGRAM) samcat $(DESTDIR)$(bindir)/samcat
-	$(INSTALL_PROGRAM) samcount $(DESTDIR)$(bindir)/samcount
-	$(INSTALL_PROGRAM) samgroupbyname $(DESTDIR)$(bindir)/samgroupbyname
-	$(INSTALL_PROGRAM) samsort $(DESTDIR)$(bindir)/samsort
-	$(INSTALL_PROGRAM) samsplit $(DESTDIR)$(bindir)/samsplit
-	# FIXME mkdir $(DESTDIR)$(prefix)/share
-	mkdir $(DESTDIR)$(mandir)
-	mkdir $(DESTDIR)$(man1dir)
-	$(INSTALL_DATA) tools/samcat.1 $(DESTDIR)$(man1dir)/samcat.1
-	$(INSTALL_DATA) tools/samgroupbyname.1 \
-	                $(DESTDIR)$(man1dir)/samgroupbyname.1
-	$(INSTALL_DATA) tools/samsort.1 $(DESTDIR)$(man1dir)/samsort.1
-	$(INSTALL_DATA) tools/samsplit.1 $(DESTDIR)$(man1dir)/samsplit.1
-	mkdir $(DESTDIR)$(man3dir)
-	$(INSTALL_DATA) tools/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
+	$(MKDIR_P) $(DESTDIR)$(bindir)
+	$(INSTALL_PROGRAM) $(TOOLS) $(DESTDIR)$(bindir)
+	$(MKDIR_P) $(DESTDIR)$(man1dir) $(DESTDIR)$(man3dir)
+	$(INSTALL_DATA) $(SRC)tools/*.1 $(DESTDIR)$(man1dir)
+	$(INSTALL_DATA) $(SRC)tools/cansam.3 $(DESTDIR)$(man3dir)/cansam.3
 
 uninstall:
-	for sam_hdr in cansam/*.h cansam/sam/*.h; do rm $(DESTDIR)$(includedir)/$$sam_hdr; done
-	-rmdir $(DESTDIR)$(includedir)/cansam/sam $(DESTDIR)$(includedir)/cansam
-	-rm $(DESTDIR)$(libdir)/libcansam.a
-	-rm $(DESTDIR)$(bindir)/samcat
-	-rm $(DESTDIR)$(BINDIR)/samcount
-	-rm $(DESTDIR)$(bindir)/samgroupbyname
-	-rm $(DESTDIR)$(BINDIR)/samsort
-	-rm $(DESTDIR)$(BINDIR)/samsplit
-	cd tools; for man in *.1; do rm $(DESTDIR)$(man1dir)/$$man; done
-	rm $(DESTDIR)$(man3dir)/cansam.3
+	-rm -rf $(DESTDIR)$(includedir)/cansam
+	-rm -f $(DESTDIR)$(libdir)/libcansam.a
+	-rm -f $(DESTDIR)$(bindir)/samcat $(DESTDIR)$(man1dir)/samcat.1
+	-rm -f $(DESTDIR)$(bindir)/samcount
+	-rm -f $(DESTDIR)$(bindir)/samgroupbyname $(DESTDIR)$(man1dir)/samgroupbyname.1
+	-rm -f $(DESTDIR)$(bindir)/samsort $(DESTDIR)$(man1dir)/samsort.1
+	-rm -f $(DESTDIR)$(bindir)/samsplit $(DESTDIR)$(man1dir)/samsplit.1
+	-rm -f $(DESTDIR)$(man3dir)/cansam.3
 
 doc:
 	doxygen doc/Doxyfile
