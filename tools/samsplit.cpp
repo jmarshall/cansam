@@ -199,6 +199,7 @@ try {
       delete copy_out;
       throw sam::system_error("can't write to ", copyname, errno0);
     }
+    copy_out->exceptions(std::ios::failbit | std::ios::badbit);
 
     *copy_out << headers;
   }

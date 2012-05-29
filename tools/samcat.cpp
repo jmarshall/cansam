@@ -164,6 +164,7 @@ try {
   if (!out.is_open())
     throw sam::system_error("can't write to ", output_fname, errno);
 
+  out.exceptions(std::ios::failbit | std::ios::badbit);
   out.setf(output_format, std::ios::basefield | std::ios::boolalpha);
 
   int status = EXIT_SUCCESS;
