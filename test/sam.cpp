@@ -54,6 +54,46 @@ std::cout << "end of loop 1\n";
     std::cout << aln << '\n';
 }
 
+static void test_bam_headers(test_harness& t, const string& basename,
+			     const std::stringstream& text) {
+  string filename = test_objdir_prefix + basename + "-out.bam";
+
+  sam::isamstream sam(text.rdbuf());
+  sam::collection headers;
+  sam >> headers;
+
+  {
+  sam::osamstream out(filename, sam::bam_format);
+  out.exceptions(std::ios::failbit | std::ios::badbit);
+  out << headers;
+  // FIXME Fix close() buffer flushing, so can use this instead of a block
+  // out.close();
+  }
+
+  sam::isamstream in(filename);
+  in.exceptions(std::ios::failbit | std::ios::badbit);
+
+  sam::collection headers2;
+  in >> headers2;
+  std::ostringstream text2;
+  text2 << headers2;
+
+  t.check(text.str(), text2.str(), basename);
+}
+
 void test_sam_io(test_harness& t) {
   test_reader(t);
+
+  std::stringstream text;
+  for (int i = 1; i <= 20000; i++)
+    text << "@SQ\tSN:chr" << i << "\tLN:" << 10000 + i * 2 << '\n';
+  test_bam_headers(t, "manysmallheaders", text);
+
+  text.str("");
+  for (int i = 1; i <= 1200; i++) {
+    text << "@SQ\tSN:chr" << i << "\tLN:" << 10000 + i * 2 << '\n';
+    if (i == 1000)
+      text << "@SQ\tSN:chrBig\tLN:80000\tSP:" << string(80000, 'A') << '\n';
+  }
+  test_bam_headers(t, "hugeheader", text);
 }

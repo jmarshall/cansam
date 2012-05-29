@@ -134,8 +134,16 @@ public:
     begin = array;
   }
 
-  // Ensure the buffer has at least the specified caacity
+  // Ensure the buffer has at least the specified capacity.
   void reserve(size_t sz) { if (capacity < sz)  reserve_(sz); }
+
+  // Ensure that at least  sz  character positions are available beyond  end.
+  void make_available(size_t sz) {
+    if (available() < sz) {
+      if (size() + sz <= capacity)  flush();
+      else  reserve_(size() + sz);
+    }
+  }
 
   // Move any unread characters to the start of the buffer and ensure there is
   // reasonable space available beyond  end, possibly by enlarging the buffer.
@@ -357,6 +365,7 @@ void bamio::flush_buffer(osamstream& stream) {
   buffer.flush();
 }
 
+// Constructor used when reading a BAM stream.
 bamio::bamio(const char* text, std::streamsize textsize)
   : buffer(65536), cdata(65536),
     zinflate_active(false), zdeflate_active(false) {
@@ -364,8 +373,10 @@ bamio::bamio(const char* text, std::streamsize textsize)
   cdata.end += textsize;
 }
 
+// Constructor used when writing a BAM stream.
 bamio::bamio(bool compression)
-  : buffer(65536), cdata(65536),
+  : buffer(BGZF::uncompressed_max_size + sizeof(alignment::bamcore)),
+    cdata(BGZF::full_block_size),
     compression_level(compression? Z_DEFAULT_COMPRESSION : Z_NO_COMPRESSION),
     zinflate_active(false), zdeflate_active(false) {
 }
@@ -758,19 +769,19 @@ void bamio::put(osamstream& stream, const collection& coln) {
   convert::set_bam_int32(buffer.end, header_length);
   buffer.end += sizeof(int32_t);
 
-  for (collection::const_iterator it = coln.begin(); it != coln.end(); ++it)
-    if (buffer.available() >= size_t(it->sam_length() + 1)) {
-      buffer.end = format_sam(buffer.end, *it);
-      *buffer.end++ = '\n';
-    }
-    else {
-      // FIXME bamio::put(headers) buffering
-      throw std::logic_error("bamio::put(headers) buffering not implemented");
-    }
+  for (collection::const_iterator it = coln.begin(); it != coln.end(); ++it) {
+    buffer.make_available(it->sam_length() + 1);
 
-  if (buffer.size() >= BGZF::uncompressed_max_size)
-    flush_buffer(stream);
+    buffer.end = format_sam(buffer.end, *it);
+    *buffer.end++ = '\n';
 
+    while (buffer.size() >= BGZF::uncompressed_max_size)
+      flush_buffer(stream);
+  }
+
+  // Because  buffer  has a capacity that exceeds the BGZF uncompressed block
+  // size by at least sizeof(bamcore), it is certainly guaranteed that there
+  // is space available for a single int32_t.
   convert::set_bam_int32(buffer.end, coln.ref_size());
   buffer.end += sizeof(int32_t);
 
@@ -779,23 +790,19 @@ void bamio::put(osamstream& stream, const collection& coln) {
     const string& name = it->name();
     int namelen = name.length();
 
-    if (buffer.available() >= sizeof(int32_t) + namelen+1 + sizeof(int32_t)) {
-      convert::set_bam_int32(buffer.end, namelen+1);
-      buffer.end += sizeof(int32_t);
-      memcpy(buffer.end, name.data(), namelen);
-      buffer.end += namelen;
-      *buffer.end++ = '\0';
-      convert::set_bam_int32(buffer.end, it->length());
-      buffer.end += sizeof(int32_t);
-    }
-    else {
-      // FIXME bamio::put(headers) buffering
-      throw std::logic_error("bamio::put(headers) buffering not implemented");
-    }
-  }
+    buffer.make_available(sizeof(int32_t) + namelen+1 + sizeof(int32_t));
 
-  if (buffer.size() >= BGZF::uncompressed_max_size)
-    flush_buffer(stream);
+    convert::set_bam_int32(buffer.end, namelen+1);
+    buffer.end += sizeof(int32_t);
+    memcpy(buffer.end, name.data(), namelen);
+    buffer.end += namelen;
+    *buffer.end++ = '\0';
+    convert::set_bam_int32(buffer.end, it->length());
+    buffer.end += sizeof(int32_t);
+
+    while (buffer.size() >= BGZF::uncompressed_max_size)
+      flush_buffer(stream);
+  }
 }
 
 void bamio::put(osamstream& stream, const alignment& aln) {

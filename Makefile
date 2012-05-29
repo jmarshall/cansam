@@ -137,7 +137,7 @@ test/interval.o: test/interval.cpp test/test.h $(sam_intervalmap_h)
 test/sam.o: test/sam.cpp test/test.h $(sam_alignment_h) cansam/sam/stream.h
 test/wire.o: test/wire.cpp test/test.h lib/wire.h
 
-.PHONY: all clean doc docclean install lib tags test uninstall
+.PHONY: all clean doc docclean install lib tags test testclean uninstall
 
 prefix      = /usr
 exec_prefix = $(prefix)
@@ -186,3 +186,6 @@ clean:
 
 docclean:
 	-rm -rf doc/html doc/latex
+
+testclean:
+	-rm -f test/*-out.bam
