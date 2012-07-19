@@ -7,6 +7,7 @@ test/*-out.bam
 samcat
 samcount
 samgroupbyname
+samhead
 samsort
 samsplit
 test/runtests

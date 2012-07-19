@@ -1,13 +1,8 @@
-.de TQ
-.  br
-.  ns
-.  TP \\$1
-..
-.TH cansam 3 "" "Cancer Genome Project" "Wellcome Trust Sanger Institute"
+.TH samhead 1 "July 2012" "Cansam" "Bioinformatics tools"
 .SH NAME
-cansam \- a C++ binding for SAM/BAM files
+samhead \- print the headers of SAM and BAM files
 .\"
-.\" Copyright (C) 2010-2012 Genome Research Ltd.
+.\" Copyright (C) 2012 Genome Research Ltd.
 .\"
 .\" Author: John Marshall <jm18@sanger.ac.uk>
 .\"
@@ -37,47 +32,15 @@ cansam \- a C++ binding for SAM/BAM files
 .\" ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
 .SH SYNOPSIS
-#include <cansam/sam/alignment.h>
-.PD 0
-.P
-// ...
-.PD
-.P
-.BR cc " [...] " -lcansam " [...]"
+.B samhead
+.RI [ FILE ]...
 .SH DESCRIPTION
-The Sequence Alignment/Map (SAM) file format and its binary companion BAM
-are formats for storing nucleotide sequence alignments.  They are designed
-for the large volumes of short- to middling-length reads produced by
-next-generation sequencing technologies.
-.P
-.B Cansam
-is a C++ library providing classes representing the records found in
-these files, facilities for reading and writing SAM and BAM files, and several
-algorithms for manipulating these files, including sorting and merging.
-.P
-Several simple command-line utilities using these facilities are also provided.
-.
-.SH FILES
-.TP
-cansam/sam/alignment.h
-.TQ
-cansam/sam/header.h
-The main header files.
-.TP
-libcansam.a
-Link library; link with
-.B -lcansam
-to use Cansam.
+The \fBsamhead\fP utility reads files in SAM or BAM format, and writes the
+headers of each, in turn, to standard output.
+If no input files are specified, or when \fIFILE\fP is a single hyphen ("-"),
+\fBsamhead\fP reads from standard input.
 .SH SEE ALSO
-.IR samcat (1),
-.IR samcount (1),
-.IR samgroupbyname (1),
-.IR samhead (1),
-.IR samsort (1),
-.IR samsplit (1)
-.TP
-http://example.com/cansam/
-Complete Cansam documentation.
+.IR samcat (1)
 .TP
 http://samtools.sourceforge.net/
-SAM file format specification.
+The SAM file format specification.

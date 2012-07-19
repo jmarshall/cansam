@@ -19,6 +19,7 @@ They are intended to be of use in their own right, as well as providing
 non-trivial examples of programming with the library.
 
   - @ref samcat  for converting between SAM and BAM formats
+  - @ref samhead for displaying headers
   - @ref samsort and @ref samgroupbyname for sorting and merging files
   - @ref samsplit for partitioning files
 

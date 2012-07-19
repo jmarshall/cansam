@@ -40,7 +40,7 @@ LDLIBS   = -lz
 AR       = ar
 RANLIB   = ranlib
 
-TOOLS   = samcat samcount samgroupbyname samsort samsplit
+TOOLS   = samcat samcount samgroupbyname samhead samsort samsplit
 OUTPUTS = libcansam.a $(TOOLS) test/runtests
 all: $(OUTPUTS)
 
@@ -84,7 +84,7 @@ lib/version.o: lib/version.cpp cansam/version.h
 
 
 MISC_OBJS = tools/samcat.o tools/samcount.o tools/samgroupbyname.o \
-	    tools/samsort.o tools/samsplit.o \
+	    tools/samhead.o tools/samsort.o tools/samsplit.o \
 	    tools/utilities.o examples/simplecat.o
 
 samcat: tools/samcat.o tools/utilities.o libcansam.a
@@ -95,6 +95,9 @@ samcount: tools/samcount.o tools/utilities.o libcansam.a
 
 samgroupbyname: tools/samgroupbyname.o tools/utilities.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ tools/samgroupbyname.o tools/utilities.o libcansam.a $(LDLIBS)
+
+samhead: tools/samhead.o tools/utilities.o libcansam.a
+	$(CXX) $(LDFLAGS) -o $@ tools/samhead.o tools/utilities.o libcansam.a $(LDLIBS)
 
 samsort: tools/samsort.o libcansam.a
 	$(CXX) $(LDFLAGS) -o $@ tools/samsort.o libcansam.a $(LDLIBS)
@@ -113,6 +116,8 @@ tools/samcount.o: tools/samcount.cpp $(sam_alignment_h) $(sam_header_h) \
 tools/samgroupbyname.o: tools/samgroupbyname.cpp cansam/sam/algorithm.h \
 			$(sam_alignment_h) cansam/exception.h $(sam_header_h) \
 			cansam/sam/stream.h tools/utilities.h
+tools/samhead.o: tools/samhead.cpp cansam/exception.h $(sam_header_h) \
+		 cansam/sam/stream.h tools/utilities.h
 tools/samsort.o: tools/samsort.cpp tools/samsort.h $(sam_alignment_h)
 tools/samsplit.o: tools/samsplit.cpp $(sam_alignment_h) cansam/exception.h \
 		  $(sam_header_h) cansam/sam/stream.h $(lib_utilities_h) \
@@ -170,6 +175,7 @@ uninstall:
 	-rm -f $(DESTDIR)$(bindir)/samcat $(DESTDIR)$(man1dir)/samcat.1
 	-rm -f $(DESTDIR)$(bindir)/samcount
 	-rm -f $(DESTDIR)$(bindir)/samgroupbyname $(DESTDIR)$(man1dir)/samgroupbyname.1
+	-rm -f $(DESTDIR)$(bindir)/samhead $(DESTDIR)$(man1dir)/samhead.1
 	-rm -f $(DESTDIR)$(bindir)/samsort $(DESTDIR)$(man1dir)/samsort.1
 	-rm -f $(DESTDIR)$(bindir)/samsplit $(DESTDIR)$(man1dir)/samsplit.1
 	-rm -f $(DESTDIR)$(man3dir)/cansam.3
