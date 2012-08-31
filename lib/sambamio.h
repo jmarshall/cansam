@@ -71,7 +71,8 @@ protected:
 
     std::streamsize n = stream.rdbuf()->sgetn(buffer, length);
     if (n == 0) {
-      if (stream.setstate_wouldthrow(std::ios::eofbit))  throw eof_exception();
+      try { stream.setstate(std::ios::eofbit); }
+      catch (std::ios::failure&) { throw eof_exception(); }
     }
     return n;
   }

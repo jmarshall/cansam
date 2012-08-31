@@ -51,6 +51,7 @@ const std::ios_base::openmode bam_format = std::ios_base::binary | compressed;
 
 class alignment;
 class collection;
+class exception;
 class sambamio;
 
 /** @class sam::samstream_base cansam/sam/stream.h
@@ -58,6 +59,11 @@ class sambamio;
 
 This is a base class for the SAM/BAM stream hierarchy; it is unlikely to be
 usefully instantiated itself.
+
+Because it is not just characters being transferred, there is buffering and
+other state in the <tt>[io]samstream</tt> object as well as the associated
+@c streambuf.  Hence using the inherited @c rdbuf(streambuf*) method to change
+the associated stream buffer has an undefined effect.
 
 @note This hierarchy doesn't provide a stream in the sense that @e anything
 can be streamed to/from it; it only accepts SAM headers and alignment records.
@@ -81,7 +87,8 @@ public:
 
 protected:
   // @cond infrastructure
-  bool setstate_wouldthrow(iostate state);
+  void setstate_maybe_rethrow(iostate state);
+  void setstate_maybe_rethrow(iostate state, sam::exception& exception);
 
   samstream_base(std::streambuf* sbuf, bool owned)
     : std::ios(sbuf), io(), filename_(), owned_rdbuf_(owned) { }
@@ -110,7 +117,18 @@ public:
   virtual ~isamstream();
 
   /// Read the collection of headers
-  /** Blah blah blah FIXME */
+  /** Similarly to @c std::istream's extraction operators, this reads @b all
+  header records into @a headers and returns the stream.  The @c iostate flags
+  will be set at EOF or upon errors, and exceptions will be thrown accordingly
+  as selected via @c exceptions().
+
+  Header records appear at the start of a file, so this must be the first
+  extraction operator used.
+
+  The stream retains a reference to @a headers and hands it to
+  subsequently-extracted alignment records; therefore @a headers's lifetime
+  must end after the lifetimes of the stream and any resulting @c alignment
+  objects.  */
   isamstream& operator>> (collection& headers);
 
   /// Read an alignment record

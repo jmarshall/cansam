@@ -44,6 +44,33 @@ using std::string;
 
 namespace sam {
 
+// For use while handling an exception.  Sets error state as per setstate(),
+// but if an exception is to be thrown (due to setting a state listed in
+// exceptions()), rethrows the original exception instead of std::ios::failure.
+void samstream_base::setstate_maybe_rethrow(iostate state) {
+  bool rethrow = false;
+
+  try { setstate(state); }
+  catch (failure&) { rethrow = true; }
+
+  if (rethrow)  throw;
+}
+
+// For use while handling an exception, which must be provided as an argument.
+// As above, also annotating the rethrown exception with the stream's details.
+void samstream_base::setstate_maybe_rethrow(iostate state, sam::exception& e) {
+  bool rethrow = false;
+
+  try { setstate(state); }
+  catch (failure&) { rethrow = true; }
+
+  if (rethrow) {
+    e.set_filename(filename());
+    throw;
+  }
+}
+
+
 bool samstream_base::is_open() const {
   if (sam::streambuf* sbuf = dynamic_cast<sam::streambuf*>(rdbuf()))
     return sbuf->is_open();
@@ -70,15 +97,6 @@ samstream_base::~samstream_base() {
     std::streambuf* sbuf = rdbuf(NULL);
     delete sbuf;
   }
-}
-
-// As per setstate(), but returns whether setstate() would have thrown an
-// exception, i.e., whether a state listed in exceptions() has been set.
-bool samstream_base::setstate_wouldthrow(iostate state) {
-  try { setstate(state); }
-  catch (...) { return true; }
-
-  return false;
 }
 
 std::streambuf*
@@ -125,22 +143,28 @@ isamstream& isamstream::rewind() {
 and from the underlying streambuf, and propagate the exceptions if instructed
 to do so by exceptions().
 
+If so-instructed, setting eofbit within io->get() produces an eof_exception
+which is propagated as an externally-known exception type, std::ios::failure.
+
 The formatting layers throw sam::bad_format exceptions, so these cause failbit
 to be set; Cansam's streambufs specifically throw sam::* exceptions other than
 sam::bad_format, and other streambufs might throw anything at all but surely
 not sam::bad_format, so other exceptions set badbit, corresponding to serious
-streambuf problems such as I/O errors.  */
+streambuf problems such as I/O errors.
+
+When an exception is to be thrown, the original exception is annotated (if
+it is derived from sam::exception) and rethrown rather than allowing plain
+setstate() to throw a generic exception.  */
 
 isamstream& isamstream::operator>> (collection& headers) {
   try {
     if (! io) throw "hmmmm"; // FIXME
     io->get(*this, headers);
   }
-  catch (const sambamio::eof_exception&) {
-    // An exception was thrown while setting eofbit within io->get().
-    // Propagate it as an externally-known exception type.
-    throw std::ios::failure("eof");
-  }
+  catch (sambamio::eof_exception&) { throw failure("eof"); }
+  catch (sam::bad_format& e) { setstate_maybe_rethrow(failbit, e); }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(badbit, e); }
+  catch (...) { setstate_maybe_rethrow(badbit); }
 
   return *this;
 }
@@ -152,34 +176,14 @@ isamstream& isamstream::operator>> (alignment& aln) {
       // differing from standard streams) as this is not a failure as such.
       // Leave eofbit as is, as it means EOF-seen-on-streambuf rather than
       // no-more-records, and it is almost certainly already set anyway.
-      (void) setstate_wouldthrow(failbit);
+      try { setstate(failbit); }
+      catch (failure&) { }
     }
   }
-  catch (const sambamio::eof_exception&) {
-    // An exception was thrown while setting eofbit within io->get().
-    // Propagate it as an externally-known exception type.
-    throw std::ios::failure("eof");
-  }
-  catch (sam::bad_format& e) {
-    // If an exception is to be thrown, annotate and rethrow the original
-    // exception (rather than the generic one thrown by plain setstate()).
-    if (setstate_wouldthrow(failbit)) {
-      e.set_filename(filename());
-      throw;
-    }
-  }
-  catch (sam::exception& e) {
-    if (setstate_wouldthrow(badbit)) {
-      e.set_filename(filename());
-      throw;
-    }
-  }
-  catch (...) {
-    // FIXME  Possibly worth propagating this as a sam::exception or so,
-    // so that our callers need expect only sam::* exceptions.
-    if (setstate_wouldthrow(badbit))
-      throw;
-  }
+  catch (sambamio::eof_exception&) { throw failure("eof"); }
+  catch (sam::bad_format& e) { setstate_maybe_rethrow(failbit, e); }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(badbit, e); }
+  catch (...) { setstate_maybe_rethrow(badbit); }
 
   return *this;
 }
@@ -202,9 +206,22 @@ osamstream::~osamstream() {
   // FIXME catch...
 }
 
+/* Similarly to isamstream's operators, these methods set iostate bits in
+response to exceptions from io->put() and from the underlying streambuf,
+and propagate the exceptions if instructed to do so by exceptions().
+
+This is an output stream, so sam::bad_format is unlikely but nonetheless
+translated to failbit.  All other exceptions indicate serious streambuf
+problems such as I/O errors, so cause badbit to be set.  */
+
 osamstream& osamstream::operator<< (const collection& headers) {
-  io->put(*this, headers);
-  // FIXME exceptions...
+  try {
+    io->put(*this, headers);
+  }
+  catch (sam::bad_format& e) { setstate_maybe_rethrow(failbit, e); }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(badbit, e); }
+  catch (...) { setstate_maybe_rethrow(badbit); }
+
   return *this;
 }
 
@@ -212,17 +229,9 @@ osamstream& osamstream::operator<< (const alignment& aln) {
   try {
     io->put(*this, aln);
   }
-  // FIXME hmmm...
-  catch (sam::exception& e) {
-    if (setstate_wouldthrow(badbit)) {
-      e.set_filename(filename());
-      throw;
-    }
-  }
-  catch (...) {
-    if (setstate_wouldthrow(badbit))
-      throw;
-  }
+  catch (sam::bad_format& e) { setstate_maybe_rethrow(failbit, e); }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(badbit, e); }
+  catch (...) { setstate_maybe_rethrow(badbit); }
 
   return *this;
 }
