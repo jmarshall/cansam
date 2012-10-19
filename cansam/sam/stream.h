@@ -57,8 +57,8 @@ class sambamio;
 /** @class sam::samstream_base cansam/sam/stream.h
     @brief Base class for SAM/BAM streams
 
-This is a base class for the SAM/BAM stream hierarchy; it is unlikely to be
-usefully instantiated itself.
+This is a base class for the SAM/BAM stream hierarchy; it cannot be
+instantiated itself.
 
 Because it is not just characters being transferred, there is buffering and
 other state in the <tt>[io]samstream</tt> object as well as the associated
@@ -85,13 +85,30 @@ public:
   /// Set an associated filename
   void set_filename(const std::string& filename) { filename_ = filename; }
 
+  /// Set initial exceptions mask for subsequent samstream objects
+  /** By default, each newly-constructed SAM/BAM stream object has an
+  exceptions mask of @c failbit|badbit, so throws exceptions on all formatting
+  errors and I/O errors, including failure to open files.  (This differs from
+  standard iostreams, which throw no exceptions by default.)
+
+  This function can be used to change this default for all
+  subsequently-constructed stream objects.  (Use the usual @c exceptions()
+  method to change an individual stream's exception mask.)  */
+  static void initial_exceptions(iostate except);
+
 protected:
   // @cond infrastructure
   void setstate_maybe_rethrow(iostate state);
   void setstate_maybe_rethrow(iostate state, sam::exception& exception);
 
-  samstream_base(std::streambuf* sbuf, bool owned)
-    : std::ios(sbuf), io(), filename_(), owned_rdbuf_(owned) { }
+  samstream_base();
+  samstream_base(std::streambuf* sbuf, bool owned);
+
+  void reset_closed_or_throw();
+  void reset_closed_or_throw(std::streambuf* sbuf, bool owned);
+
+  void open_into_rdbuf(const std::string& filename, openmode mode);
+  virtual void close_() = 0;
 
   sambamio* io;
   // @endcond
@@ -101,6 +118,8 @@ private:
 
   std::string filename_;
   bool owned_rdbuf_;
+
+  static iostate initial_exceptions_;
 };
 
 /** @class sam::isamstream cansam/sam/stream.h
@@ -108,13 +127,22 @@ private:
 */
 class isamstream : virtual public samstream_base {
 public:
+  /// Construct an unopened input stream
+  isamstream() { }
+
   /// Construct an input stream by opening a file
-  explicit isamstream(const std::string& filename, openmode mode = in);
+  explicit isamstream(const std::string& filename);
 
   /// Construct an input stream associated with an already-opened stream buffer
   explicit isamstream(std::streambuf* sbuf);
 
   virtual ~isamstream();
+
+  /// Open a file
+  void open(const std::string& filename);
+
+  /// Associate with an already-opened stream buffer
+  void open(std::streambuf* sbuf);
 
   /// Read the collection of headers
   /** Similarly to @c std::istream's extraction operators, this reads @b all
@@ -145,19 +173,33 @@ public:
 #endif
 
   // FIXME  Some form of seek/tell -- or maybe that's in samstream_base
+
+protected:
+  // @cond infrastructure
+  virtual void close_();
+  // @endcond
 };
 
 /** @class sam::osamstream cansam/sam/stream.h
     @brief SAM/BAM output stream */
 class osamstream : virtual public samstream_base {
 public:
+  /// Construct an unopened output stream
+  osamstream() { }
+
   /// Construct an output stream by opening a file
   explicit osamstream(const std::string& filename, openmode mode = out);
 
   /// Construct an output stream associated with an already-opened stream buffer
-  explicit osamstream(std::streambuf* sbuf);
+  explicit osamstream(std::streambuf* sbuf, openmode mode = out);
 
   virtual ~osamstream();
+
+  /// Open a file
+  void open(const std::string& filename, openmode mode = out);
+
+  /// Associate with an already-opened stream buffer
+  void open(std::streambuf* sbuf, openmode mode = out);
 
   /// Write the collection of headers
   osamstream& operator<< (const collection& headers);
@@ -168,19 +210,41 @@ public:
   /// Apply @a manipulator to this stream
   osamstream& operator<< (ios_base& (*manipulator)(ios_base&))
     { manipulator(*this); return *this; }
+
+  /// Flush any uncommitted output
+  osamstream& flush();
+
+protected:
+  // @cond infrastructure
+  virtual void close_();
+  // @endcond
 };
 
 /** @class sam::samstream cansam/sam/stream.h
     @brief SAM/BAM input/output stream  */
 class samstream : public isamstream, public osamstream {
 public:
+  /// Construct an unopened stream
+  samstream() { }
+
   /// Construct a stream by opening a file
   explicit samstream(const std::string& filename, openmode mode = in|out);
 
   /// Construct a stream associated with an already-opened stream buffer
-  explicit samstream(std::streambuf* sbuf);
+  explicit samstream(std::streambuf* sbuf, openmode mode = in|out);
 
   virtual ~samstream();
+
+  /// Open a file
+  void open(const std::string& filename, openmode mode = in|out);
+
+  /// Associate with an already-opened stream buffer
+  void open(std::streambuf* sbuf, openmode mode = in|out);
+
+protected:
+  // @cond infrastructure
+  virtual void close_();
+  // @endcond
 };
 
 /// Returns the mode flags indicated by the filename extension

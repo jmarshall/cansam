@@ -31,6 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 #include <fstream>
 #include <cctype>    // for tolower()
+#include <errno.h>
 
 #include <unistd.h>  // for STDIN_FILENO etc
 
@@ -43,6 +44,42 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 using std::string;
 
 namespace sam {
+
+namespace {
+
+// Used as a placeholder rdbuf() for closed streams.  This class's methods are
+// never invoked, as closed_io always accompanies closed_buf and doesn't use
+// its rdbuf().  (We can't use NULL as a placeholder as that causes badbit to
+// be set and likely throws an exception inconveniently.)
+class nullbuf : public std::streambuf {
+public:
+  nullbuf() { }
+  virtual ~nullbuf() { }
+} closed_buf;
+
+// Used as a placeholder sambamio for closed streams, throwing an exception if
+// any of the stream's insertion/extraction operators are used -- rather than
+// crashing as would happen if we used a NULL sambamio for closed streams.
+class nullio : public sambamio {
+public:
+  nullio(const char* what) : error(what) { }
+  virtual ~nullio() { }
+
+  virtual bool get(isamstream&, collection&) { throw error; }
+  virtual bool get(isamstream&, alignment&)  { throw error; }
+  virtual void put(osamstream&, const collection&) { throw error; }
+  virtual void put(osamstream&, const alignment&)  { throw error; }
+  virtual void flush(osamstream&) { throw error; }
+
+protected:
+  virtual size_t xsgetn(isamstream&, char*, size_t) { throw error; }
+
+private:
+  std::logic_error error;
+} closed_io("samstream is not open");
+
+} // anonymous namespace
+
 
 // For use while handling an exception.  Sets error state as per setstate(),
 // but if an exception is to be thrown (due to setting a state listed in
@@ -71,64 +108,169 @@ void samstream_base::setstate_maybe_rethrow(iostate state, sam::exception& e) {
 }
 
 
-bool samstream_base::is_open() const {
-  if (sam::streambuf* sbuf = dynamic_cast<sam::streambuf*>(rdbuf()))
-    return sbuf->is_open();
-  else if (std::filebuf* fbuf = dynamic_cast<std::filebuf*>(rdbuf()))
-    return fbuf->is_open();
-  else
-    return rdbuf()? true : false;
+std::ios::iostate samstream_base::initial_exceptions_ = failbit | badbit;
+
+void samstream_base::initial_exceptions(iostate except) {
+  initial_exceptions_ = except;
 }
 
-void samstream_base::close() {
+
+// The usual base constructor sets up a tidily-closed stream, so that if
+// further construction of an open stream fails, our destructor has a known
+// state from which to determine whether to deallocate  io  and  rdbuf().
+// (Whenever  rdbuf() is &closed_buf,  owned_rdbuf_  will be false.)
+samstream_base::samstream_base()
+  : std::ios(&closed_buf), io(&closed_io), filename_(), owned_rdbuf_(false) {
+  exceptions(initial_exceptions_);
+}
+
+// When the stream buffer is already known, we can short-circuit that
+// and construct our  std::ios  base with the final stream buffer.
+samstream_base::samstream_base(std::streambuf* sbuf, bool owned)
+  : std::ios(sbuf), io(&closed_io), filename_(), owned_rdbuf_(owned) {
+  exceptions(initial_exceptions_);
+}
+
+// These reset the closed stream to the same state as the corresponding
+// constructors, or throw if it is already open.  (A closed stream is
+// either tidily-closed or has a  non-closed_buf rdbuf()  left behind by
+// a failed  open().  These functions tidy up the latter before resetting.)
+void samstream_base::reset_closed_or_throw() {
+  reset_closed_or_throw(&closed_buf, false);
+}
+
+void samstream_base::reset_closed_or_throw(std::streambuf* sbuf, bool owned) {
+  if (io != &closed_io)  throw std::logic_error("samstream is already open");
+
+  std::streambuf* prevbuf = rdbuf(sbuf);
+  if (owned_rdbuf_)  delete prevbuf;
+  owned_rdbuf_ = owned;
+
+  filename_.clear();
+}
+
+
+bool samstream_base::is_open() const {
+  return io != &closed_io;
+}
+
+void samstream_base::close()
+try {
+  if (io == &closed_io)  throw std::logic_error("samstream is already closed");
+
+  // Invoke class-specific actions, e.g., flushing osamstreams.
+  // (Derived classes' close_() methods assume their stream is properly open,
+  // so all callers must check  io  or  is_open()  before invoking them.)
+  close_();
+
+  // If the stream buffer can be closed, do so.  We close it explicitly
+  // rather than just via its destructor so that exceptions are propagated,
+  // which is usually the point of calling this close() explicitly.
   if (sam::streambuf* sbuf = dynamic_cast<sam::streambuf*>(rdbuf()))
     sbuf->close();
   else if (std::filebuf* fbuf = dynamic_cast<std::filebuf*>(rdbuf()))
     fbuf->close();
 
-  // FIXME maybe this should delete rdbuf() (if owned_rdbuf_) and/or io
+  // Return this stream to an unopened state.
+  delete io;
+  io = &closed_io;
+
+  std::streambuf* prevbuf = rdbuf(&closed_buf);
+  if (owned_rdbuf_)  delete prevbuf;
+  owned_rdbuf_ = false;
+
+  filename_.clear();
 }
+catch (sam::bad_format& e) { setstate_maybe_rethrow(failbit, e); }
+catch (sam::exception& e)  { setstate_maybe_rethrow(badbit, e); }
+catch (...) { setstate_maybe_rethrow(badbit); }
 
 samstream_base::~samstream_base() {
-  delete io;
+  // Derived classes' destructors will already have invoked their
+  // class-specific close_() actions as required.
 
-  if (owned_rdbuf_) {
-    exceptions(goodbit);  // Prevent exceptions caused by emptying rdbuf().
-    std::streambuf* sbuf = rdbuf(NULL);
-    delete sbuf;
-  }
+  if (io != &closed_io)  delete io;
+  if (owned_rdbuf_)  delete rdbuf();
 }
 
-std::streambuf*
-new_and_open(const std::string& filename, std::ios::openmode mode) {
+// Opens the specified stream into an owned rdbuf() and sets filename as
+// appropriate.  If a streambuf was allocated, then it will be in rdbuf()
+// and owned_rdbuf_ will be true, even if an exception is thrown thereafter;
+// hence samstream_base's destructor will be able to deallocate it reliably.
+void samstream_base::
+open_into_rdbuf(const std::string& filename, openmode mode) {
   // TODO Eventually might look for URL schemes and make a different streambuf
 
   if (filename == "-") {
-    rawfilebuf* sbuf = new rawfilebuf();
+    if ((mode & in) && (mode & (out|app)))
+      throw sam::exception("can't open standard input/output for update");
+
+    filename_ = (mode & in)? "standard input" : "standard output";
+
+    rawfilebuf* sbuf = new rawfilebuf;
+    rdbuf(sbuf);
+    owned_rdbuf_ = true;
+
     // TODO On some platforms, may need setmode(O_BINARY) or similar
-    sbuf->attach((mode & std::ios::out)? STDOUT_FILENO : STDIN_FILENO);
-    return sbuf;
+    sbuf->attach((mode & in)? STDIN_FILENO : STDOUT_FILENO);
   }
-  else
-    return new rawfilebuf(filename.c_str(), mode & ~compressed);
+  else {
+    filename_ = filename;
+
+    rawfilebuf* sbuf = new rawfilebuf;
+    rdbuf(sbuf);
+    owned_rdbuf_ = true;
+
+    if (! sbuf->open(filename.c_str(), mode & ~compressed))
+      throw sam::system_error((mode & in)? "can't open " : "can't write to ",
+			      filename, errno);
+  }
 
   // FIXME "& ~compressed" is because compressed == ate... hmmm... that's a hack
 }
 
-isamstream::isamstream(const std::string& filename, openmode mode)
-  : samstream_base(new_and_open(filename, mode | in), true) {
-  set_filename(filename);
-  if (is_open())
+
+// Input streams
+// =============
+
+isamstream::isamstream(const std::string& filename) {
+  try {
+    open_into_rdbuf(filename, in | binary);
     io = sambamio::new_in(*this);
+  }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+  catch (...) { setstate_maybe_rethrow(failbit); }
 }
 
-isamstream::isamstream(std::streambuf* sbuf)
-  : samstream_base(sbuf, false) {
+isamstream::isamstream(std::streambuf* sbuf) : samstream_base(sbuf, false) {
+  try {
+    io = sambamio::new_in(*this);
+  }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+  catch (...) { setstate_maybe_rethrow(failbit); }
+}
+
+void isamstream::open(const std::string& filename)
+try {
+  reset_closed_or_throw();
+  open_into_rdbuf(filename, in | binary);
   io = sambamio::new_in(*this);
+}
+catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+catch (...) { setstate_maybe_rethrow(failbit); }
+
+void isamstream::open(std::streambuf* sbuf)
+try {
+  reset_closed_or_throw(sbuf, false);
+  io = sambamio::new_in(*this);
+}
+catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+catch (...) { setstate_maybe_rethrow(failbit); }
+
+void isamstream::close_() {
 }
 
 isamstream::~isamstream() {
-  // FIXME...
 }
 
 #if 0
@@ -137,7 +279,6 @@ isamstream& isamstream::rewind() {
   return *this;
 }
 #endif
-
 
 /* These operators set iostate bits in response to exceptions from io->get()
 and from the underlying streambuf, and propagate the exceptions if instructed
@@ -158,7 +299,6 @@ setstate() to throw a generic exception.  */
 
 isamstream& isamstream::operator>> (collection& headers) {
   try {
-    if (! io) throw "hmmmm"; // FIXME
     io->get(*this, headers);
   }
   catch (sambamio::eof_exception&) { throw failure("eof"); }
@@ -189,21 +329,51 @@ isamstream& isamstream::operator>> (alignment& aln) {
 }
 
 
-osamstream::osamstream(const std::string& filename, openmode mode)
-  : samstream_base(new_and_open(filename, mode | out), true) {
-  set_filename(filename);
-  if (is_open())
+// Output streams
+// ==============
+
+osamstream::osamstream(const std::string& filename, openmode mode) {
+  try {
+    open_into_rdbuf(filename, mode | out);
     io = sambamio::new_out(mode);
+  }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+  catch (...) { setstate_maybe_rethrow(failbit); }
+}
+
+osamstream::osamstream(std::streambuf* sbuf, openmode mode)
+  : samstream_base(sbuf, false) {
+  try {
+    io = sambamio::new_out(mode);
+  }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+  catch (...) { setstate_maybe_rethrow(failbit); }
+}
+
+void osamstream::open(const std::string& filename, openmode mode)
+try {
+  reset_closed_or_throw();
+  open_into_rdbuf(filename, mode | out);
+  io = sambamio::new_out(mode);
+}
+catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+catch (...) { setstate_maybe_rethrow(failbit); }
+
+void osamstream::open(std::streambuf* sbuf, openmode mode)
+try {
+  reset_closed_or_throw(sbuf, false);
+  io = sambamio::new_out(mode);
+}
+catch (sam::exception& e)  { setstate_maybe_rethrow(failbit, e); }
+catch (...) { setstate_maybe_rethrow(failbit); }
+
+void osamstream::close_() {
+  io->flush(*this);
 }
 
 osamstream::~osamstream() {
-  // FIXME  What exactly should this condition be?
-  // Probably close() above should flush too
-  // or maybe ~samio() should do the flushing
-
-  if (is_open() && io)
-    io->flush(*this);
-  // FIXME catch...
+  try { if (is_open())  close_(); }
+  catch (...) { }
 }
 
 /* Similarly to isamstream's operators, these methods set iostate bits in
@@ -236,6 +406,20 @@ osamstream& osamstream::operator<< (const alignment& aln) {
   return *this;
 }
 
+osamstream& osamstream::flush() {
+  try {
+    io->flush(*this);
+  }
+  catch (sam::bad_format& e) { setstate_maybe_rethrow(failbit, e); }
+  catch (sam::exception& e)  { setstate_maybe_rethrow(badbit, e); }
+  catch (...) { setstate_maybe_rethrow(badbit); }
+
+  return *this;
+}
+
+
+// Infrastructure
+// ==============
 
 std::ios_base::openmode extension(const string& filename) {
   using std::ios;

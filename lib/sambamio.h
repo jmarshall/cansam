@@ -44,7 +44,6 @@ class sambamio {
 public:
   class eof_exception { };
 
-  // FIXME isamstream or samstream_base?  is it an isamstream in the ctor already? yes, but are we happy with that?
   static sambamio* new_in(isamstream&);
   static sambamio* new_out(std::ios::openmode);
 

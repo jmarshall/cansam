@@ -90,11 +90,6 @@ public:
   /// Construct a closed buffer
   rawfilebuf() : fd_(-1), owned_(false) { }
 
-  /// Construct a buffer, opening a file that will be closed when this buffer
-  /// is destroyed
-  rawfilebuf(const char* fname, std::ios_base::openmode mode, int perm = 0664)
-    : fd_(-1), owned_(true) { open(fname, mode, perm); }
-
   /// Destroy this buffer object, optionally closing the underlying
   /// file descriptor
   ~rawfilebuf() { if (owned_)  close_nothrow(); }

@@ -194,4 +194,4 @@ docclean:
 	-rm -rf doc/html doc/latex
 
 testclean:
-	-rm -f test/*-out.bam
+	-rm -f test/*-out.[bs]am

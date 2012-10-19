@@ -2,7 +2,7 @@
 TAGS
 
 doc/html
-test/*-out.bam
+test/*-out.[bs]am
 
 samcat
 samcount
