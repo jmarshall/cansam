@@ -54,7 +54,7 @@ version number directly as their own version number, external code should not
 -- as such code is not updated in concert with the library.  */
 
 /// Library version, as an integer @c Mmmmpp
-#define CANSAM_VERSION  700
+#define CANSAM_VERSION  800
 
 namespace sam {
 

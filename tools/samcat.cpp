@@ -30,7 +30,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <iostream>
 #include <string>
 #include <cstdlib>
-#include <cerrno>
 
 #include "cansam/sam/alignment.h"
 #include "cansam/sam/header.h"
@@ -56,8 +55,6 @@ static struct samcat_statistics {
 } stats;
 
 void cat(isamstream& in, osamstream& out, bool suppress_headers) {
-  in.exceptions(std::ios::failbit | std::ios::badbit);
-
   collection headers;
   in >> headers;
 
@@ -75,8 +72,6 @@ void cat(isamstream& in, osamstream& out, bool suppress_headers) {
 }
 
 void cat_to_fastq(isamstream& in, std::ostream& out) {
-  in.exceptions(std::ios::failbit | std::ios::badbit);
-
   collection headers;
   in >> headers;
 
@@ -161,10 +156,6 @@ try {
   stats.nin = stats.nout = 0;
 
   osamstream out(output_fname, std::ios::out | output_mode);
-  if (!out.is_open())
-    throw sam::system_error("can't write to ", output_fname, errno);
-
-  out.exceptions(std::ios::failbit | std::ios::badbit);
   out.setf(output_format, std::ios::basefield | std::ios::boolalpha);
 
   int status = EXIT_SUCCESS;
@@ -175,13 +166,13 @@ try {
   }
   else
     for (int i = optind; i < argc; i++) {
-      isamstream in(argv[i]);
-      if (in.is_open())
+      try {
+	isamstream in(argv[i]);
 	cat(in, out, suppress_headers);
-      else {
+      }
+      catch (const sam::exception& e) {
 	std::cout << std::flush;
-	sam::system_error error("can't open ", argv[i], errno);
-	std::cerr << "samcat: " << error.what() << std::endl;
+	std::cerr << "samcat: " << e.what() << std::endl;
 	status = EXIT_FAILURE;
       }
     }
@@ -195,7 +186,7 @@ try {
 
   return status;
 }
-catch (const sam::exception& e) {
+catch (const std::exception& e) {
   std::cout << std::flush;
   std::cerr << "samcat: " << e.what() << std::endl;
   return EXIT_FAILURE;

@@ -30,8 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <iostream>
 #include <map>
 #include <string>
-#include <cerrno>
 #include <cstdlib>
+
+#include <boost/scoped_array.hpp>
 
 #include "cansam/sam/alignment.h"
 #include "cansam/sam/header.h"
@@ -99,7 +100,7 @@ static struct split_statistics {
 } stats = { 0, 0 };
 
 struct split {
-  split() : count(0), out(NULL) { }
+  split(osamstream* out0) : count(0), out(out0) { }
 
   unsigned long count;
   osamstream* out;
@@ -107,7 +108,7 @@ struct split {
 
 typedef std::map<string, split> rg_split_map;
 
-void split_reads(isamstream& in, rg_split_map& rg_split, osamstream* out) {
+void split_reads(isamstream& in, rg_split_map& rg_split, osamstream& out) {
   alignment aln;
   string rg_buffer;
 
@@ -116,11 +117,15 @@ void split_reads(isamstream& in, rg_split_map& rg_split, osamstream* out) {
     if ((aln.flags() & opt.pos_flags) == opt.pos_flags &&
 	(aln.flags() & opt.neg_flags) == 0 &&
 	aln.mapq() >= opt.min_quality) {
-      split& split = rg_split[aln.aux(rg_buffer, "RG")];
+      rg_split_map::iterator it = rg_split.find(aln.aux(rg_buffer, "RG"));
+      if (it == rg_split.end())
+	throw sam::bad_format("No @RG header for '" + rg_buffer + "'");
+      split& split = it->second;
+
       *split.out << aln;
       split.count++;
 
-      if (out)  *out << aln;
+      if (out.is_open())  out << aln;
     }
     else
       stats.discarded++;
@@ -180,55 +185,40 @@ try {
   if (nargs >= 2)  split_template = argv[optind+1];
 
   isamstream in(filename);
-  if (! in.is_open())
-    throw sam::system_error("can't open ", filename, errno);
-
-  in.exceptions(std::ios::failbit | std::ios::badbit);
   input_basename = (filename != "-")? basename(filename) : "stdin";
 
   collection headers;
   in >> headers;
 
-  osamstream* copy_out = NULL;
+  osamstream copy_out;
   if (! output_filename.empty()) {
     header empty("@RG");
     string copyname = expand(output_filename, empty, 0);
-    copy_out = new osamstream(copyname, output_mode);
-    if (! copy_out->is_open()) {
-      int errno0 = errno;
-      delete copy_out;
-      throw sam::system_error("can't write to ", copyname, errno0);
-    }
-    copy_out->exceptions(std::ios::failbit | std::ios::badbit);
-
-    *copy_out << headers;
+    copy_out.open(copyname, output_mode);
+    copy_out << headers;
   }
+
+  int rg_count = 0;
+  for (collection::iterator it = headers.begin(); it != headers.end(); ++it)
+    if (it->type_equals("RG"))  rg_count++;
+
+  boost::scoped_array<osamstream> out_array(new osamstream[rg_count]);
 
   // FIXME This assumes we have enough file descriptors for all the read groups.
   rg_split_map rg_split;
   int rg_index = 0;
   for (collection::iterator it = headers.begin(); it != headers.end(); ++it)
     if (it->type_equals("RG")) {
-      rg_index++;
+      osamstream* out = &out_array[rg_index++];
       string splitname = expand(split_template, *it, rg_index);
-      osamstream* out = new osamstream(splitname, output_mode);
-      if (! out->is_open()) {
-	// FIXME Leaks all those allocated so far
-	throw sam::system_error("can't write to ", splitname, errno);
-      }
-      out->exceptions(std::ios::failbit | std::ios::badbit);
-      rg_split[it->field<string>("ID")].out = out;
+      out->open(splitname, output_mode);
+      rg_split.insert(make_pair(it->field<string>("ID"), split(out)));
 
       // TODO Remove the other @RG headers.
       *out << headers;
     }
 
   split_reads(in, rg_split, copy_out);
-
-  for (rg_split_map::iterator it = rg_split.begin(); it != rg_split.end(); ++it)
-    delete it->second.out;
-
-  delete copy_out;
 
   return EXIT_SUCCESS;
 }

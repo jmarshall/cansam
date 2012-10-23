@@ -35,6 +35,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include "cansam/sam/alignment.h"
 #include "cansam/sam/header.h"
 #include "cansam/sam/stream.h"
+#include "cansam/exception.h"
 #include "tools/utilities.h"
 
 using std::string;
@@ -53,8 +54,6 @@ string table_header(const string& div) {
 }
 
 void count(isamstream& in, bool display, const string& fname) {
-  in.exceptions(std::ios::failbit | std::ios::badbit);
-
   collection headers;
   in >> headers;
 
@@ -94,7 +93,8 @@ void count(isamstream& in, bool display, const string& fname) {
   }
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+try {
   const char usage[] =
 "Usage: samcount [-lr] [FILE]...\n"
 "Options:\n"
@@ -134,17 +134,23 @@ int main(int argc, char** argv) {
   if (! display_options_seen)
     by_library = by_read_group = true;
 
+  int status = EXIT_SUCCESS;
+
   if (optind == argc) {
     isamstream in("-");
     count(in, by_read_group, "");
   }
   else
     for (int i = optind; i < argc; i++) {
-      isamstream in(argv[i]);
-      if (in.is_open())
+      try {
+	isamstream in(argv[i]);
 	count(in, by_read_group, argv[i]);
-      else
-	std::cerr << "error opening " << argv[i] << " or something\n";
+      }
+      catch (const sam::exception& e) {
+	std::cout << std::flush;
+	std::cerr << "samcount: " << e.what() << std::endl;
+	status = EXIT_FAILURE;
+      }
     }
 
   if (by_library) {
@@ -155,5 +161,10 @@ int main(int argc, char** argv) {
 		<< it->first << '\n';
   }
 
-  return EXIT_SUCCESS;
+  return status;
+}
+catch (const std::exception& e) {
+  std::cout << std::flush;
+  std::cerr << "samcount: " << e.what() << std::endl;
+  return EXIT_FAILURE;
 }

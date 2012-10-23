@@ -27,12 +27,11 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
+#include <exception>
 #include <iostream>
 #include <string>
-#include <cerrno>
 #include <cstdlib>
 
-#include "cansam/exception.h"
 #include "cansam/sam/header.h"
 #include "cansam/sam/stream.h"
 #include "tools/utilities.h"
@@ -42,8 +41,6 @@ using namespace sam;
 
 void head(const string& filename) {
   isamstream in(filename);
-  if (! in.is_open())  throw sam::system_error("can't open ", filename, errno);
-  in.exceptions(std::ios::failbit | std::ios::badbit);
 
   collection headers;
   in >> headers;

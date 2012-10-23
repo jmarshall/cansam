@@ -27,18 +27,17 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
+#include <exception>
 #include <iomanip>
 #include <iostream>
 #include <set>
 #include <string>
-#include <cerrno>
 #include <cstdlib>
 
 #include "cansam/sam/algorithm.h"
 #include "cansam/sam/alignment.h"
 #include "cansam/sam/header.h"
 #include "cansam/sam/stream.h"
-#include "cansam/exception.h"
 #include "tools/utilities.h"
 
 using std::string;
@@ -133,15 +132,7 @@ int main(int argc, char** argv) {
 
   try {
     isamstream in(input_fname);
-    if (!in.is_open())
-      throw sam::system_error("can't open ", input_fname, errno);
-
     osamstream out(output_fname, output_mode);
-    if (!out.is_open())
-      throw sam::system_error("can't write to ", output_fname, errno);
-
-    in.exceptions (std::ios::failbit | std::ios::badbit);
-    out.exceptions(std::ios::failbit | std::ios::badbit);
 
     collection headers;
     in >> headers;
@@ -166,7 +157,7 @@ int main(int argc, char** argv) {
 	<< std::endl;
     }
   }
-  catch (const sam::exception& e) {
+  catch (const std::exception& e) {
     std::cerr << "samgroupbyname: " << e.what() << '\n';
     return EXIT_FAILURE;
   }
