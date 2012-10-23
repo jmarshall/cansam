@@ -120,6 +120,9 @@ private:
   bool owned_rdbuf_;
 
   static iostate initial_exceptions_;
+
+  samstream_base(const samstream_base&) /* = delete */;
+  samstream_base& operator= (const samstream_base&) /* = delete */;
 };
 
 /** @class sam::isamstream cansam/sam/stream.h
@@ -178,6 +181,10 @@ protected:
   // @cond infrastructure
   virtual void close_();
   // @endcond
+
+private:
+  isamstream(const isamstream&) /* = delete */;
+  isamstream& operator= (const isamstream&) /* = delete */;
 };
 
 /** @class sam::osamstream cansam/sam/stream.h
@@ -218,6 +225,10 @@ protected:
   // @cond infrastructure
   virtual void close_();
   // @endcond
+
+private:
+  osamstream(const osamstream&) /* = delete */;
+  osamstream& operator= (const osamstream&) /* = delete */;
 };
 
 /** @class sam::samstream cansam/sam/stream.h
@@ -245,6 +256,10 @@ protected:
   // @cond infrastructure
   virtual void close_();
   // @endcond
+
+private:
+  samstream(const samstream&) /* = delete */;
+  samstream& operator= (const samstream&) /* = delete */;
 };
 
 /// Returns the mode flags indicated by the filename extension
