@@ -112,7 +112,11 @@ which may be of any of the following types:
   - @c float (eventually)
   - @c double (eventually)
   - @c std::vector<uint8_t> (eventually)
-  - @c const_iterator
+  - @c const_iterator (within a different alignment object)
+
+Note that a @c const_iterator used as a source value must be a dereferenceable
+iterator pointing to an alignment::tagfield in a @em different alignment object
+to the one being modified.
 */
 class alignment {
 public:

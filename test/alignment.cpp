@@ -130,6 +130,8 @@ std::cout << aln << "\nset_aux.Z2\n";
   aln.set_aux("Z2", bar);
 aln.dump_on(std::cout);
 std::cout << aln << "\nset_aux.Z3\n";
+  sam::alignment aln2 = aln;
+  cit2 = aln2.find("X1");
   aln.set_aux("Z3", cit2);
 
 std::cout << "begin: " << aln.begin() << ", end: " << aln.end() << "\nauxen:";
