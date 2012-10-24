@@ -318,8 +318,9 @@ static void&nbsp;</td><td class="memItemRight" valign="bottom"><a class="el" hre
 <li><code>float</code> (eventually)</li>
 <li><code>double</code> (eventually)</li>
 <li><code>std::vector&lt;uint8_t&gt;</code> (eventually)</li>
-<li><code>const_iterator</code> </li>
+<li><code>const_iterator</code> (within a different alignment object)</li>
 </ul>
+<p>Note that a <code>const_iterator</code> used as a source value must be a dereferenceable iterator pointing to an <a class="el" href="classsam_1_1alignment_1_1tagfield.html" title="Helper class representing an auxiliary field as seen via an iterator.">alignment::tagfield</a> in a <em>different</em> alignment object to the one being modified. </p>
 <dl><dt><b>Examples: </b></dt><dd>
 <p><a class="el" href="simplecat.cpp-example.html#_a2">simplecat.cpp</a>.</p>
 </dd>
