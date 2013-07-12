@@ -1,6 +1,6 @@
 /*  samsplit.cpp -- Split a SAM or BAM file into separate read groups.
 
-    Copyright (C) 2011-2012 Genome Research Ltd.
+    Copyright (C) 2011-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <map>
 #include <string>
 #include <cstdlib>
+
+#include <unistd.h>  // for getopt()
 
 #include <boost/scoped_array.hpp>
 

@@ -1,6 +1,6 @@
 /*  samsort.cpp -- sort SAM and/or BAM files, merging headers where necessary.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -33,6 +33,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <map>
 #include <cstdlib>
 #include <cstring>
+
+#include <unistd.h>  // for getopt()
 
 #include "samsort.h"
 #include "cansam/sam/alignment.h"

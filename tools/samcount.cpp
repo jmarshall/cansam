@@ -1,6 +1,6 @@
 /*  samcount.cpp -- Display statistics for SAM and BAM files.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -31,6 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <map>
 #include <string>
 #include <cstdlib>
+
+#include <unistd.h>  // for getopt()
 
 #include "cansam/sam/alignment.h"
 #include "cansam/sam/header.h"
