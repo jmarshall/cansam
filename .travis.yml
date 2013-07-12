@@ -5,4 +5,7 @@ compiler:
   - clang
   - gcc
 
+before_install:
+  - sudo apt-get install -qq libboost-all-dev
+
 script: make -e && make test
