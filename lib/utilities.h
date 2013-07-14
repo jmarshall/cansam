@@ -1,6 +1,6 @@
 /*  utilities.h -- Various library support functions.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -55,6 +55,9 @@ struct buffer {
 
   // TODO Add buffer sizes for octal and hexadecimal
 };
+
+template <typename IntType>
+char* decimal(char* dest, IntType value);
 
 template <typename UnsignedType>
 char* decimal_(char* dest, UnsignedType value, const traits::false_type&) {
@@ -117,6 +120,9 @@ char* hexadecimal(char* dest, IntType ivalue) {
 } // namespace format
 
 namespace parse {
+
+template <typename IntType>
+const char* decimal(const char* s, IntType& value);
 
 template <typename UnsignedType>
 const char*

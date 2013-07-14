@@ -1,7 +1,7 @@
 /// @file cansam/sam/header.h
 /// Classes for SAM/BAM headers
 
-/*  Copyright (C) 2010-2012 Genome Research Ltd.
+/*  Copyright (C) 2010-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -183,7 +183,7 @@ public:
 
   class const_iterator :
     public std::iterator<std::bidirectional_iterator_tag, tagfield,
-			 ptrdiff_t, const tagfield*, const tagfield&> {
+			 std::ptrdiff_t, const tagfield*, const tagfield&> {
   public:
     const_iterator() { }
     const_iterator(const const_iterator& it) : ptr(it.ptr) { }
@@ -467,7 +467,7 @@ public:
     // FIXME should be random_access_iterator_tag
     typedef std::bidirectional_iterator_tag iterator_category;
     typedef ValueType value_type;
-    typedef ptrdiff_t difference_type;
+    typedef std::ptrdiff_t difference_type;
     typedef typename if_c<is_const, const ValueType*, ValueType*>::type pointer;
     typedef typename if_c<is_const, const ValueType&, ValueType&>::type
       reference;

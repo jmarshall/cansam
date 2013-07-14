@@ -1,7 +1,7 @@
 /// @file cansam/sam/alignment.h
 /// Classes and functions for SAM/BAM alignment records
 
-/*  Copyright (C) 2010-2012 Genome Research Ltd.
+/*  Copyright (C) 2010-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -401,11 +401,11 @@ public:
 
   class const_iterator :
     public std::iterator<std::forward_iterator_tag, tagfield,
-			 ptrdiff_t, const tagfield*, const tagfield&> {
+			 std::ptrdiff_t, const tagfield*, const tagfield&> {
   public:
     const_iterator() { }
     const_iterator(const const_iterator& it) : ptr(it.ptr) { }
-    const_iterator(iterator it) : ptr(it.ptr) { }
+    const_iterator(alignment::iterator it) : ptr(it.ptr) { }
     ~const_iterator() { }
     const_iterator& operator= (const_iterator it)
       { ptr = it.ptr; return *this; }
