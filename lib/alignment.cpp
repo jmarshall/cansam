@@ -1,6 +1,6 @@
 /*  alignment.cpp -- Classes and functions for SAM/BAM alignment records.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -401,7 +401,7 @@ shared by all the default-constructed alignments.  (It's shared so that we can
 have a constant-time default constructor.)  This block lies about its capacity
 so that tests of the form "p->capacity() < some_size" always trigger when  p
 is the empty block.  */
-struct alignment::block alignment::empty_block = {
+alignment::block alignment::empty_block = {
   { 0 /* 37, if truth be told */, 0 },
   { 33, -1, 0, 1, 0, 0, 0, 0, 0, -1, 0, 0 },
   { '\0' /* an empty qname C-string */ }

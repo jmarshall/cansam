@@ -1,7 +1,7 @@
 /// @file cansam/intervalmap.h
 /// Classes for sequence interval containers
 
-/*  Copyright (C) 2011-2012 Genome Research Ltd.
+/*  Copyright (C) 2011-2013 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -115,9 +115,9 @@ protected:
 
   node* root;
 
-private:
   static node nil;
 
+private:
   void dump(int level, char side, const node* p, const node* pparent) const;
   void dump_intersecting_r(node* x, const interval& i);
   void dump_intersecting_i(node* x, const interval& i);
@@ -166,7 +166,7 @@ public:
     interval key;
   };
 
-  iterator begin() { return iterator(minimum()); }
+  iterator begin() { return iterator(minimum(root)); }
   iterator end() { return iterator(&nil); }
 
   iterator insert(const interval& i, const MappedType& v)
