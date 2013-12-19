@@ -1,3 +1,7 @@
+The Modified-BSD License
+
+Copyright (C) 2010-2013 Genome Research Ltd.
+
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
 
@@ -22,3 +26,15 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+[The use of a range of years within a copyright notice in this distribution
+should be interpreted as being equivalent to a list of years including the
+first and last year specified and all consecutive years between them.
+
+For example, a copyright notice that reads "Copyright (C) 2005, 2007-2009,
+2011-2012" should be interpreted as being identical to a notice that reads
+"Copyright (C) 2005, 2007, 2008, 2009, 2011, 2012" and a copyright notice
+that reads "Copyright (C) 2005-2012" should be interpreted as being identical
+to a notice that reads "Copyright (C) 2005, 2006, 2007, 2008, 2009, 2010,
+2011, 2012".]
