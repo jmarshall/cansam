@@ -1,6 +1,6 @@
 /*  utilities.cpp -- Support routines common to the various utilities.
 
-    Copyright (C) 2010-2013 Genome Research Ltd.
+    Copyright (C) 2010-2014 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -39,7 +39,7 @@ using std::string;
 
 void print_version(std::ostream& stream, const char* name) {
   stream << name << " (Cansam) " << sam::version() << "\n"
-"Copyright (C) 2013 Genome Research Ltd.\n"
+"Copyright (C) 2014 Genome Research Ltd.\n"
 "This is free software: you are free to change and redistribute it.\n"
 "There is NO WARRANTY, to the extent permitted by law.\n";
 }
