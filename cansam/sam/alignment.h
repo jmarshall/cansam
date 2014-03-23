@@ -1,7 +1,7 @@
 /// @file cansam/sam/alignment.h
 /// Classes and functions for SAM/BAM alignment records
 
-/*  Copyright (C) 2010-2013 Genome Research Ltd.
+/*  Copyright (C) 2010-2014 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -63,7 +63,8 @@ enum alignment_flag {
   SECOND_IN_PAIR      = 0x080, ///< The read is the second of a pair
   NONPRIMARY          = 0x100, ///< This alignment is not the primary one for the read
   QUALITY_FAILED      = 0x200, ///< Failed platform or vendor quality checks
-  DUPLICATE           = 0x400  ///< PCR duplicate or optical duplicate
+  DUPLICATE           = 0x400, ///< PCR duplicate or optical duplicate
+  SUPPLEMENTARY       = 0x800  ///< This alignment is a supplementary one for the read
 };
 
 /// Returns the bitwise representation of @a flags

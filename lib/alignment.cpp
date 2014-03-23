@@ -1,6 +1,6 @@
 /*  alignment.cpp -- Classes and functions for SAM/BAM alignment records.
 
-    Copyright (C) 2010-2013 Genome Research Ltd.
+    Copyright (C) 2010-2014 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -515,6 +515,7 @@ int parse_flags(const char* s) {
       case 's':  value |= NONPRIMARY;  break;
       case 'q':  value |= QUALITY_FAILED;  break;
       case 'd':  value |= DUPLICATE;  break;
+      case 'S':  value |= SUPPLEMENTARY;  break;
 
       case 'f':
       case 'F':
@@ -556,10 +557,10 @@ int alignment::sam_length() const {
 
   if (flags() & (PAIRED | PROPER_PAIRED | MATE_UNMAPPED | MATE_REVERSE_STRAND |
 		 FIRST_IN_PAIR | SECOND_IN_PAIR)) {
-    len += 1 + 11;  // Longest FLAG is "urURpP12sqd"
+    len += 1 + 12;  // Longest FLAG is "urURpP12sSqd"
   }
   else
-    len += 1 + 5;  // Longest unpaired FLAG is "ursqd" or "0x400"
+    len += 1 + 6;  // Longest unpaired FLAG is "ursSqd"
 
   len += 1 + rname().length();
   len += 1 + format::buffer<coord_t>::size;
@@ -662,6 +663,7 @@ char* format_sam(char* dest, int flags, const std::ios& format) {
     if (flags & FIRST_IN_PAIR)   *dest++ = '1';
     if (flags & SECOND_IN_PAIR)  *dest++ = '2';
     if (flags & NONPRIMARY)      *dest++ = 's';
+    if (flags & SUPPLEMENTARY)   *dest++ = 'S';
     if (flags & QUALITY_FAILED)  *dest++ = 'q';
     if (flags & DUPLICATE)       *dest++ = 'd';
   }
