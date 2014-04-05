@@ -1,6 +1,6 @@
 /*  sambamio.h -- SAM/BAM input/output formatting.
 
-    Copyright (C) 2010-2014 Genome Research Ltd.
+    Copyright (C) 2010, 2012, 2014 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 

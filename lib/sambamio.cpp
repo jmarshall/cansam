@@ -1,6 +1,6 @@
 /*  sambamio.cpp -- SAM/BAM input/output formatting.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010, 2012, 2014 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -106,6 +106,16 @@ inline int write_bgzf_trailer(char* s, uint32_t crc, int uncompressed_size) {
 }
 
 } // namespace BGZF
+
+namespace CRAM {
+
+// Returns whether the memory block starts with a valid file definition
+inline bool is_cram_file_definition(const char* s, int length) {
+  return length >= 6 && memcmp(s, "\x43\x52\x41\x4d", 4) == 0 &&
+	 (s[4] >= '\2' && s[4] <= '\3') && (s[5] >= '\0' && s[5] <= '\1');
+}
+
+} // namespace CRAM
 
 class char_buffer {
 public:
@@ -993,6 +1003,8 @@ sambamio* sambamio::new_in(isamstream& stream) {
     return new bamio(buffer, n);
   else if (BGZF::is_gzip_header(buffer, n))
     return new gzsamio(buffer, n);
+  else if (CRAM::is_cram_file_definition(buffer, n))
+    throw std::logic_error("CRAM reader not implemented");
   else
     return new samio(buffer, n);
 }
