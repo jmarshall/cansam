@@ -1,6 +1,6 @@
 /*  alignment.cpp -- Classes and functions for SAM/BAM alignment records.
 
-    Copyright (C) 2010-2014 Genome Research Ltd.
+    Copyright (C) 2010-2015 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -514,6 +514,7 @@ int parse_flags(const char* s) {
       case '2':  value |= SECOND_IN_PAIR;  break;
       case 's':  value |= NONPRIMARY;  break;
       case 'q':  value |= QUALITY_FAILED;  break;
+      case 'x':  value |= QUALITY_FAILED;  break;
       case 'd':  value |= DUPLICATE;  break;
       case 'S':  value |= SUPPLEMENTARY;  break;
 
@@ -664,7 +665,7 @@ char* format_sam(char* dest, int flags, const std::ios& format) {
     if (flags & SECOND_IN_PAIR)  *dest++ = '2';
     if (flags & NONPRIMARY)      *dest++ = 's';
     if (flags & SUPPLEMENTARY)   *dest++ = 'S';
-    if (flags & QUALITY_FAILED)  *dest++ = 'q';
+    if (flags & QUALITY_FAILED)  *dest++ = 'x';
     if (flags & DUPLICATE)       *dest++ = 'd';
   }
   else if (fmtflags & std::ios::oct)
