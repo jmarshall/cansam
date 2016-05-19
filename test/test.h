@@ -1,6 +1,6 @@
 /*  test/test.h -- Simple test harness framework.
 
-    Copyright (C) 2010 Genome Research Ltd.
+    Copyright (C) 2010, 2016 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -30,6 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #ifndef TEST_H
 #define TEST_H
 
+#include <iosfwd>
 #include <string>
 using std::string;
 
@@ -38,6 +39,7 @@ public:
   test_harness() : npass(0), nfail(0) { }
 
   void check(bool expr, const string& title);
+  void check(const std::ios& s, const string& title);
   void check(const string& a, const string& b, const string& title);
   void check(const char* a, const char* b, const string& title);
   void check(size_t a, size_t b, const string& title);

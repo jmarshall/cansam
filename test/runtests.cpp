@@ -1,6 +1,6 @@
 /*  test/runtests.cpp -- Simple test harness.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010-2012, 2016 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -37,6 +37,16 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 void test_harness::check(bool expr, const string& title) {
   if (expr) {
+    npass++;
+  }
+  else {
+    std::cerr << "FAILED\t" << title << '\n';
+    nfail++;
+  }
+}
+
+void test_harness::check(const std::ios& s, const string& title) {
+  if (s) {
     npass++;
   }
   else {
