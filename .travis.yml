@@ -8,4 +8,4 @@ compiler:
 before_install:
   - sudo apt-get install -qq libboost-all-dev
 
-script: make -ek && make test
+script: env; make -ek && make test
