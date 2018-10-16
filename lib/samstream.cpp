@@ -1,6 +1,6 @@
 /*  samstream.cpp -- Classes for SAM/BAM input/output streams.
 
-    Copyright (C) 2010-2012 Genome Research Ltd.
+    Copyright (C) 2010-2012, 2018 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -88,7 +88,7 @@ void samstream_base::setstate_maybe_rethrow(iostate state) {
   bool rethrow = false;
 
   try { setstate(state); }
-  catch (failure&) { rethrow = true; }
+  catch (...) { rethrow = true; }
 
   if (rethrow)  throw;
 }
@@ -99,7 +99,7 @@ void samstream_base::setstate_maybe_rethrow(iostate state, sam::exception& e) {
   bool rethrow = false;
 
   try { setstate(state); }
-  catch (failure&) { rethrow = true; }
+  catch (...) { rethrow = true; }
 
   if (rethrow) {
     e.set_filename(filename());
@@ -317,7 +317,7 @@ isamstream& isamstream::operator>> (alignment& aln) {
       // Leave eofbit as is, as it means EOF-seen-on-streambuf rather than
       // no-more-records, and it is almost certainly already set anyway.
       try { setstate(failbit); }
-      catch (failure&) { }
+      catch (...) { }
     }
   }
   catch (sambamio::eof_exception&) { throw failure("eof"); }

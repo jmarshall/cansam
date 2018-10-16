@@ -1,6 +1,6 @@
 /*  sambamio.h -- SAM/BAM input/output formatting.
 
-    Copyright (C) 2010, 2012, 2014 Genome Research Ltd.
+    Copyright (C) 2010, 2012, 2014, 2018 Genome Research Ltd.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -72,7 +72,7 @@ protected:
     std::streamsize n = stream.rdbuf()->sgetn(buffer, length);
     if (n == 0) {
       try { stream.setstate(std::ios::eofbit); }
-      catch (std::ios::failure&) { throw eof_exception(); }
+      catch (...) { throw eof_exception(); }
     }
     return n;
   }
