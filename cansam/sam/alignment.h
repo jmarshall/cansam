@@ -2,6 +2,7 @@
 /// Classes and functions for SAM/BAM alignment records
 
 /*  Copyright (C) 2010-2014 Genome Research Ltd.
+    Portions copyright (C) 2020 University of Glasgow.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -98,6 +99,66 @@ int calc_bin(coord_t pos, coord_t right);
     i.e., a 0-based range.  */
 int calc_zbin(coord_t zpos, coord_t zright);
 
+/** CIGAR string operators.  */
+enum cigar_opcode {
+  MATCH,          ///< Alignment match (can be a sequence match or mismatch)
+  INSERTION,      ///< Insertion to the reference
+  DELETION,       ///< Deletion from the reference
+  REF_SKIP,       ///< Skipped region from the reference
+  SOFT_CLIP,      ///< Soft clipping (clipped sequences present in SEQ)
+  HARD_CLIP,      ///< Hard clipping (clipped sequences NOT present in SEQ)
+  PADDING,        ///< Padding (silent deletion from padded reference)
+  MATCH_EQUAL,    ///< Sequence match
+  MATCH_DIFF      ///< Sequence mismatch
+};
+
+/** @class sam::cigar_op cansam/sam/alignment.h
+*/
+class cigar_op {
+public:
+  cigar_op(int length, char opchar) : data_(length << 4 | encode(opchar)) { }
+  cigar_op(const cigar_op& cigar) : data_(cigar.data_) { }
+  ~cigar_op() { }
+
+  cigar_op& operator= (const cigar_op& cigar)
+    { data_ = cigar.data_; return *this; }
+
+  cigar_opcode opcode() const { return static_cast<cigar_opcode>(data_ & 0xf); }
+  char opchar() const { return opchars[data_ & 0xf]; }
+  int length() const { return data_ >> 4; }
+
+  static cigar_opcode encode(char opchar);
+  static char decode(cigar_opcode opcode) { return opchars[opcode]; }
+
+private:
+  // @cond private
+  friend class alignment;
+  static const char opchars[16];
+
+  cigar_op(const char* ptr);
+
+  uint32_t data_;
+  // @endcond
+};
+
+/// Print a CIGAR operation to the stream
+/** Writes a CIGAR record to a stream as text in SAM format.
+@relatesalso cigar_op */
+std::ostream& operator<< (std::ostream& stream, const cigar_op& cigar);
+
+/// Write a CIGAR operation to @a dest in SAM format
+/** @param dest  Character array to be written to; must have space for
+at least 10 characters.
+@param cigar  The CIGAR operation to be formatted.
+@return  A pointer to the first unused character position in @a dest.
+@relatesalso cigar_op */
+char* format_sam(char* dest, const cigar_op& cigar);
+
+/// Print an unpacked CIGAR string to the stream
+/** Writes a vector of CIGAR records to a stream as text in SAM format.
+@relatesalso cigar_op */
+std::ostream& operator<< (std::ostream& stream, const std::vector<cigar_op>&);
+
 /** @class sam::alignment cansam/sam/alignment.h
     @brief SAM/BAM alignment record
 
@@ -181,8 +242,14 @@ public:
   coord_t pos() const  { return p->c.zpos+1; }
   coord_t zpos() const { return p->c.zpos; }
   int mapq() const { return p->c.mapq; }
-  std::string cigar() const;
-  // TODO raw cigar
+
+  /// Number of CIGAR operations
+  size_t cigar_length() const { return p->c.cigar_length; }
+
+  cigar_op cigar(size_t i) const;
+  template <typename CigarType> CigarType cigar() const;
+  std::string& cigar(std::string& dest) const;
+  std::vector<cigar_op>& cigar(std::vector<cigar_op>& dest) const;
 
   /** Returns, for paired reads, an index uniquely identifying the mate read's
   reference sequence within the collection of which it is a part.
@@ -488,6 +555,7 @@ public:
   void set_zpos(coord_t zpos);
   void set_mapq(int mapq);
   void set_cigar(const std::string& cigar) { set_cigar(cigar.c_str()); }
+  void set_cigar(const std::vector<cigar_op>& cigar);
   void set_mate_rindex(int mate_rindex);
   void set_mate_rname(const std::string& mate_rname);
   void set_mate_pos(coord_t pos);
@@ -704,6 +772,11 @@ inline bool operator== (alignment::iterator it1, alignment::const_iterator it2)
   { return alignment::const_iterator(it1) == it2; }
 inline bool operator!= (alignment::iterator it1, alignment::const_iterator it2)
   { return alignment::const_iterator(it1) != it2; }
+
+template<> inline std::string alignment::cigar() const
+  { std::string dest; return cigar(dest); }
+template<> inline std::vector<cigar_op> alignment::cigar() const
+  { std::vector<cigar_op> dest; return cigar(dest); }
 
 template<> inline std::string alignment::tagfield::value() const
   { std::string dest; return value(dest); }

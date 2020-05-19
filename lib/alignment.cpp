@@ -1,6 +1,7 @@
 /*  alignment.cpp -- Classes and functions for SAM/BAM alignment records.
 
     Copyright (C) 2010-2015 Genome Research Ltd.
+    Portions copyright (C) 2020 University of Glasgow.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -58,24 +59,62 @@ namespace sam {
 // For order(); 0, FIRST_IN_PAIR, SECOND_IN_PAIR, FIRST_IN_PAIR|SECOND_IN_PAIR.
 const int alignment::order_value[4] = { 0, -1, +1, 0 };
 
-string alignment::cigar() const {
-  // TODO Probably will build some kind of sam::cigar class...
+const char cigar_op::opchars[16] =
+  { 'M','I','D','N','S','H','P','=','X','?','?','?','?','?','?','?' };
 
+cigar_opcode cigar_op::encode(char opcode) {
+  switch (opcode) {
+  case 'M':  return MATCH;
+  case 'I':  return INSERTION;
+  case 'D':  return DELETION;
+  case 'N':  return REF_SKIP;
+  case 'S':  return SOFT_CLIP;
+  case 'H':  return HARD_CLIP;
+  case 'P':  return PADDING;
+  case '=':  return MATCH_EQUAL;
+  case 'X':  return MATCH_DIFF;
+  default:
+    throw std::range_error(make_string()
+	<< "Unknown CIGAR operator ('" << opcode << "')");
+  }
+}
+
+cigar_op::cigar_op(const char* ptr) : data_(convert::uint32(ptr)) { }
+
+string& alignment::cigar(string& dest) const {
   int cigar_length = p->c.cigar_length;
 
   if (cigar_length == 0)
-    return "*";
+    return dest.assign("*");
 
-  string text;
-  char buffer[format::buffer<int>::size];
+  dest.clear();
+  char buffer[format::buffer<int>::size + 1];
   const char* cigar_data = p->cigar_data();
   for (int i = 0; i < cigar_length; i++, cigar_data += sizeof(uint32_t)) {
-    uint32_t code = convert::uint32(cigar_data);
-    text.append(buffer, format::decimal(buffer, code >> 4) - buffer);
-    text += "MIDNSHP=X???????"[code & 0xf];
+    cigar_op cigar(cigar_data);
+    dest.append(buffer, format_sam(buffer, cigar) - buffer);
   }
 
-  return text;
+  return dest;
+}
+
+std::vector<cigar_op>& alignment::cigar(std::vector<cigar_op>& dest) const {
+  int cigar_length = p->c.cigar_length;
+
+  dest.clear();
+  dest.reserve(cigar_length);
+
+  const char* cigar_data = p->cigar_data();
+  for (int i = 0; i < cigar_length; i++, cigar_data += sizeof(uint32_t))
+    dest.push_back(cigar_op(cigar_data));
+  return dest;
+}
+
+cigar_op alignment::cigar(size_t i) const {
+  if (i >= p->c.cigar_length)
+    throw std::range_error("CIGAR operator index out of range");
+
+  return cigar_op(p->cigar_data() + sizeof(uint32_t) * i);
 }
 
 scoord_t alignment::cigar_span() const {
@@ -343,6 +382,18 @@ void alignment::set_cigar(const char* cigar) {
   p->c.cigar_length = new_cigar_length;
   if (! (cigar[0] == '*' && cigar[1] == '\0'))
     pack_cigar(cbuffer, cigar);
+}
+
+void alignment::set_cigar(const std::vector<cigar_op>& cigar) {
+  int new_cigar_length = cigar.size();
+  char* cbuffer = replace_gap(p->cigar_data(),
+		      p->cigar_data() + sizeof(uint32_t) * p->c.cigar_length,
+		      sizeof(uint32_t) * new_cigar_length);
+
+  p->c.cigar_length = new_cigar_length;
+  for (std::vector<cigar_op>::const_iterator it = cigar.begin();
+       it != cigar.end(); ++it, cbuffer += sizeof(uint32_t))
+    convert::set_bam_uint32(cbuffer, it->data_);
 }
 
 void alignment::set_mate_rindex(int rindex) {
@@ -675,6 +726,12 @@ char* format_sam(char* dest, int flags, const std::ios& format) {
   else
     dest = format::decimal(dest, flags);
 
+  return dest;
+}
+
+char* format_sam(char* dest, const cigar_op& cigar) {
+  dest = format::decimal(dest, cigar.length());
+  *dest++ = cigar.opchar();
   return dest;
 }
 

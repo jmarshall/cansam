@@ -1,6 +1,7 @@
 /*  ostream.cpp -- Various output stream inserters.
 
     Copyright (C) 2010-2012 Genome Research Ltd.
+    Portions copyright (C) 2020 University of Glasgow.
 
     Author: John Marshall <jm18@sanger.ac.uk>
 
@@ -135,6 +136,22 @@ std::ostream& operator<< (std::ostream& out, const alignment& aln) {
   char* buffer = get_buffer(out, aln.sam_length() + 1);
   *format_sam(buffer, aln, out) = '\0';
   return out << buffer;
+}
+
+std::ostream& operator<< (std::ostream& out, const cigar_op& cigar) {
+  char* buffer = get_buffer(out, format::buffer<int>::size + 1 + 1);
+  *format_sam(buffer, cigar) = '\0';
+  return out << buffer;
+}
+
+std::ostream& operator<< (std::ostream& out, const std::vector<cigar_op>& cigar) {
+  std::vector<cigar_op>::const_iterator it = cigar.begin();
+  std::vector<cigar_op>::const_iterator end = cigar.end();
+
+  if (it == end)  return out << '*';
+
+  for (; it != end; ++it)  out << *it;
+  return out;
 }
 
 std::ostream& operator<< (std::ostream& out, const alignment::tagfield& aux) {
