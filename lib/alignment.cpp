@@ -118,7 +118,17 @@ cigar_op alignment::cigar(size_t i) const {
 }
 
 scoord_t alignment::cigar_span() const {
-  return 0;  // FIXME
+  if (p->c.flags & UNMAPPED)  return 1;
+
+  int cigar_length = p->c.cigar_length;
+  const char* cigar_data = p->cigar_data();
+
+  scoord_t span = 0;
+  for (int i = 0; i < cigar_length; i++, cigar_data += sizeof(uint32_t)) {
+    cigar_op cigar(cigar_data);
+    if (cigar.consumes_reference())  span += cigar.length();
+  }
+  return (span > 0)? span : 1;
 }
 
 void alignment::pack_seq(char* dest, const char* seq, int seq_length) {

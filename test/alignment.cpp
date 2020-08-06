@@ -158,6 +158,29 @@ std::cout << "post: it: " << it << "\n";
 std::cout << "End of test_iterators()\n";
 }
 
+void test_cigar_op(test_harness& t, int code, char op, bool query, bool ref) {
+  std::string opstr(1, op);
+  int len = 100 + 53 * code;
+  sam::cigar_op cigar(len, op);
+  t.check(cigar.opcode() == sam::cigar_opcode(code), opstr + ".opcode");
+  t.check(cigar.opchar() == op, opstr + ".opchar");
+  t.check(cigar.length() == len, opstr + ".length");
+  t.check(cigar.consumes_query() == query, opstr + ".consumes_query");
+  t.check(cigar.consumes_reference() == ref, opstr + ".consumes_reference");
+}
+
+void test_cigar_op(test_harness& t) {
+  test_cigar_op(t, 0, 'M', true,  true);
+  test_cigar_op(t, 1, 'I', true,  false);
+  test_cigar_op(t, 2, 'D', false, true);
+  test_cigar_op(t, 3, 'N', false, true);
+  test_cigar_op(t, 4, 'S', true,  false);
+  test_cigar_op(t, 5, 'H', false, false);
+  test_cigar_op(t, 6, 'P', false, false);
+  test_cigar_op(t, 7, '=', true,  true);
+  test_cigar_op(t, 8, 'X', true,  true);
+}
+
 void test_auxen(test_harness& t) {
   sam::alignment aln;
   aln.push_back("XS", "carrot");
@@ -213,6 +236,7 @@ void test_alignments(test_harness& t) {
 
   test_unpack_seq(t);
   test_iterators(t, a1);
+  test_cigar_op(t);
   test_auxen(t);
 
   test_format(t);

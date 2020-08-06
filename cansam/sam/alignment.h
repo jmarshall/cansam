@@ -127,6 +127,9 @@ public:
   char opchar() const { return opchars[data_ & 0xf]; }
   int length() const { return data_ >> 4; }
 
+  bool consumes_query() const     { return 0x0193 & (1 << (data_ & 0xf)); }
+  bool consumes_reference() const { return 0x018d & (1 << (data_ & 0xf)); }
+
   static cigar_opcode encode(char opchar);
   static char decode(cigar_opcode opcode) { return opchars[opcode]; }
 
