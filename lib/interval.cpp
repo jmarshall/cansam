@@ -33,6 +33,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #include <ostream>
 
 #include "cansam/exception.h"
+#include "cansam/sam/alignment.h"
 #include "lib/utilities.h"
 
 using std::string;
@@ -89,6 +90,10 @@ interval& interval::assign(const string& text, size_t pos) {
 	<< "Invalid interval value ('" << text.substr(pos) << "')");
 
   return *this;
+}
+
+seqinterval::seqinterval(const alignment& aln)
+  : interval(aln.zpos(), aln.right_pos()), name_(aln.rname()) {
 }
 
 seqinterval& seqinterval::assign(const string& text, size_t pos) {

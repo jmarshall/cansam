@@ -69,7 +69,8 @@ lib/alignment.o: lib/alignment.cpp $(sam_alignment_h) cansam/exception.h \
 lib/collection.o: lib/collection.cpp $(sam_header_h) cansam/exception.h
 lib/exception.o: lib/exception.cpp cansam/exception.h
 lib/header.o: lib/header.cpp $(sam_header_h) cansam/exception.h $(lib_utilities_h)
-lib/interval.o: lib/interval.cpp $(sam_interval_h)
+lib/interval.o: lib/interval.cpp $(sam_interval_h) cansam/exception.h \
+		$(sam_alignment_h)
 lib/intervalmap.o: lib/intervalmap.cpp $(sam_intervalmap_h)
 lib/ostream.o: lib/ostream.cpp $(sam_alignment_h) $(sam_header_h) \
 	       $(lib_utilities_h)

@@ -40,6 +40,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 
 namespace sam {
 
+class alignment;
+
 /** @class sam::interval cansam/interval.h
     @brief Interval within an unspecified sequence
 */
@@ -136,6 +138,9 @@ public:
 
   /// Construct a seqinterval from a "NAME:START-END"-style string
   explicit seqinterval(const std::string& text) { assign(text); }
+
+  /// Construct a seqinterval representing ALN's span on its reference
+  explicit seqinterval(const alignment& aln);
 
   /// Construct a copy of a seqinterval
   seqinterval(const seqinterval& i) : interval(i), name_(i.name_) { }
