@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: master
+  pull_request:
+
+jobs:
+  unix_build:
+    name: Unix / GCC
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install prerequisites
+      run:  sudo apt install -qq libboost-all-dev
+    - name: Checkout cansam
+      uses: actions/checkout@v2
+    - name: Compile
+      run:  make -k
+    - name: Run tests
+      run:  make test
+  macos_build:
+    name: macOS / Clang
+    runs-on: macos-latest
+    steps:
+    - name: Install prerequisites
+      run:  brew install boost
+    - name: Checkout cansam
+      uses: actions/checkout@v2
+    - name: Compile
+      run:  make -k CXX=clang++
+    - name: Run tests
+      run:  make test
