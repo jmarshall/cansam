@@ -13,7 +13,7 @@ jobs:
     - name: Install prerequisites
       run:  sudo apt install -qq libboost-all-dev
     - name: Checkout cansam
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Compile
       run:  make -k
     - name: Run tests
@@ -25,7 +25,7 @@ jobs:
     - name: Install prerequisites
       run:  brew install boost
     - name: Checkout cansam
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Compile
       run:  make -k CXX=clang++
     - name: Run tests
