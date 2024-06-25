@@ -36,7 +36,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 // macros predefined by the various compilers to detect what needs to be done
 // to convert such a binary representation to that used by this host.
 
-#if defined __i386__ || defined __x86_64__ || defined __ia64__
+#if defined __i386__ || defined __x86_64__ || defined __ia64__ || \
+    defined __arm__ || defined __aarch64__
 #define WIRE_NOOP
 #elif 0
 // We need to swap bytes, and the architecture does rotates efficiently.
