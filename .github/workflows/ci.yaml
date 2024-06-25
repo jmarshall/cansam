@@ -6,27 +6,35 @@ on:
   pull_request:
 
 jobs:
-  unix_build:
-    name: Unix / GCC
-    runs-on: ubuntu-latest
+  build:
+    name: ${{ matrix.compiler == 'g++' && 'GCC' || 'Clang' }} ${{ matrix.std }}
+    runs-on: ${{ matrix.compiler == 'g++' && 'ubuntu' || 'macos' }}-latest
+    strategy:
+      matrix:
+        compiler: [g++, clang++]
+        std: [c++98, c++11, c++14, c++17, c++20, c++2b]
+      fail-fast: false
+
     steps:
-    - name: Install prerequisites
-      run:  sudo apt install -qq libboost-all-dev
-    - name: Checkout cansam
-      uses: actions/checkout@v4
-    - name: Compile
-      run:  make -k
-    - name: Run tests
-      run:  make test
-  macos_build:
-    name: macOS / Clang
-    runs-on: macos-latest
-    steps:
-    - name: Install prerequisites
-      run:  brew install boost
-    - name: Checkout cansam
-      uses: actions/checkout@v4
-    - name: Compile
-      run:  make -k CXX=clang++
-    - name: Run tests
-      run:  make test
+      - name: Check out cansam
+        uses: actions/checkout@v4
+
+      - name: Install Linux prerequisites
+        if:   runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -q --no-install-recommends --no-install-suggests libboost-all-dev
+
+      - name: Install macOS prerequisites
+        if:   runner.os == 'macOS'
+        run: |
+          brew install boost
+          echo "CPATH=$HOMEBREW_PREFIX/include" >> $GITHUB_ENV
+
+      - name: Compile cansam
+        run: |
+          make -k "CXX=${{ matrix.compiler }} -std=${{ matrix.std }}"
+
+      - name: Run tests
+        run: |
+          make test
