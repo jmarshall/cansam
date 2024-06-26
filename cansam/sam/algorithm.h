@@ -31,15 +31,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #ifndef CANSAM_SAM_ALGORITHM_H
 #define CANSAM_SAM_ALGORITHM_H
 
-#include <functional>
-
 #include "cansam/sam/alignment.h"
 
 namespace sam {
 
 /// Function object class for comparing alignments
-class less_by_qname :
-  public std::binary_function<const alignment&, const alignment&, bool> {
+class less_by_qname {
 public:
   /// Returns whether the query name of @a a is lexicographically less than
   /// that of @a b
@@ -48,8 +45,7 @@ public:
 };
 
 /// Function object class for comparing alignments
-class equal_by_qname :
-  public std::binary_function<const alignment&, const alignment&, bool> {
+class equal_by_qname {
 public:
   /// Returns whether the query name of @a a is the same as that of @a b
   bool operator() (const alignment& a, const alignment& b) const
@@ -57,7 +53,7 @@ public:
 };
 
 /// Function object class for hashing alignments
-class hash_by_qname : public std::unary_function<const alignment&, size_t> {
+class hash_by_qname {
 public:
   /// Returns a hash value derived from the alignment's query name
   size_t operator() (const alignment& aln) const {

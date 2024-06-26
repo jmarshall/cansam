@@ -31,7 +31,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  */
 #ifndef CANSAM_INTERVALMAP_H
 #define CANSAM_INTERVALMAP_H
 
-#include <functional>
 #include <iterator>
 #include <map>
 #include <string>
