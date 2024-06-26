@@ -181,10 +181,14 @@ public:
   // @cond infrastructure
   typedef std::char_traits<char> traits_type;
 
-  class const_iterator :
-    public std::iterator<std::bidirectional_iterator_tag, tagfield,
-			 std::ptrdiff_t, const tagfield*, const tagfield&> {
+  class const_iterator {
   public:
+    typedef std::bidirectional_iterator_tag iterator_category;
+    typedef tagfield value_type;
+    typedef std::ptrdiff_t difference_type;
+    typedef const tagfield* pointer;
+    typedef const tagfield& reference;
+
     const_iterator() { }
     const_iterator(const const_iterator& it) : ptr(it.ptr) { }
     ~const_iterator() { }

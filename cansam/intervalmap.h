@@ -140,8 +140,14 @@ private:
 public:
   typedef pair_node value_type;
 
-  class iterator : public std::iterator<std::forward_iterator_tag, value_type> {
+  class iterator {
   public:
+    typedef std::forward_iterator_tag iterator_category;
+    typedef pair_node value_type;
+    typedef std::ptrdiff_t difference_type;
+    typedef pair_node* pointer;
+    typedef pair_node& reference;
+
     iterator(node* x) : ptr(x) { }
     iterator(node* x, const interval& i) : ptr(x), key(i) { }
     iterator(const iterator& it) : ptr(it.ptr), key(it.key) { }
@@ -172,7 +178,7 @@ public:
     { return iterator(interval_tree_base::insert(new pair_node(i, v))); }
 
   std::pair<iterator, iterator> intersecting_range(const interval& i)
-    { return make_pair(iterator(first_intersecting(root, i), i), end()); }
+    { return std::make_pair(iterator(first_intersecting(root, i), i), end()); }
 };
 
 template <typename MappedType>
